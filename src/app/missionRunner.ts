@@ -15,8 +15,9 @@ import {
   STATUS_WON,
 } from '../sim/state';
 import { influence, step, TICK_MS } from '../sim/tick';
-import { ST_DEAD, ST_PERSUADED, type AgentSpec } from '../sim/units';
+import { NPC_CIV, ST_DEAD, ST_PERSUADED, type AgentSpec } from '../sim/units';
 import { WEAPONS } from '../sim/weapons';
+import { createPerfOverlay } from './perfOverlay';
 
 export interface MissionResult {
   won: boolean;
@@ -30,6 +31,11 @@ export interface MissionResult {
 
 const NPC_CAP = 400;
 
+export interface MissionOptions {
+  civCount?: number;
+  perf?: boolean;
+}
+
 export function runMission(
   renderer: WebGPURenderer,
   seed: number,
@@ -38,9 +44,10 @@ export function runMission(
   hud: HTMLElement,
   objectiveText: string,
   extraGuards = 0,
+  opts: MissionOptions = {},
 ): Promise<MissionResult> {
   return new Promise((resolve) => {
-    const state = createMission(seed, missionType, specs, extraGuards);
+    const state = createMission(seed, missionType, specs, extraGuards, opts.civCount);
     const gs = createGameScene(state);
     const rig = createRig(window.innerWidth / window.innerHeight, fromFx(state.agents[0]!.x), fromFx(state.agents[0]!.z));
     const queue = new CommandQueue();
@@ -236,6 +243,33 @@ export function runMission(
       window.removeEventListener('resize', onResize);
       renderer.setAnimationLoop(null);
       hud.innerHTML = '';
+      perf?.dispose();
+    };
+
+    const perf = opts.perf ? createPerfOverlay() : null;
+    let nextDriveTick = 40;
+    const driveStress = () => {
+      for (const a of state.agents) {
+        if (!a.alive) continue;
+        let best = -1;
+        let bestD = Infinity;
+        for (const n of state.npcs) {
+          if (n.kind === NPC_CIV || n.state === ST_DEAD || n.state === ST_PERSUADED) continue;
+          const dx = fromFx(n.x) - fromFx(a.x);
+          const dz = fromFx(n.z) - fromFx(a.z);
+          const d = dx * dx + dz * dz;
+          if (d < bestD) {
+            bestD = d;
+            best = n.id;
+          }
+        }
+        if (best >= 0 && bestD < 900) send({ type: 'attack', ids: [a.id], npcId: best });
+        else {
+          const cell = state.map.walkable[(Math.random() * state.map.walkable.length) | 0]!;
+          const w = state.map.w;
+          send({ type: 'move', ids: [a.id], x: toFx((cell % w) + 0.5), z: toFx(((cell / w) | 0) + 0.5) });
+        }
+      }
     };
 
     let last = performance.now();
@@ -245,12 +279,19 @@ export function runMission(
     renderer.setAnimationLoop((time: number) => {
       const dt = Math.min(time - last, 250);
       last = time;
+      let simMs = 0;
       if (!paused && state.mission.status === STATUS_ACTIVE) {
         acc += dt;
+        const simStart = performance.now();
         while (acc >= TICK_MS) {
           capturePrev();
           step(state, queue.drain(state.tick));
           acc -= TICK_MS;
+        }
+        simMs = performance.now() - simStart;
+        if (perf && state.tick >= nextDriveTick) {
+          nextDriveTick = state.tick + 60;
+          driveStress();
         }
       }
 
@@ -278,6 +319,11 @@ export function runMission(
 
       syncScene(gs, state, prevAX, prevAZ, prevNX, prevNZ, Math.min(1, acc / TICK_MS), selected);
       renderer.render(gs.scene, rig.camera);
+      if (perf) {
+        let npcAlive = 0;
+        for (const n of state.npcs) if (n.state !== ST_DEAD) npcAlive++;
+        perf.frame(dt, simMs, npcAlive);
+      }
 
       hudT += dt;
       if (hudT > 200) {

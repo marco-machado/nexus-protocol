@@ -24,6 +24,7 @@ export function createMission(
   missionType: number,
   specs: AgentSpec[],
   extraGuards = 0,
+  civCount = CIV_COUNT,
 ): SimState {
   const s = baseState(seed, seed ^ 0x77aa11);
   s.mission.type = missionType;
@@ -86,7 +87,7 @@ export function createMission(
     }
   }
 
-  for (let i = 0; i < CIV_COUNT; i++) {
+  for (let i = 0; i < civCount; i++) {
     const cell = s.map.walkable[rand(s, s.map.walkable.length)]!;
     spawnNpc(s, NPC_CIV, cell);
   }
