@@ -6,11 +6,22 @@ import { createPost } from '../render/post';
 import { createRain } from '../render/rain';
 import { createGameScene, objectiveDone, syncScene } from '../render/scene';
 import { fromFx, toFx } from '../sim/fixed';
-import { CommandQueue, type Command } from '../sim/commands';
+import {
+  CommandQueue,
+  GEAR_CHARGE,
+  GEAR_CLOAK,
+  GEAR_DRONE,
+  GEAR_EMP,
+  GEAR_MEDBAY,
+  type Command,
+} from '../sim/commands';
 import { hashState } from '../sim/hash';
 import { Recorder } from '../sim/replay';
 import { createMission } from '../sim/setup';
 import {
+  DEP_TRAP,
+  DEP_TURRET,
+  MISSION_DEFENSE,
   SWARM_FLASHMOB,
   SWARM_FOLLOW,
   SWARM_HOLD,
@@ -18,7 +29,7 @@ import {
   STATUS_WON,
 } from '../sim/state';
 import { influence, step, TICK_MS } from '../sim/tick';
-import { NPC_CIV, ST_DEAD, ST_PERSUADED, type AgentSpec } from '../sim/units';
+import { NPC_CIV, NPC_ENEMY, ST_DEAD, ST_PERSUADED, type AgentSpec } from '../sim/units';
 import { WEAPONS } from '../sim/weapons';
 import { audio } from './audio';
 import { createComms } from './comms';
@@ -35,6 +46,7 @@ export interface MissionResult {
   survivors: boolean[];
   ticks: number;
   finalHash: number;
+  loot: number;
 }
 
 const NPC_CAP = 400;
@@ -81,6 +93,7 @@ export function runMission(
     capturePrev();
 
     let paused = false;
+    let placeMode = missionType === MISSION_DEFENSE;
     let endTimer = -1;
     const raycaster = new Raycaster();
     const groundPlane = new Plane(new Vector3(0, 1, 0), 0);
@@ -126,6 +139,17 @@ export function runMission(
       boxDiv.remove();
       boxDiv = null;
       const moved = Math.abs(e.clientX - downX) + Math.abs(e.clientY - downY) > 8;
+      if (placeMode && !moved) {
+        const g = groundAt(e.clientX, e.clientY);
+        if (g) {
+          const cx = Math.max(0, Math.min(state.map.w - 1, Math.floor(g.x)));
+          const cz = Math.max(0, Math.min(state.map.h - 1, Math.floor(g.z)));
+          const kind = e.shiftKey ? DEP_TRAP : DEP_TURRET;
+          const left = kind === DEP_TURRET ? state.mission.turretBudget : state.mission.trapBudget;
+          if (left > 0) send({ type: 'place', kind, cell: cx + cz * state.map.w });
+        }
+        return;
+      }
       const v = new Vector3();
       const additive = e.shiftKey;
       if (!additive) selected.fill(false);
@@ -223,6 +247,18 @@ export function runMission(
         send({ type: 'swarm', mode: SWARM_HOLD, x: 0, z: 0 });
       } else if (k === 'b') {
         send({ type: 'swarm', mode: SWARM_FLASHMOB, x: toFx(lastGround.x), z: toFx(lastGround.z) });
+      } else if (k === 'v') {
+        const ids = selIds().filter((id) => state.agents[id]!.spec.cloak);
+        if (ids.length > 0) send({ type: 'use', ids, gear: GEAR_CLOAK });
+      } else if (k === 't' || k === 'y' || k === 'u' || k === 'k') {
+        const gear =
+          k === 't' ? GEAR_CHARGE : k === 'y' ? GEAR_MEDBAY : k === 'u' ? GEAR_DRONE : GEAR_EMP;
+        const ids = selIds();
+        if (ids.length > 0) send({ type: 'use', ids, gear });
+      } else if (k === 'p' && missionType === MISSION_DEFENSE) {
+        placeMode = !placeMode && state.mission.turretBudget + state.mission.trapBudget > 0;
+      } else if (k === 'enter' && placeMode) {
+        placeMode = false;
       } else if (k === ' ') {
         e.preventDefault();
         paused = !paused;
@@ -303,8 +339,15 @@ export function runMission(
 
     let prevAlarmLevel = state.alarm.level;
     let prevDone = false;
+    let prevWave = state.mission.wave;
     const prevAlive = state.agents.map((a) => a.alive);
     const pollEvents = () => {
+      if (state.mission.wave !== prevWave) {
+        prevWave = state.mission.wave;
+        comms.push(
+          `Hostile wave ${state.mission.wave} of ${state.mission.wavesTotal} inbound. Insurance has been notified.`,
+        );
+      }
       if (state.alarm.level !== prevAlarmLevel) {
         if (state.alarm.level === 2)
           comms.push('Corporate tactical units en route. This is now a billable incident.');
@@ -477,7 +520,7 @@ export function runMission(
       hudT += dt;
       if (hudT > 200) {
         hudT = 0;
-        renderHud(hud, state, selected, objectiveText, paused);
+        renderHud(hud, state, selected, objectiveText, paused, placeMode);
         pollEvents();
         for (let i = pendingHints.length - 1; i >= 0; i--) {
           if (pendingHints[i]!.when(state)) {
@@ -500,6 +543,7 @@ export function runMission(
           survivors: state.agents.map((a) => a.alive),
           ticks: state.tick,
           finalHash: hashState(state),
+          loot: state.mission.status === STATUS_WON ? state.mission.loot : 0,
         });
       }
     });
@@ -529,6 +573,7 @@ function renderHud(
   selected: boolean[],
   objectiveText: string,
   paused: boolean,
+  placeMode: boolean,
 ): void {
   const inf = influence(state);
   const agents = state.agents
@@ -538,18 +583,40 @@ function renderHud(
       const cls = a.alive ? (selected[i] ? 'agent sel' : 'agent') : 'agent dead';
       const stim = `C${a.stims[0]} F${a.stims[1]} S${a.stims[2]}`;
       const aggro = ['HOLD', 'DEF', 'FREE'][a.aggression] ?? 'FREE';
-      return `<div class="${cls}"><b>A${i + 1}</b> ${a.alive ? a.hp : 'KIA'}<span class="hpbar"><i style="width:${(a.hp / a.maxHp) * 100}%"></i></span><small>${wname} | ${stim} | R${((a.reserve / 10) | 0)} | ${aggro}</small></div>`;
+      const flags = `${a.cloakT > 0 ? ' | CLOAK' : ''}${a.stunT > 0 ? ' | JAMMED' : ''}${a.spec.shieldMax > 0 ? ` | SH${a.shield}` : ''}`;
+      return `<div class="${cls}"><b>A${i + 1}</b> ${a.alive ? a.hp : 'KIA'}<span class="hpbar"><i style="width:${(a.hp / a.maxHp) * 100}%"></i></span><small>${wname} | ${stim} | R${((a.reserve / 10) | 0)} | ${aggro}${flags}</small></div>`;
     })
     .join('');
   let objective = objectiveText;
-  if (state.mission.type === 2) {
-    const left = state.mission.assets.filter((a) => a.alive).length;
+  const m = state.mission;
+  if (m.type === 2) {
+    const left = m.assets.filter((a) => a.alive).length;
     objective += ` (${left} left)`;
-  } else if (state.mission.type === 0) {
+  } else if (m.type === 0) {
     const left = state.npcs.filter((n) => n.missionTarget && n.state !== ST_DEAD).length;
     objective += ` (${left} left)`;
-  } else if (state.mission.vipId >= 0) {
-    const vip = state.npcs[state.mission.vipId];
+  } else if (m.type === 3) {
+    const left = state.npcs.filter(
+      (n) => n.kind === NPC_ENEMY && n.state !== ST_DEAD && n.state !== ST_PERSUADED,
+    ).length;
+    objective += ` (${left} left)`;
+  } else if (m.type === 4) {
+    const relay = m.assets[0];
+    objective += ` | WAVE ${m.wave}/${m.wavesTotal} | RELAY ${relay?.alive ? relay.hp : 0}`;
+    if (placeMode)
+      objective += ` | PLACING: click turret (${m.turretBudget}), shift-click trap (${m.trapBudget}), Enter done`;
+  } else if (m.type === 5) {
+    const stageText =
+      m.stage === 0
+        ? '1/3 cut power'
+        : m.stage === 1
+          ? m.crackT > 0
+            ? `2/3 cracking vault ${Math.min(99, Math.round((m.crackT / 300) * 100))}%`
+            : '2/3 open the vault'
+          : '3/3 exfiltrate';
+    objective += ` | ${stageText}`;
+  } else if (m.vipId >= 0) {
+    const vip = state.npcs[m.vipId];
     objective += vip && vip.state === ST_PERSUADED ? ' (VIP acquired: reach exfil)' : '';
   }
   const status =
@@ -559,7 +626,9 @@ function renderHud(
         : ''
       : state.mission.status === STATUS_WON
         ? 'CONTRACT FULFILLED'
-        : 'SQUAD WRITTEN OFF';
+        : m.type === 4 && m.assets[0] && !m.assets[0].alive
+          ? 'RELAY LOST'
+          : 'SQUAD WRITTEN OFF';
   hud.innerHTML = `
     <div class="hud-top">
       <span class="obj">${objective}</span>
@@ -569,5 +638,5 @@ function renderHud(
       ${status ? `<span class="status">${status}</span>` : ''}
     </div>
     <div class="hud-agents">${agents}</div>
-    <div class="hud-help">LMB select | RMB move/attack | 1-4 squad, 5 all | Z/X/C stims | Tab weapon | R aggression | F persuade | G/H/B swarm | WASD/arrows pan | Q/E rotate | space pause | -/= sim speed</div>`;
+    <div class="hud-help">LMB select | RMB move/attack | 1-4 squad, 5 all | Z/X/C stims | Tab weapon | R aggression | F persuade | G/H/B swarm | V cloak | T charge | Y medbay | U drone | K EMP | WASD/arrows pan | Q/E rotate | space pause | -/= sim speed</div>`;
 }

@@ -22,7 +22,7 @@ function hostileNear(state: SimState, radius: number): boolean {
   return false;
 }
 
-export function hintsFor(m: MetaState, t: Territory): TutorialHint[] {
+export function hintsFor(m: MetaState, t: Territory, missionType = t.missionType): TutorialHint[] {
   const owned = m.territories.filter((x) => x.owned).length;
   const hints: TutorialHint[] = [];
 
@@ -56,7 +56,7 @@ export function hintsFor(m: MetaState, t: Territory): TutorialHint[] {
     );
   }
 
-  if (t.missionType === 1 && owned <= 3) {
+  if (missionType === 1 && owned <= 3) {
     hints.push(
       {
         when: (s) => s.tick >= 40,
@@ -68,6 +68,33 @@ export function hintsFor(m: MetaState, t: Territory): TutorialHint[] {
           return influence(s) >= 8 && vip !== undefined && vip.state !== ST_PERSUADED;
         },
         text: 'Influence quota met. Approach the VIP and press F to finalize the acquisition.',
+      },
+    );
+  }
+
+  if (missionType === 3) {
+    hints.push({
+      when: (s) => s.tick >= 40,
+      text: 'Rival assets carry Persuadertrons of their own. Their pulse jams unaugmented agents at close range.',
+    });
+  }
+
+  if (missionType === 4) {
+    hints.push({
+      when: (s) => s.tick >= 20,
+      text: 'Perimeter budget authorized: click places a turret, shift-click places a trap, Enter locks the layout.',
+    });
+  }
+
+  if (missionType === 5) {
+    hints.push(
+      {
+        when: (s) => s.tick >= 40,
+        text: 'Vault procedure: cut the power relay first. The vault door yields to the technician, or to sustained ordnance.',
+      },
+      {
+        when: (s) => s.mission.stage === 1,
+        text: 'Power is down. Persuade the vault technician (influence 8) and escort them to the vault door.',
       },
     );
   }

@@ -73,6 +73,11 @@ export function createMinimap(state: SimState): Minimap {
         dot((asset.cell % MAP_W) + 0.5, ((asset.cell / MAP_W) | 0) + 0.5, css(SCENE_COLORS.asset), 3);
       }
 
+      for (const d of s.deployables) {
+        if (!d.alive) continue;
+        dot(fromFx(d.x), fromFx(d.z), css(SCENE_COLORS.agent), 1.5);
+      }
+
       const alive = s.agents.filter((a) => a.alive);
       for (const n of s.npcs) {
         if (n.state === ST_DEAD) continue;

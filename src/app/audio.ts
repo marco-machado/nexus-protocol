@@ -155,6 +155,22 @@ function shot(b: Buses, wid: number): void {
   } else if (wid === 2) {
     burst(b, 3200, 0.05, 0.35);
     blip(b, b.sfx, 'square', 1100, 350, 0.05, 0.18);
+  } else if (wid === 4) {
+    burst(b, 2800, 0.04, 0.3);
+    blip(b, b.sfx, 'square', 900, 300, 0.04, 0.15);
+  } else if (wid === 5) {
+    burst(b, 600, 0.3, 0.4);
+  } else if (wid === 6) {
+    burst(b, 6000, 0.14, 0.6);
+    blip(b, b.sfx, 'sawtooth', 2600, 70, 0.2, 0.35);
+  } else if (wid === 7) {
+    burst(b, 500, 0.24, 0.7);
+    blip(b, b.sfx, 'square', 200, 60, 0.2, 0.3);
+  } else if (wid === 8) {
+    blip(b, b.sfx, 'sawtooth', 300, 2200, 0.15, 0.35);
+    burst(b, 4000, 0.1, 0.3);
+  } else if (wid === 9) {
+    blip(b, b.sfx, 'sine', 1200, 200, 0.5, 0.3);
   } else {
     burst(b, 5000, 0.22, 0.65);
     blip(b, b.sfx, 'sawtooth', 2100, 90, 0.25, 0.35);
@@ -165,6 +181,7 @@ let lastState: SimState | null = null;
 let prevShots = [0, 0, 0, 0];
 let prevHits = 0;
 let prevDeaths = 0;
+let prevBooms = 0;
 let prevLevel = 0;
 
 export const audio = {
@@ -211,6 +228,7 @@ export const audio = {
       prevShots = [...state.shotsByWid];
       prevHits = state.fleshHits;
       prevDeaths = state.kills + state.civKills;
+      prevBooms = state.booms;
       prevLevel = -1;
     }
 
@@ -227,6 +245,13 @@ export const audio = {
     let hits = Math.min(IMPACT_CAP, state.fleshHits - prevHits);
     prevHits = state.fleshHits;
     while (hits-- > 0) burst(b, 1200, 0.04, 0.15);
+
+    let booms = Math.min(2, state.booms - prevBooms);
+    prevBooms = state.booms;
+    while (booms-- > 0) {
+      burst(b, 300, 0.5, 0.9);
+      blip(b, b.sfx, 'sine', 120, 30, 0.5, 0.5);
+    }
 
     const deaths = state.kills + state.civKills;
     let d = Math.min(DEATH_CAP, deaths - prevDeaths);
