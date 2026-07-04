@@ -1,10 +1,13 @@
 import { createRenderer } from './render/renderer';
+import { applyPalette } from './render/palette';
 import { Game } from './app/game';
 import { runMission } from './app/missionRunner';
 import { Screens } from './app/screens';
+import { settings } from './app/settings';
 import { defaultSpec } from './sim/units';
 
 async function main(): Promise<void> {
+  applyPalette(settings.palette);
   const canvas = document.getElementById('app') as HTMLCanvasElement;
   const hud = document.getElementById('hud') as HTMLElement;
   const screenEl = document.getElementById('screen') as HTMLElement;
