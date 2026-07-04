@@ -8,6 +8,7 @@ import {
   CylinderGeometry,
   DirectionalLight,
   DynamicDrawUsage,
+  FogExp2,
   InstancedMesh,
   Matrix4,
   Mesh,
@@ -52,13 +53,55 @@ export interface GameScene {
 const dummy = new Object3D();
 const hidden = new Matrix4().makeScale(0, 0, 0);
 
+const NEON_COLORS = [0x00e5ff, 0xff2fd6, 0xff9f1c, 0x7c4dff];
+
+function createNeonStrips(state: SimState): InstancedMesh {
+  // deterministic per territory so a district always wears the same signage
+  let rng = state.mapSeed | 0 || 1;
+  const next = (n: number) => {
+    rng ^= rng << 13;
+    rng ^= rng >>> 17;
+    rng ^= rng << 5;
+    return ((rng >>> 4) % n + n) % n;
+  };
+  const strips = new InstancedMesh(
+    new BoxGeometry(1, 1, 1),
+    new MeshBasicMaterial(),
+    state.map.buildings.length * 2,
+  );
+  const color = new Color();
+  let i = 0;
+  for (const b of state.map.buildings) {
+    for (let e = 0; e < 2; e++) {
+      const alongX = next(2) === 0;
+      const y = b.h * (0.55 + next(40) / 100);
+      if (alongX) {
+        dummy.position.set(b.x + b.w / 2, y, next(2) === 0 ? b.z + 0.02 : b.z + b.d - 0.02);
+        dummy.scale.set(b.w * 0.85, 0.1, 0.06);
+      } else {
+        dummy.position.set(next(2) === 0 ? b.x + 0.02 : b.x + b.w - 0.02, y, b.z + b.d / 2);
+        dummy.scale.set(0.06, 0.1, b.d * 0.85);
+      }
+      dummy.updateMatrix();
+      strips.setMatrixAt(i, dummy.matrix);
+      strips.setColorAt(i, color.set(NEON_COLORS[next(NEON_COLORS.length)]!));
+      i++;
+    }
+  }
+  dummy.scale.set(1, 1, 1);
+  strips.instanceMatrix.needsUpdate = true;
+  if (strips.instanceColor) strips.instanceColor.needsUpdate = true;
+  return strips;
+}
+
 export function createGameScene(state: SimState): GameScene {
   const scene = new Scene();
-  scene.background = new Color(0x0a0d14);
+  scene.background = new Color(0x05070d);
+  scene.fog = new FogExp2(0x05070d, 0.006);
 
   const ground = new Mesh(
     new PlaneGeometry(MAP_W, MAP_W),
-    new MeshLambertMaterial({ color: 0x11151d }),
+    new MeshLambertMaterial({ color: 0x0c1017 }),
   );
   ground.rotation.x = -Math.PI / 2;
   ground.position.set(MAP_W / 2, 0, MAP_W / 2);
@@ -66,7 +109,7 @@ export function createGameScene(state: SimState): GameScene {
 
   const buildings = new InstancedMesh(
     new BoxGeometry(1, 1, 1),
-    new MeshLambertMaterial({ color: 0x2b3a52 }),
+    new MeshLambertMaterial({ color: 0x222f45 }),
     state.map.buildings.length,
   );
   state.map.buildings.forEach((b, i) => {
@@ -78,6 +121,7 @@ export function createGameScene(state: SimState): GameScene {
   });
   buildings.instanceMatrix.needsUpdate = true;
   scene.add(buildings);
+  scene.add(createNeonStrips(state));
 
   const npcMesh = new InstancedMesh(
     new BoxGeometry(0.55, 1.6, 0.55),
@@ -186,10 +230,10 @@ export function createGameScene(state: SimState): GameScene {
     markerMeshes.push(m);
   }
 
-  scene.add(new AmbientLight(0xa8b8dc, 1.6));
-  const sun = new DirectionalLight(0xdfe8ff, 2.2);
-  sun.position.set(40, 70, 25);
-  scene.add(sun);
+  scene.add(new AmbientLight(0x8fa8d8, 0.9));
+  const moon = new DirectionalLight(0xa9c2f0, 1.1);
+  moon.position.set(40, 70, 25);
+  scene.add(moon);
 
   return {
     scene,
