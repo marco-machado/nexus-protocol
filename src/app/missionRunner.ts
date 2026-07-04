@@ -437,7 +437,7 @@ export function runMission(
       rain?.update(dt, rig.cx, rig.cz);
       if (post) post.render();
       else renderer.render(gs.scene, rig.camera);
-      minimap.update(state, rig, false);
+      minimap.update(state, rig, state.agents.some((a) => a.alive && a.spec.scanner));
       updateArrows();
       audio.update(state);
       if (perf) {

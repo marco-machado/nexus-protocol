@@ -23,8 +23,20 @@ const GEAR = {
   persuadertron: { name: 'Persuadertron', price: 500 },
   armor: { name: 'Body Armor', price: 400 },
   medkit: { name: 'Medkit', price: 100 },
+  scanner: { name: 'Scanner', price: 250 },
 };
 const RECRUIT_COST = 800;
+const SLOT_CAP = 8;
+
+function slotsUsed(a: import('./meta').MetaAgent): number {
+  return (
+    a.loadout.length +
+    (a.gear.persuadertron ? 1 : 0) +
+    (a.gear.armor ? 1 : 0) +
+    (a.gear.scanner ? 1 : 0) +
+    (a.gear.medkits > 0 ? 1 : 0)
+  );
+}
 
 export class Screens {
   private el: HTMLElement;
@@ -183,7 +195,10 @@ export class Screens {
         <button data-buygear="armor" ${m.credits < GEAR.armor.price ? 'disabled' : ''}>BUY ${GEAR.armor.price}</button>
         <button data-givegear="armor" ${m.armors <= 0 ? 'disabled' : ''}>EQUIP</button></div>
       <div class="row"><span>Medkit <small>auto-heal</small></span><span></span>
-        <button data-buygear="medkit" ${m.credits < GEAR.medkit.price ? 'disabled' : ''}>BUY ${GEAR.medkit.price} (sel. agent)</button><span></span></div>`;
+        <button data-buygear="medkit" ${m.credits < GEAR.medkit.price ? 'disabled' : ''}>BUY ${GEAR.medkit.price} (sel. agent)</button><span></span></div>
+      <div class="row"><span>Scanner <small>map-wide hostile tracking</small></span><span>x${m.scanners}</span>
+        <button data-buygear="scanner" ${m.credits < GEAR.scanner.price ? 'disabled' : ''}>BUY ${GEAR.scanner.price}</button>
+        <button data-givegear="scanner" ${m.scanners <= 0 ? 'disabled' : ''}>EQUIP</button></div>`;
     const augRows = augsUnlocked(m)
       ? AUG_DEFS.map(
           (d) => `<div class="row"><span>${d.name} <small>${d.desc}</small></span><span></span>
@@ -205,9 +220,9 @@ export class Screens {
           .join('');
         return `<div class="acard ${i === this.selAgent ? 'sel' : ''}" data-agent="${i}">
           <h4>${a.name}</h4>
-          <small>HP ${spec.maxHp} | missions ${a.missions} | kills ${a.kills}</small>
+          <small>HP ${spec.maxHp} | missions ${a.missions} | kills ${a.kills} | SLOTS ${slotsUsed(a)}/${SLOT_CAP}</small>
           <div>${load || '<i>unarmed</i>'}</div>
-          <div class="chips">${a.gear.persuadertron ? '<span class="chip cyan">Persuadertron<b data-dropgear="persuadertron">x</b></span>' : ''}${a.gear.armor ? '<span class="chip">Armor<b data-dropgear="armor">x</b></span>' : ''}<span class="chip">Medkit x${a.gear.medkits}</span></div>
+          <div class="chips">${a.gear.persuadertron ? '<span class="chip cyan">Persuadertron<b data-dropgear="persuadertron">x</b></span>' : ''}${a.gear.armor ? '<span class="chip">Armor<b data-dropgear="armor">x</b></span>' : ''}${a.gear.scanner ? '<span class="chip cyan">Scanner<b data-dropgear="scanner">x</b></span>' : ''}<span class="chip">Medkit x${a.gear.medkits}</span></div>
           <small>${a.augments.map((k) => AUG_DEFS.find((d) => d.key === k)!.name).join(', ') || 'no augments'}</small>
         </div>`;
       })
@@ -247,7 +262,7 @@ export class Screens {
         }
       } else if (d.give !== undefined) {
         const wid = Number(d.give);
-        if ((m.arsenal[wid] ?? 0) > 0 && sel.alive && sel.loadout.length < 8) {
+        if ((m.arsenal[wid] ?? 0) > 0 && sel.alive && slotsUsed(sel) < SLOT_CAP) {
           m.arsenal[wid]!--;
           sel.loadout.push(wid);
           rerender();
@@ -263,20 +278,27 @@ export class Screens {
       } else if (d.buygear !== undefined) {
         const g = d.buygear as keyof typeof GEAR;
         if (m.credits >= GEAR[g].price) {
+          if (g === 'medkit' && (!sel.alive || (sel.gear.medkits === 0 && slotsUsed(sel) >= SLOT_CAP))) return;
           m.credits -= GEAR[g].price;
           if (g === 'persuadertron') m.persuadertrons++;
           else if (g === 'armor') m.armors++;
-          else if (sel.alive) sel.gear.medkits++;
+          else if (g === 'scanner') m.scanners++;
+          else sel.gear.medkits++;
           rerender();
         }
       } else if (d.givegear !== undefined) {
-        if (d.givegear === 'persuadertron' && m.persuadertrons > 0 && sel.alive && !sel.gear.persuadertron) {
+        if (!sel.alive || slotsUsed(sel) >= SLOT_CAP) return;
+        if (d.givegear === 'persuadertron' && m.persuadertrons > 0 && !sel.gear.persuadertron) {
           m.persuadertrons--;
           sel.gear.persuadertron = true;
           rerender();
-        } else if (d.givegear === 'armor' && m.armors > 0 && sel.alive && !sel.gear.armor) {
+        } else if (d.givegear === 'armor' && m.armors > 0 && !sel.gear.armor) {
           m.armors--;
           sel.gear.armor = true;
+          rerender();
+        } else if (d.givegear === 'scanner' && m.scanners > 0 && !sel.gear.scanner) {
+          m.scanners--;
+          sel.gear.scanner = true;
           rerender();
         }
       } else if (d.dropgear !== undefined) {
@@ -287,6 +309,10 @@ export class Screens {
         } else if (d.dropgear === 'armor' && sel.gear.armor) {
           sel.gear.armor = false;
           m.armors++;
+          rerender();
+        } else if (d.dropgear === 'scanner' && sel.gear.scanner) {
+          sel.gear.scanner = false;
+          m.scanners++;
           rerender();
         }
       } else if (d.aug !== undefined) {

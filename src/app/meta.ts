@@ -19,7 +19,7 @@ export interface MetaAgent {
   kills: number;
   missions: number;
   loadout: number[];
-  gear: { persuadertron: boolean; armor: boolean; medkits: number };
+  gear: { persuadertron: boolean; armor: boolean; medkits: number; scanner: boolean };
 }
 
 export interface Territory {
@@ -39,6 +39,7 @@ export interface MetaState {
   arsenal: Record<number, number>;
   persuadertrons: number;
   armors: number;
+  scanners: number;
   researchSplit: number;
   weaponPts: number;
   augPts: number;
@@ -69,6 +70,7 @@ export function newMeta(): MetaState {
     arsenal: { 0: 4, 1: 1 },
     persuadertrons: 1,
     armors: 0,
+    scanners: 0,
     researchSplit: 50,
     weaponPts: 0,
     augPts: 0,
@@ -92,7 +94,7 @@ export function newAgent(i: number): MetaAgent {
     kills: 0,
     missions: 0,
     loadout: [0],
-    gear: { persuadertron: false, armor: false, medkits: 1 },
+    gear: { persuadertron: false, armor: false, medkits: 1, scanner: false },
   };
 }
 
@@ -101,6 +103,7 @@ export function buildSpec(a: MetaAgent): AgentSpec {
   spec.weapons = a.loadout.map((wid): WeaponSlot => ({ wid, ammo: WEAPONS[wid]!.ammoMax }));
   if (spec.weapons.length === 0) spec.weapons = [{ wid: 0, ammo: WEAPONS[0]!.ammoMax }];
   spec.persuadertron = a.gear.persuadertron;
+  spec.scanner = a.gear.scanner === true;
   spec.medkits = a.gear.medkits;
   if (a.gear.armor) spec.maxHp += 60;
   for (const aug of a.augments) {
@@ -207,7 +210,10 @@ export function loadMeta(): MetaState | null {
   try {
     const raw = localStorage.getItem(SAVE_KEY);
     if (!raw) return null;
-    return JSON.parse(raw) as MetaState;
+    const m = JSON.parse(raw) as MetaState;
+    m.scanners ??= 0;
+    for (const a of m.agents) a.gear.scanner ??= false;
+    return m;
   } catch {
     return null;
   }
