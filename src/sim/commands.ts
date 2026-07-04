@@ -37,13 +37,20 @@ export interface CycleCommand {
   ids: number[];
 }
 
+export interface AggroCommand {
+  type: 'aggro';
+  ids: number[];
+  level: number;
+}
+
 export type Command =
   | MoveCommand
   | AttackCommand
   | StimCommand
   | PersuadeCommand
   | SwarmCommand
-  | CycleCommand;
+  | CycleCommand
+  | AggroCommand;
 
 export class CommandQueue {
   private byTick = new Map<number, Command[]>();

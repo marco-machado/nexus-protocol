@@ -10,6 +10,10 @@ export const NPC_POLICE = 1;
 export const NPC_TACTICAL = 2;
 export const NPC_GUARD = 3;
 
+export const AGGRO_HOLD = 0;
+export const AGGRO_DEFENSIVE = 1;
+export const AGGRO_FREE = 2;
+
 export const ST_IDLE = 0;
 export const ST_WALK = 1;
 export const ST_PANIC = 2;
@@ -55,6 +59,7 @@ export interface Agent {
   spec: AgentSpec;
   attackTarget: number;
   persuadeCd: number;
+  aggression: number;
 }
 
 export interface Npc {
@@ -141,6 +146,7 @@ export function createAgent(id: number, x: Fx, z: Fx, spec: AgentSpec): Agent {
     spec,
     attackTarget: -1,
     persuadeCd: 0,
+    aggression: AGGRO_FREE,
   };
 }
 
