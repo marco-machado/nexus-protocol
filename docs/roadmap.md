@@ -2,11 +2,11 @@
 
 Status legend: [DONE] implemented and verified in code, [PARTIAL] implemented with gaps noted, [TODO] not started.
 
-Snapshot as of 2026-07-04, updated after the Phase A implementation pass. Verified against the working tree, a passing `npm test` (determinism replay plus pinned golden hash), and CI on Linux. Sources: `docs/design.md` (GDD), the MVP build plan, and the M0 slice plan. Performance measurements live in `docs/perf.md`.
+Snapshot as of 2026-07-04, updated after the Phase B implementation pass. Verified against the working tree and a passing `npm test` (determinism replays for all six mission types plus pinned golden hash). Sources: `docs/design.md` (GDD), the MVP build plan, and the M0 slice plan. Performance measurements live in `docs/perf.md`.
 
 ## 1. Where the project stands
 
-The MVP vertical slice defined in GDD section 12 is functionally complete: 1 region (5 territories), tier 1-2 gear, Persuadertron, three mission types, single-player. The architecture rule that could not be retrofitted (deterministic fixed-point command-driven sim) is in place and test-enforced. Phase A (hardening plus M7: CI, perf baseline, onboarding, minimap, objective markers, accessibility, audio, night/neon visual pass, balance) is implemented; the only Phase A remainder is the manual perf run on a Windows iGPU laptop. Everything beyond that is full-release scope.
+The MVP vertical slice defined in GDD section 12 is functionally complete, and Phase B (content depth) is now implemented on top of it: all six mission types, the full tier 1-5 weapon and equipment set, and augment V1-V3 per slot, gated behind extended research thresholds. The architecture rule that could not be retrofitted (deterministic fixed-point command-driven sim) is in place and test-enforced. The only Phase A remainder is the manual perf run on a Windows iGPU laptop. Everything beyond that is Phase C+ full-release scope.
 
 ## 2. MVP milestone validation (M0-M7)
 
@@ -89,13 +89,14 @@ Close section 3 plus M7. Exit criterion: a stranger can click a link, learn the 
 - [DONE] Visual pass: night rain look, neon bloom post-processing, both toggleable
 - [DONE] Balance tuning pass across the three mission types (headless probe methodology in section 3.7)
 
-### Phase B — Content depth (gear, augments, missions)
-- Weapon tiers 3-5 and their equipment (Minigun, Flamethrower, Gauss Rifle, Launcher, Plasma Lance, Orbital Tag; Cloak Field, Drone Scout, Energy Shield, Demo Charges, MedBay Beacon, EMP Burst). The projectile/equipment framework exists; each item is data plus at most one new sim behavior (area damage, cloaking, deployables)
-- Augment V2/V3 per slot, including the two flagged specials (Eyes V3 see-through-smoke, Brain V3 Persuadertron immunity)
-- Purge missions (enemy squads using player systems: the agent AI exists, needs a squad-level controller)
-- Defense missions (wave spawning exists in police escalation; add pre-mission turret/trap placement budget)
-- Heist missions (multi-stage objectives: power, persuade, vault, exfil; the objective framework needs sequencing support)
-- Already done: 4 weapons, V1 augments across all six slots, 3 mission types, destructible mission assets, finite ammo and looting
+### Phase B — Content depth (gear, augments, missions) [DONE]
+- [DONE] Weapon tiers 3-5 (Minigun, Flamethrower, Gauss Rifle, Launcher, Plasma Lance, Orbital Tag). New sim behaviors: area damage with falloff (`explodeAt`), delayed orbital strikes (`SimState.blasts`), and LOS-blocking smoke left by explosions (`SimState.smoke`/`smokeGrid`). Also fixed in passing: point-blank shots now resolve as direct contact fire, since projectiles spawn past the muzzle and overshot adjacent targets (this previously stalemated melee-range fights and adjacent asset attacks)
+- [DONE] Equipment tiers 3-5: Cloak Field (V toggles; invisible to NPC targeting, drains the stim reserve, breaks on firing), Drone Scout (U; deployable recon marker), Energy Shield (absorbs 80, recharges out of combat), Demo Charges (T; timed structural blast), MedBay Beacon (Y; deployable heal zone), EMP Burst (K; stuns all NPCs in 8 cells). Deployables live in `SimState.deployables`; equipment unlocks ride the weapons research track
+- [DONE] Augment V2/V3 per slot with per-level research gates (V2 200 pts, V3 380 pts) and both flagged specials: Eyes V3 sees through smoke, Brain V3 grants Persuadertron immunity. Deviations: Legs V3 is +35% speed (no verticality yet for fall immunity) and Torso V3 is +120 HP (no carry-capacity system); revisit if those systems land in Phase C/D
+- [DONE] Purge missions (SECTOR 02): two rival squads of `NPC_ENEMY` agents with a leader/follower squad controller, tiered loadouts by difficulty, and enemy Persuadertron pulses that jam non-immune agents and strip persuaded followers
+- [DONE] Defense missions: offered on owned territories at unrest >= 60; turret/trap placement budget spent in-mission via `place` commands (click/shift-click, Enter to lock), escalating waves (police, tactical, enemy agents) that demolish the relay at close range; winning suppresses unrest, losing flips the territory
+- [DONE] Heist missions (SECTOR 05): staged power relay, vault technician persuasion, vault crack (technician near the door with power down, or 600 HP of ordnance as the loud route), then exfil; vault loot pays out in the debrief
+- Balance verified by headless bot probes (3 seeds per new type): purge and heist probe 3/3 winnable, defense 2/3 with the loss a genuine squad wipe. `GOLDEN_FINAL_HASH` re-pinned; determinism replay tests now cover all three new mission types plus cloak/charge/EMP/placement commands
 
 ### Phase C — World and campaign
 - 40 territories across 8 regions; territory data model already supports ownership, tax, unrest, seed

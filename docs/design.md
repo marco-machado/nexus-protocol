@@ -116,6 +116,9 @@ Agents earn **Service Records** (kills, missions, persuasions) and procedurally 
 | Tab | Cycle weapons |
 | F | Persuadertron pulse |
 | G/H/B | Swarm orders: Follow / Hold Position / Flashmob |
+| V | Cloak Field toggle (selected agents) |
+| T / Y / U / K | Deploy Demo Charge / MedBay Beacon / Drone Scout / EMP Burst |
+| Click / Shift+click | Defense placement phase: place turret / trap (Enter locks in) |
 | WASD / arrows | Pan camera |
 | Q/E | Rotate camera in 45° steps |
 | Scroll | Zoom |
