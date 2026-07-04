@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Nexus Protocol</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        overflow: hidden;
+        background: #0a0d14;
+        font-family: 'Menlo', 'Consolas', monospace;
+        user-select: none;
+      }
+      #app {
+        display: block;
+        width: 100%;
+        height: 100%;
+      }
+      #hud {
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        color: #b9c4d6;
+        font-size: 12px;
+      }
+      .hud-top {
+        position: absolute;
+        top: 10px;
+        left: 12px;
+        right: 12px;
+        display: flex;
+        gap: 18px;
+        align-items: center;
+      }
+      .obj {
+        color: #e8eef8;
+        background: rgba(10, 16, 26, 0.75);
+        padding: 5px 10px;
+        border-left: 3px solid #00e5ff;
+      }
+      .alarm {
+        padding: 4px 8px;
+        background: rgba(10, 16, 26, 0.75);
+      }
+      .alarm.a0 { color: #38d47a; }
+      .alarm.a1 { color: #e8b23a; }
+      .alarm.a2 { color: #ef4444; }
+      .inf { color: #22d3ee; background: rgba(10, 16, 26, 0.75); padding: 4px 8px; }
+      .status {
+        color: #facc15;
+        font-size: 16px;
+        font-weight: bold;
+        background: rgba(10, 16, 26, 0.9);
+        padding: 6px 14px;
+      }
+      .hud-agents {
+        position: absolute;
+        left: 12px;
+        bottom: 34px;
+        display: flex;
+        gap: 8px;
+      }
+      .agent {
+        background: rgba(10, 16, 26, 0.8);
+        border: 1px solid #24354d;
+        padding: 6px 8px;
+        min-width: 130px;
+      }
+      .agent.sel { border-color: #00e5ff; }
+      .agent.dead { opacity: 0.45; }
+      .agent small { display: block; color: #7d8aa0; margin-top: 2px; }
+      .hpbar {
+        display: block;
+        height: 3px;
+        background: #26303f;
+        margin-top: 3px;
+      }
+      .hpbar i {
+        display: block;
+        height: 3px;
+        background: #38d47a;
+      }
+      .hud-help {
+        position: absolute;
+        bottom: 8px;
+        left: 12px;
+        color: #55627a;
+        font-size: 10px;
+      }
+      .selbox {
+        position: fixed;
+        border: 1px solid #00e5ff;
+        background: rgba(0, 229, 255, 0.08);
+        pointer-events: none;
+        z-index: 10;
+      }
+      #screen {
+        position: fixed;
+        inset: 0;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        background: rgba(6, 9, 14, 0.94);
+        color: #c7d2e4;
+        z-index: 20;
+        overflow: auto;
+      }
+      .panel {
+        max-width: 860px;
+        width: 92%;
+        max-height: 92vh;
+        overflow: auto;
+        background: #0c111b;
+        border: 1px solid #24354d;
+        border-top: 3px solid #00e5ff;
+        padding: 22px 28px;
+      }
+      .panel h1 {
+        font-size: 40px;
+        letter-spacing: 6px;
+        color: #e8eef8;
+        margin: 0 0 4px;
+      }
+      .panel h1 span { color: #00e5ff; margin-left: 10px; }
+      .panel h2 { color: #e8eef8; letter-spacing: 2px; margin: 0; }
+      .panel h3 { color: #7d8aa0; font-size: 12px; letter-spacing: 2px; margin: 14px 0 6px; }
+      .panel .tag { color: #7d8aa0; }
+      .panel .fine { color: #45526b; font-size: 10px; margin-top: 24px; }
+      .panel button {
+        display: inline-block;
+        background: #14202f;
+        color: #c7d2e4;
+        border: 1px solid #2c4058;
+        font: inherit;
+        padding: 8px 16px;
+        margin: 6px 6px 0 0;
+        cursor: pointer;
+      }
+      .panel button:hover:not(:disabled) { border-color: #00e5ff; color: #fff; }
+      .panel button:disabled { opacity: 0.35; cursor: default; }
+      .panel button.primary { background: #063c46; border-color: #00e5ff; color: #aff6ff; }
+      .menu { text-align: center; }
+      .menu button { display: block; margin: 10px auto 0; min-width: 260px; }
+      .topbar { display: flex; gap: 18px; align-items: center; margin-bottom: 12px; }
+      .credits { color: #facc15; font-weight: bold; }
+      .terrgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+      .terr { border: 1px solid #24354d; padding: 10px 12px; font-size: 12px; }
+      .terr.owned { border-left: 3px solid #38d47a; }
+      .terr h3 { margin: 0 0 6px; color: #c7d2e4; font-size: 12px; }
+      .own { color: #38d47a; }
+      .riv { color: #ef4444; }
+      .unrest.hot { color: #ef4444; }
+      .taxrow { display: flex; align-items: center; gap: 8px; margin: 4px 0; }
+      .taxrow input { flex: 1; }
+      .research { border: 1px solid #24354d; padding: 10px 12px; margin-top: 12px; font-size: 12px; }
+      .research progress { width: 180px; height: 8px; }
+      .loglines { color: #5f86b0; font-size: 11px; margin-top: 12px; line-height: 1.7; }
+      .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+      .col { font-size: 12px; }
+      .acard { border: 1px solid #24354d; padding: 8px 10px; margin-bottom: 8px; cursor: pointer; }
+      .acard.sel { border-color: #00e5ff; }
+      .acard.dead { opacity: 0.6; }
+      .acard h4 { margin: 0 0 4px; color: #e8eef8; }
+      .acard small { color: #7d8aa0; display: block; margin: 2px 0; }
+      .chip {
+        display: inline-block;
+        background: #14202f;
+        border: 1px solid #2c4058;
+        padding: 2px 6px;
+        margin: 2px 4px 2px 0;
+        font-size: 11px;
+      }
+      .chip.cyan { border-color: #0e7490; color: #22d3ee; }
+      .chip b { color: #ef4444; margin-left: 6px; cursor: pointer; }
+      .row { display: grid; grid-template-columns: 1fr auto auto auto; gap: 8px; align-items: center; padding: 3px 0; }
+      .row small { color: #7d8aa0; }
+      .row i { color: #45526b; font-size: 11px; }
+      .btnrow { margin-top: 16px; display: flex; justify-content: space-between; }
+      .debrief .good { color: #38d47a; }
+      .debrief .bad { color: #ef4444; }
+    </style>
+  </head>
+  <body>
+    <canvas id="app"></canvas>
+    <div id="hud"></div>
+    <div id="screen"></div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
