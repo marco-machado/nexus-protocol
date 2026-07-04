@@ -1,7 +1,8 @@
 import { Plane, Raycaster, Vector2, Vector3 } from 'three';
 import type { WebGPURenderer } from 'three/webgpu';
 import { createRig, updateRig } from '../render/camera';
-import { createGameScene, syncScene } from '../render/scene';
+import { SCENE_COLORS } from '../render/palette';
+import { createGameScene, objectiveDone, syncScene } from '../render/scene';
 import { fromFx, toFx } from '../sim/fixed';
 import { CommandQueue, type Command } from '../sim/commands';
 import { hashState } from '../sim/hash';
@@ -251,10 +252,78 @@ export function runMission(
       hud.innerHTML = '';
       perf?.dispose();
       minimap.dispose();
+      arrowLayer.remove();
     };
 
     const perf = opts.perf ? createPerfOverlay() : null;
     const minimap = createMinimap(state);
+
+    const arrowLayer = document.createElement('div');
+    document.body.appendChild(arrowLayer);
+    const arrows = new Map<string, HTMLDivElement>();
+    const arrowV = new Vector3();
+    const placeArrow = (key: string, x: number, z: number, colorHex: string) => {
+      let el = arrows.get(key);
+      if (!el) {
+        el = document.createElement('div');
+        el.className = 'offarrow';
+        arrowLayer.appendChild(el);
+        arrows.set(key, el);
+      }
+      arrowV.set(x, 1, z).project(rig.camera);
+      if (Math.abs(arrowV.x) < 0.92 && Math.abs(arrowV.y) < 0.92) {
+        el.style.display = 'none';
+        return;
+      }
+      const m = Math.max(Math.abs(arrowV.x), Math.abs(arrowV.y));
+      const ex = arrowV.x / m;
+      const ey = arrowV.y / m;
+      const sx = (ex * 0.92 * 0.5 + 0.5) * window.innerWidth;
+      const sy = (-ey * 0.92 * 0.5 + 0.5) * window.innerHeight;
+      const angle = Math.atan2(-ey, ex);
+      el.style.display = 'block';
+      el.style.left = `${sx - 8}px`;
+      el.style.top = `${sy - 8}px`;
+      el.style.borderLeftColor = colorHex;
+      el.style.transform = `rotate(${angle}rad)`;
+    };
+    const hideArrow = (key: string) => {
+      const el = arrows.get(key);
+      if (el) el.style.display = 'none';
+    };
+    const updateArrows = () => {
+      const done = objectiveDone(state);
+      for (const n of state.npcs) {
+        if (!n.missionTarget && !n.vip) continue;
+        const key = `n${n.id}`;
+        if (n.state === ST_DEAD || (n.vip && n.state === ST_PERSUADED)) hideArrow(key);
+        else
+          placeArrow(
+            key,
+            fromFx(n.x),
+            fromFx(n.z),
+            `#${(n.vip ? SCENE_COLORS.vip : SCENE_COLORS.target).getHexString()}`,
+          );
+      }
+      state.mission.assets.forEach((asset, i) => {
+        if (asset.alive)
+          placeArrow(
+            `a${i}`,
+            (asset.cell % state.map.w) + 0.5,
+            ((asset.cell / state.map.w) | 0) + 0.5,
+            `#${SCENE_COLORS.asset.getHexString()}`,
+          );
+        else hideArrow(`a${i}`);
+      });
+      if (done && state.mission.status === STATUS_ACTIVE)
+        placeArrow(
+          'exfil',
+          fromFx(state.mission.exfilX),
+          fromFx(state.mission.exfilZ),
+          `#${SCENE_COLORS.exfil.getHexString()}`,
+        );
+      else hideArrow('exfil');
+    };
     let nextDriveTick = 40;
     const driveStress = () => {
       for (const a of state.agents) {
@@ -328,6 +397,7 @@ export function runMission(
       syncScene(gs, state, prevAX, prevAZ, prevNX, prevNZ, Math.min(1, acc / TICK_MS), selected);
       renderer.render(gs.scene, rig.camera);
       minimap.update(state, rig, false);
+      updateArrows();
       if (perf) {
         let npcAlive = 0;
         for (const n of state.npcs) if (n.state !== ST_DEAD) npcAlive++;
