@@ -2,7 +2,10 @@ import { cellIdx, MAP_H, MAP_W } from './map';
 import { nearestWalkable } from './path';
 import {
   baseState,
+  MISSION_DEFENSE,
+  MISSION_HEIST,
   MISSION_PERSUADE,
+  MISSION_PURGE,
   MISSION_RAID,
   rand,
   type SimState,
@@ -13,6 +16,7 @@ import {
   defaultSpec,
   npcHp,
   NPC_CIV,
+  NPC_ENEMY,
   NPC_GUARD,
   type AgentSpec,
 } from './units';
@@ -48,8 +52,17 @@ export function createMission(
   const ax = anchor % MAP_W;
   const az = (anchor / MAP_W) | 0;
 
-  const guardCount =
-    (missionType === MISSION_PERSUADE ? 6 : missionType === MISSION_RAID ? 5 : 5) + extraGuards;
+  const baseGuards =
+    missionType === MISSION_PERSUADE
+      ? 6
+      : missionType === MISSION_HEIST
+        ? 7
+        : missionType === MISSION_PURGE
+          ? 3
+          : missionType === MISSION_DEFENSE
+            ? 0
+            : 5;
+  const guardCount = baseGuards === 0 ? 0 : baseGuards + extraGuards;
   for (let g = 0; g < guardCount; g++) {
     const gx = Math.max(0, Math.min(MAP_W - 1, ax + rand(s, 11) - 5));
     const gz = Math.max(0, Math.min(MAP_H - 1, az + rand(s, 11) - 5));
@@ -72,6 +85,54 @@ export function createMission(
       s.mission.assets.push({ cell, hp: 120, alive: true });
       placed++;
     }
+  } else if (missionType === MISSION_PURGE) {
+    const squadSize = 3;
+    for (let sq = 0; sq < 2; sq++) {
+      const sqx = Math.max(2, Math.min(MAP_W - 3, ax + (sq === 0 ? -12 : 12) + rand(s, 7) - 3));
+      const sqz = Math.max(2, Math.min(MAP_H - 3, az + rand(s, 9) - 4));
+      for (let e = 0; e < squadSize; e++) {
+        const cell = nearestWalkable(
+          s.map,
+          cellIdx(
+            Math.max(0, Math.min(MAP_W - 1, sqx + rand(s, 5) - 2)),
+            Math.max(0, Math.min(MAP_H - 1, sqz + rand(s, 5) - 2)),
+          ),
+        );
+        const enemy = spawnNpc(s, NPC_ENEMY, cell);
+        enemy.squad = sq;
+        enemy.missionTarget = true;
+        enemy.wid = e === 0 ? 3 : extraGuards >= 2 ? 4 : 2;
+      }
+    }
+  } else if (missionType === MISSION_DEFENSE) {
+    const cx = Math.max(1, Math.min(MAP_W - 2, ax));
+    const cz = Math.max(1, Math.min(MAP_H - 2, az + 20));
+    let cell = cellIdx(cx, cz);
+    if (s.map.obstacle[cell]) cell = nearestWalkable(s.map, cell);
+    s.map.obstacle[cell] = 1;
+    s.mission.assets.push({ cell, hp: 500, alive: true });
+    s.mission.wavesTotal = 4 + Math.min(2, extraGuards);
+    s.mission.waveT = 500;
+    s.mission.turretBudget = 3;
+    s.mission.trapBudget = 4;
+  } else if (missionType === MISSION_HEIST) {
+    const px = Math.max(1, Math.min(MAP_W - 2, ax + rand(s, 17) - 8 + (rand(s, 2) === 0 ? -10 : 10)));
+    const pz = Math.max(1, Math.min(MAP_H - 2, az + rand(s, 13) - 6));
+    let powerCell = cellIdx(px, pz);
+    if (s.map.obstacle[powerCell]) powerCell = nearestWalkable(s.map, powerCell);
+    s.map.obstacle[powerCell] = 1;
+    s.mission.assets.push({ cell: powerCell, hp: 150, alive: true });
+
+    let vaultCell = cellIdx(Math.max(1, Math.min(MAP_W - 2, ax)), Math.max(1, Math.min(MAP_H - 2, az)));
+    if (s.map.obstacle[vaultCell] || vaultCell === powerCell) vaultCell = nearestWalkable(s.map, vaultCell);
+    s.map.obstacle[vaultCell] = 1;
+    s.mission.assets.push({ cell: vaultCell, hp: 600, alive: true });
+
+    const tech = spawnNpc(s, NPC_CIV, nearestWalkable(s.map, cellIdx(ax + 2, az + 2)));
+    tech.vip = true;
+    tech.hp = 40;
+    s.mission.vipId = tech.id;
+    s.mission.loot = 2500 + 500 * extraGuards;
   } else {
     for (let t = 0; t < 2; t++) {
       const cell = nearestWalkable(

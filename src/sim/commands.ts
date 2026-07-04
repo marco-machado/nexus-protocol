@@ -43,6 +43,24 @@ export interface AggroCommand {
   level: number;
 }
 
+export const GEAR_CLOAK = 0;
+export const GEAR_CHARGE = 1;
+export const GEAR_MEDBAY = 2;
+export const GEAR_DRONE = 3;
+export const GEAR_EMP = 4;
+
+export interface UseCommand {
+  type: 'use';
+  ids: number[];
+  gear: number;
+}
+
+export interface PlaceCommand {
+  type: 'place';
+  kind: number;
+  cell: number;
+}
+
 export type Command =
   | MoveCommand
   | AttackCommand
@@ -50,7 +68,9 @@ export type Command =
   | PersuadeCommand
   | SwarmCommand
   | CycleCommand
-  | AggroCommand;
+  | AggroCommand
+  | UseCommand
+  | PlaceCommand;
 
 export class CommandQueue {
   private byTick = new Map<number, Command[]>();

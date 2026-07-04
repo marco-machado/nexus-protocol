@@ -9,6 +9,7 @@ export const NPC_CIV = 0;
 export const NPC_POLICE = 1;
 export const NPC_TACTICAL = 2;
 export const NPC_GUARD = 3;
+export const NPC_ENEMY = 4;
 
 export const AGGRO_HOLD = 0;
 export const AGGRO_DEFENSIVE = 1;
@@ -36,6 +37,14 @@ export interface AgentSpec {
   medkits: number;
   persuadertron: boolean;
   scanner: boolean;
+  cloak: boolean;
+  shieldMax: number;
+  charges: number;
+  drones: number;
+  medbays: number;
+  emps: number;
+  smokeVision: boolean;
+  persuadeImmune: boolean;
   weapons: WeaponSlot[];
 }
 
@@ -60,6 +69,10 @@ export interface Agent {
   attackTarget: number;
   persuadeCd: number;
   aggression: number;
+  cloakT: number;
+  shield: number;
+  shieldT: number;
+  stunT: number;
 }
 
 export interface Npc {
@@ -81,6 +94,10 @@ export interface Npc {
   missionTarget: boolean;
   looted: boolean;
   followAgent: number;
+  stunT: number;
+  squad: number;
+  pulseT: number;
+  raider: boolean;
 }
 
 export interface Projectile {
@@ -91,22 +108,32 @@ export interface Projectile {
   dmg: number;
   ttl: number;
   fromAgent: boolean;
+  aoe: number;
 }
 
 export const AGENT_SPEED = toFx(5 / 20);
 export const CIV_SPEED = toFx(1.8 / 20);
 export const PANIC_SPEED = toFx(3.6 / 20);
 export const POLICE_SPEED = toFx(4 / 20);
+export const ENEMY_SPEED = toFx(4.5 / 20);
 export const RESERVE_MAX = 1000;
 
 export function npcHp(kind: number): number {
-  return kind === NPC_CIV ? 30 : kind === NPC_POLICE ? 55 : kind === NPC_TACTICAL ? 90 : 85;
+  return kind === NPC_CIV
+    ? 30
+    : kind === NPC_POLICE
+      ? 55
+      : kind === NPC_TACTICAL
+        ? 90
+        : kind === NPC_ENEMY
+          ? 120
+          : 85;
 }
 
 export function npcSpeed(n: Npc): Fx {
   if (n.state === ST_PANIC) return PANIC_SPEED;
   if (n.kind === NPC_CIV) return n.state === ST_PERSUADED ? toFx(3.4 / 20) : CIV_SPEED;
-  return POLICE_SPEED;
+  return n.kind === NPC_ENEMY ? ENEMY_SPEED : POLICE_SPEED;
 }
 
 export function defaultSpec(): AgentSpec {
@@ -121,6 +148,14 @@ export function defaultSpec(): AgentSpec {
     medkits: 1,
     persuadertron: false,
     scanner: false,
+    cloak: false,
+    shieldMax: 0,
+    charges: 0,
+    drones: 0,
+    medbays: 0,
+    emps: 0,
+    smokeVision: false,
+    persuadeImmune: false,
     weapons: [{ wid: 0, ammo: 60 }],
   };
 }
@@ -147,6 +182,10 @@ export function createAgent(id: number, x: Fx, z: Fx, spec: AgentSpec): Agent {
     attackTarget: -1,
     persuadeCd: 0,
     aggression: AGGRO_FREE,
+    cloakT: 0,
+    shield: spec.shieldMax,
+    shieldT: 0,
+    stunT: 0,
   };
 }
 
@@ -163,6 +202,10 @@ export function createNpc(id: number, kind: number, cell: number, mapW: number):
     path: [],
     pathI: 0,
     wid: kind === NPC_CIV ? -1 : kind === NPC_POLICE ? 0 : 2,
+    stunT: 0,
+    squad: -1,
+    pulseT: 0,
+    raider: false,
     ammo: 999,
     cooldown: 0,
     panicT: 0,
