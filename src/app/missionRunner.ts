@@ -295,7 +295,7 @@ export function runMission(
 
     const perf = opts.perf ? createPerfOverlay() : null;
     const post = settings.postFx ? createPost(renderer, gs.scene, rig.camera) : null;
-    const rain = settings.rain ? createRain() : null;
+    const rain = settings.rain ? createRain(rig.cx, rig.cz) : null;
     if (rain) gs.scene.add(rain.mesh);
     const minimap = createMinimap(state);
     const comms = createComms();

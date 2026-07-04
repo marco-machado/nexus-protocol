@@ -74,8 +74,8 @@ export const PALETTES: Record<PaletteName, PaletteDef> = {
       agent: 0x00e5ff,
       select: 0xf0e442,
       exfil: 0x56b4e9,
-      asset: 0xd55e00,
-      target: 0xd55e00,
+      asset: 0xe69f00,
+      target: 0x009e73,
     },
   },
   contrast: {

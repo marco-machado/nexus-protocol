@@ -119,13 +119,14 @@ export class Screens {
       const key = t.dataset.set;
       if (key === 'simSpeed' || key === 'masterVol' || key === 'musicVol' || key === 'sfxVol') {
         settings[key] = Number(t.value) / 100;
+        const label = t.nextElementSibling;
+        if (label) label.textContent = pct(settings[key]);
       } else if (key === 'postFx' || key === 'rain') {
         settings[key] = t.checked;
       } else {
         return;
       }
       saveSettings();
-      this.settings(onBack);
     };
   }
 

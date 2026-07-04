@@ -23,7 +23,8 @@ async function main(): Promise<void> {
 
   const params = new URLSearchParams(location.search);
   if (params.has('perf')) {
-    const civCount = Number(params.get('npcs') ?? '170');
+    const parsed = Number(params.get('npcs') ?? '170');
+    const civCount = Number.isFinite(parsed) ? parsed : 170;
     const specs = Array.from({ length: 4 }, () => {
       const spec = defaultSpec();
       spec.maxHp = 100000;
