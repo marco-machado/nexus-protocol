@@ -209,9 +209,12 @@ export class Screens {
       })
       .join('');
 
+    const needsPersuadertron =
+      t.missionType === 1 && !m.agents.some((a) => a.alive && a.gear.persuadertron);
     this.el.innerHTML = `
       <div class="panel equip">
         <div class="topbar"><h2>SQUAD PROVISIONING - ${t.name}</h2><span class="credits">${m.credits}cr</span></div>
+        ${needsPersuadertron ? '<div class="loglines">&gt; COMPANY ISSUE: this contract requires a Persuadertron. Equip one before launch.</div>' : ''}
         <div class="cols">
           <div class="col"><h3>SQUAD (click to select)</h3>${agents}</div>
           <div class="col"><h3>ARMORY</h3>${wpnRows}<h3>EQUIPMENT</h3>${gearRows}<h3>AUGMENTATION</h3>${augRows}</div>

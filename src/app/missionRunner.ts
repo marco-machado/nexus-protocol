@@ -18,9 +18,11 @@ import {
 import { influence, step, TICK_MS } from '../sim/tick';
 import { NPC_CIV, ST_DEAD, ST_PERSUADED, type AgentSpec } from '../sim/units';
 import { WEAPONS } from '../sim/weapons';
+import { createComms } from './comms';
 import { createMinimap } from './minimap';
 import { createPerfOverlay } from './perfOverlay';
 import { saveSettings, settings } from './settings';
+import type { TutorialHint } from './tutorial';
 
 export interface MissionResult {
   won: boolean;
@@ -37,6 +39,7 @@ const NPC_CAP = 400;
 export interface MissionOptions {
   civCount?: number;
   perf?: boolean;
+  hints?: TutorialHint[];
 }
 
 export function runMission(
@@ -252,11 +255,14 @@ export function runMission(
       hud.innerHTML = '';
       perf?.dispose();
       minimap.dispose();
+      comms.dispose();
       arrowLayer.remove();
     };
 
     const perf = opts.perf ? createPerfOverlay() : null;
     const minimap = createMinimap(state);
+    const comms = createComms();
+    const pendingHints = [...(opts.hints ?? [])];
 
     const arrowLayer = document.createElement('div');
     document.body.appendChild(arrowLayer);
@@ -408,6 +414,12 @@ export function runMission(
       if (hudT > 200) {
         hudT = 0;
         renderHud(hud, state, selected, objectiveText, paused);
+        for (let i = pendingHints.length - 1; i >= 0; i--) {
+          if (pendingHints[i]!.when(state)) {
+            comms.push(pendingHints[i]!.text);
+            pendingHints.splice(i, 1);
+          }
+        }
       }
 
       if (state.mission.status !== STATUS_ACTIVE && endTimer < 0) {

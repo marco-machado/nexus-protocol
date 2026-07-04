@@ -11,6 +11,7 @@ import {
   type Territory,
 } from './meta';
 import { Screens } from './screens';
+import { hintsFor } from './tutorial';
 
 const OBJECTIVES = [
   'Eliminate marked targets, then exfiltrate',
@@ -68,6 +69,7 @@ export class Game {
       this.hud,
       OBJECTIVES[t.missionType] ?? 'Contract',
       Math.min(4, difficulty),
+      { hints: hintsFor(this.meta, t) },
     );
     const aliveIdx = this.meta.agents.map((a, i) => (a.alive ? i : -1)).filter((i) => i >= 0);
     const survivors = this.meta.agents.map(() => true);
