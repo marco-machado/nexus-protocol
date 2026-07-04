@@ -254,6 +254,12 @@ function applyCommand(s: SimState, c: Command): void {
         }
       }
       break;
+    case 'aggro':
+      for (const id of c.ids) {
+        const a = s.agents[id];
+        if (a && a.alive) a.aggression = Math.max(0, Math.min(2, c.level | 0));
+      }
+      break;
   }
 }
 
@@ -312,8 +318,8 @@ function updateAgent(s: SimState, a: Agent, noises: Noise[]): void {
       a.attackTarget = -1;
     }
   }
-  if (tx === null) {
-    let best: Fx = rangeFx;
+  if (tx === null && a.aggression > 0) {
+    let best: Fx = a.aggression === 1 ? rangeFx >> 1 : rangeFx;
     for (const n of s.npcs) {
       if (!hostileToPlayer(n)) continue;
       const d = distFx(a.x, a.z, n.x, n.z);
@@ -324,7 +330,7 @@ function updateAgent(s: SimState, a: Agent, noises: Noise[]): void {
       }
     }
   }
-  if (tx === null && s.mission.type === MISSION_RAID) {
+  if (tx === null && a.aggression > 0 && s.mission.type === MISSION_RAID) {
     for (const asset of s.mission.assets) {
       if (!asset.alive) continue;
       const [ax, az] = centerFx(asset.cell);

@@ -195,6 +195,12 @@ export function runMission(
         e.preventDefault();
         const ids = selIds();
         if (ids.length > 0) send({ type: 'cycle', ids });
+      } else if (k === 'r') {
+        const ids = selIds();
+        if (ids.length > 0) {
+          const cur = state.agents[ids[0]!]!.aggression;
+          send({ type: 'aggro', ids, level: (cur + 2) % 3 });
+        }
       } else if (k === 'f') {
         const ids = selIds();
         const withDevice = ids.find((id) => state.agents[id]!.spec.persuadertron);
@@ -509,7 +515,8 @@ function renderHud(
       const wname = w ? `${WEAPONS[w.wid]!.name} ${w.ammo}` : 'unarmed';
       const cls = a.alive ? (selected[i] ? 'agent sel' : 'agent') : 'agent dead';
       const stim = `C${a.stims[0]} F${a.stims[1]} S${a.stims[2]}`;
-      return `<div class="${cls}"><b>A${i + 1}</b> ${a.alive ? a.hp : 'KIA'}<span class="hpbar"><i style="width:${(a.hp / a.maxHp) * 100}%"></i></span><small>${wname} | ${stim} | R${((a.reserve / 10) | 0)}</small></div>`;
+      const aggro = ['HOLD', 'DEF', 'FREE'][a.aggression] ?? 'FREE';
+      return `<div class="${cls}"><b>A${i + 1}</b> ${a.alive ? a.hp : 'KIA'}<span class="hpbar"><i style="width:${(a.hp / a.maxHp) * 100}%"></i></span><small>${wname} | ${stim} | R${((a.reserve / 10) | 0)} | ${aggro}</small></div>`;
     })
     .join('');
   let objective = objectiveText;
@@ -540,5 +547,5 @@ function renderHud(
       ${status ? `<span class="status">${status}</span>` : ''}
     </div>
     <div class="hud-agents">${agents}</div>
-    <div class="hud-help">LMB select | RMB move/attack | 1-4 squad | Q/W/E stims | Tab weapon | F persuade | G/H/B swarm | [ ] rotate | arrows pan | space pause | -/= sim speed</div>`;
+    <div class="hud-help">LMB select | RMB move/attack | 1-4 squad | Q/W/E stims | Tab weapon | R aggression | F persuade | G/H/B swarm | [ ] rotate | arrows pan | space pause | -/= sim speed</div>`;
 }
