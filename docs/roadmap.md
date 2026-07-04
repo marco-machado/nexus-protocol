@@ -34,7 +34,7 @@ Acceptance criterion met: `tests/determinism.test.ts` replays a scripted command
 - 4 weapons across tiers 1-2 with finite ammo (`src/sim/weapons.ts`: Pistol, Shotgun, SMG, Long Rifle)
 - Projectile sim with physical blocking: walls and crowds soak bullets, friendly fire always on
 - Health, death, corpse looting, auto-medkits
-- Three stim sliders (Combat/Focus/Surge on Q/W/E) drawing on a shared reserve, Surge health drain
+- Three stim sliders (Combat/Focus/Surge on Z/X/C) drawing on a shared reserve, Surge health drain
 - Alarm state with two police tiers and a finite response budget per mission
 - Tactical pause (space)
 
