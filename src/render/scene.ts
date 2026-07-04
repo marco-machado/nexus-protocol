@@ -21,8 +21,17 @@ import {
 } from 'three';
 import { fromFx } from '../sim/fixed';
 import { MAP_W } from '../sim/map';
-import type { SimState } from '../sim/state';
 import {
+  DEP_CHARGE,
+  DEP_MEDBAY,
+  DEP_TRAP,
+  DEP_TURRET,
+  MISSION_DEFENSE,
+  MISSION_PURGE,
+  type SimState,
+} from '../sim/state';
+import {
+  NPC_ENEMY,
   NPC_GUARD,
   NPC_POLICE,
   NPC_TACTICAL,
@@ -35,11 +44,15 @@ import { SCENE_COLORS } from './palette';
 
 const NPC_CAP = 400;
 const PROJ_CAP = 512;
+const DEP_CAP = 24;
+const SMOKE_CAP = 96;
 
 export interface GameScene {
   scene: Scene;
   npcMesh: InstancedMesh;
   projMesh: InstancedMesh;
+  depMesh: InstancedMesh;
+  smokeMesh: InstancedMesh;
   agentMeshes: Mesh[];
   ringMeshes: Mesh[];
   assetMeshes: Mesh[];
@@ -141,12 +154,30 @@ export function createGameScene(state: SimState): GameScene {
   projMesh.count = 0;
   scene.add(projMesh);
 
+  const depMesh = new InstancedMesh(
+    new BoxGeometry(0.6, 1, 0.6),
+    new MeshLambertMaterial(),
+    DEP_CAP,
+  );
+  depMesh.instanceMatrix.setUsage(DynamicDrawUsage);
+  depMesh.count = 0;
+  scene.add(depMesh);
+
+  const smokeMesh = new InstancedMesh(
+    new BoxGeometry(1, 1.6, 1),
+    new MeshLambertMaterial({ color: 0x3a4250, transparent: true, opacity: 0.45, depthWrite: false }),
+    SMOKE_CAP,
+  );
+  smokeMesh.instanceMatrix.setUsage(DynamicDrawUsage);
+  smokeMesh.count = 0;
+  scene.add(smokeMesh);
+
   const agentMeshes: Mesh[] = [];
   const ringMeshes: Mesh[] = [];
   for (let i = 0; i < state.agents.length; i++) {
     const m = new Mesh(
       new BoxGeometry(0.7, 1.8, 0.7),
-      new MeshLambertMaterial({ color: SCENE_COLORS.agent, emissive: 0x0a3540 }),
+      new MeshLambertMaterial({ color: SCENE_COLORS.agent, emissive: 0x0a3540, transparent: true }),
     );
     scene.add(m);
     agentMeshes.push(m);
@@ -239,6 +270,8 @@ export function createGameScene(state: SimState): GameScene {
     scene,
     npcMesh,
     projMesh,
+    depMesh,
+    smokeMesh,
     agentMeshes,
     ringMeshes,
     assetMeshes,
@@ -251,10 +284,20 @@ export function createGameScene(state: SimState): GameScene {
 }
 
 export function objectiveDone(state: SimState): boolean {
-  if (state.mission.type === 2) return state.mission.assets.every((a) => !a.alive);
-  if (state.mission.type === 0)
-    return state.npcs.every((n) => !n.missionTarget || n.state === ST_DEAD);
-  const vip = state.npcs[state.mission.vipId];
+  const m = state.mission;
+  if (m.type === 2) return m.assets.every((a) => !a.alive);
+  if (m.type === 0) return state.npcs.every((n) => !n.missionTarget || n.state === ST_DEAD);
+  if (m.type === MISSION_PURGE)
+    return state.npcs.every(
+      (n) => n.kind !== NPC_ENEMY || n.state === ST_DEAD || n.state === ST_PERSUADED,
+    );
+  if (m.type === MISSION_DEFENSE)
+    return (
+      m.wave >= m.wavesTotal &&
+      !state.npcs.some((n) => n.raider && n.state !== ST_DEAD && n.state !== ST_PERSUADED)
+    );
+  if (m.type === 5) return !(m.assets[1]?.alive ?? true);
+  const vip = state.npcs[m.vipId];
   return vip !== undefined && vip.state === ST_PERSUADED;
 }
 
@@ -278,7 +321,9 @@ export function syncScene(
       (mesh.material as MeshLambertMaterial).color.copy(SCENE_COLORS.dead);
       return;
     }
-    (mesh.material as MeshLambertMaterial).color.copy(SCENE_COLORS.agent);
+    const mat = mesh.material as MeshLambertMaterial;
+    mat.color.copy(a.stunT > 0 ? SCENE_COLORS.dead : SCENE_COLORS.agent);
+    mat.opacity = a.cloakT > 0 ? 0.3 : 1;
     (ring.material as MeshBasicMaterial).color.copy(SCENE_COLORS.select);
     const x = prevAX[i]! + (fromFx(a.x) - prevAX[i]!) * alpha;
     const z = prevAZ[i]! + (fromFx(a.z) - prevAZ[i]!) * alpha;
@@ -319,9 +364,11 @@ export function syncScene(
                   ? SCENE_COLORS.tactical
                   : n.kind === NPC_GUARD
                     ? SCENE_COLORS.guard
-                    : n.missionTarget
-                      ? SCENE_COLORS.vip
-                      : SCENE_COLORS.civ;
+                    : n.kind === NPC_ENEMY
+                      ? SCENE_COLORS.enemy
+                      : n.missionTarget
+                        ? SCENE_COLORS.vip
+                        : SCENE_COLORS.civ;
     gs.npcMesh.setColorAt(i, color);
   }
   gs.npcMesh.count = count;
@@ -338,6 +385,59 @@ export function syncScene(
   }
   gs.projMesh.count = pcount;
   gs.projMesh.instanceMatrix.needsUpdate = true;
+
+  const depColor = new Color();
+  let di = 0;
+  for (const d of state.deployables) {
+    if (!d.alive || di >= DEP_CAP) continue;
+    const x = fromFx(d.x);
+    const z = fromFx(d.z);
+    if (d.kind === DEP_TURRET) {
+      dummy.position.set(x, 0.6, z);
+      dummy.scale.set(1, 1.2, 1);
+      depColor.copy(SCENE_COLORS.agent);
+    } else if (d.kind === DEP_TRAP) {
+      dummy.position.set(x, 0.1, z);
+      dummy.scale.set(1.1, 0.15, 1.1);
+      depColor.copy(SCENE_COLORS.asset);
+    } else if (d.kind === DEP_CHARGE) {
+      dummy.position.set(x, 0.2, z);
+      dummy.scale.set(0.6, 0.35, 0.6);
+      depColor.copy(SCENE_COLORS.target);
+    } else if (d.kind === DEP_MEDBAY) {
+      dummy.position.set(x, 0.7, z);
+      dummy.scale.set(0.8, 1.4, 0.8);
+      depColor.copy(SCENE_COLORS.exfil);
+    } else {
+      dummy.position.set(x, 3 + Math.sin(performance.now() / 400) * 0.3, z);
+      dummy.scale.set(0.7, 0.25, 0.7);
+      depColor.copy(SCENE_COLORS.vip);
+    }
+    dummy.rotation.set(0, 0, 0);
+    dummy.updateMatrix();
+    gs.depMesh.setMatrixAt(di, dummy.matrix);
+    gs.depMesh.setColorAt(di, depColor);
+    di++;
+  }
+  dummy.scale.set(1, 1, 1);
+  gs.depMesh.count = di;
+  gs.depMesh.instanceMatrix.needsUpdate = true;
+  if (gs.depMesh.instanceColor) gs.depMesh.instanceColor.needsUpdate = true;
+
+  let si = 0;
+  for (const puff of state.smoke) {
+    if (si >= SMOKE_CAP) break;
+    const grow = Math.min(1, (240 - puff.t) / 30 + 0.4);
+    dummy.position.set((puff.cell % MAP_W) + 0.5, 0.8, ((puff.cell / MAP_W) | 0) + 0.5);
+    dummy.rotation.set(0, 0, 0);
+    dummy.scale.set(grow, grow * (puff.t / 240 + 0.4), grow);
+    dummy.updateMatrix();
+    gs.smokeMesh.setMatrixAt(si, dummy.matrix);
+    si++;
+  }
+  dummy.scale.set(1, 1, 1);
+  gs.smokeMesh.count = si;
+  gs.smokeMesh.instanceMatrix.needsUpdate = true;
 
   state.mission.assets.forEach((asset, i) => {
     gs.assetMeshes[i]!.visible = asset.alive;
