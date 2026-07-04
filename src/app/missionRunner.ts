@@ -17,6 +17,7 @@ import {
 import { influence, step, TICK_MS } from '../sim/tick';
 import { NPC_CIV, ST_DEAD, ST_PERSUADED, type AgentSpec } from '../sim/units';
 import { WEAPONS } from '../sim/weapons';
+import { createMinimap } from './minimap';
 import { createPerfOverlay } from './perfOverlay';
 import { saveSettings, settings } from './settings';
 
@@ -249,9 +250,11 @@ export function runMission(
       renderer.setAnimationLoop(null);
       hud.innerHTML = '';
       perf?.dispose();
+      minimap.dispose();
     };
 
     const perf = opts.perf ? createPerfOverlay() : null;
+    const minimap = createMinimap(state);
     let nextDriveTick = 40;
     const driveStress = () => {
       for (const a of state.agents) {
@@ -324,6 +327,7 @@ export function runMission(
 
       syncScene(gs, state, prevAX, prevAZ, prevNX, prevNZ, Math.min(1, acc / TICK_MS), selected);
       renderer.render(gs.scene, rig.camera);
+      minimap.update(state, rig, false);
       if (perf) {
         let npcAlive = 0;
         for (const n of state.npcs) if (n.state !== ST_DEAD) npcAlive++;
