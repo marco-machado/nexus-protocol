@@ -155,11 +155,16 @@ export function runMission(
       if (!g) return;
       const ids = selIds();
       if (ids.length === 0) return;
+      // pick in screen space; a ground-plane radius misses bodies standing above it
       let targetNpc = -1;
-      let bestD = 1.0;
+      let bestD = 26;
+      const v = new Vector3();
       for (const n of state.npcs) {
         if (n.state === ST_DEAD) continue;
-        const d = Math.hypot(fromFx(n.x) - g.x, fromFx(n.z) - g.z);
+        v.set(fromFx(n.x), 0.9, fromFx(n.z)).project(rig.camera);
+        const sx = ((v.x + 1) / 2) * window.innerWidth;
+        const sy = ((-v.y + 1) / 2) * window.innerHeight;
+        const d = Math.hypot(sx - e.clientX, (sy - e.clientY) * 0.75);
         if (d < bestD) {
           bestD = d;
           targetNpc = n.id;
@@ -184,8 +189,12 @@ export function runMission(
           }
           keyTimes.set(k, now);
         }
-      } else if (k === 'q' || k === 'w' || k === 'e') {
-        const slot = k === 'q' ? 0 : k === 'w' ? 1 : 2;
+      } else if (k === '5') {
+        state.agents.forEach((a, i) => {
+          selected[i] = a.alive;
+        });
+      } else if (k === 'z' || k === 'x' || k === 'c') {
+        const slot = k === 'z' ? 0 : k === 'x' ? 1 : 2;
         const ids = selIds();
         if (ids.length > 0) {
           const cur = state.agents[ids[0]!]!.stims[slot as 0 | 1 | 2];
@@ -221,21 +230,34 @@ export function runMission(
         settings.simSpeed = Math.max(0.5, Math.min(1, settings.simSpeed + (k === '-' ? -0.1 : 0.1)));
         settings.simSpeed = Math.round(settings.simSpeed * 100) / 100;
         saveSettings();
-      } else if (k === '[') {
+      } else if (k === '[' || k === 'q') {
         rig.yawStep = (rig.yawStep + 7) % 8;
-      } else if (k === ']') {
+      } else if (k === ']' || k === 'e') {
         rig.yawStep = (rig.yawStep + 1) % 8;
       }
     };
 
+    const PAN_KEYS: Record<string, string> = {
+      w: 'ArrowUp',
+      a: 'ArrowLeft',
+      s: 'ArrowDown',
+      d: 'ArrowRight',
+    };
     const panKeys = new Set<string>();
     const onPanDown = (e: KeyboardEvent) => {
       if (e.key.startsWith('Arrow')) {
         panKeys.add(e.key);
         e.preventDefault();
+        return;
       }
+      const mapped = PAN_KEYS[e.key.toLowerCase()];
+      if (mapped) panKeys.add(mapped);
     };
-    const onPanUp = (e: KeyboardEvent) => panKeys.delete(e.key);
+    const onPanUp = (e: KeyboardEvent) => {
+      panKeys.delete(e.key);
+      const mapped = PAN_KEYS[e.key.toLowerCase()];
+      if (mapped) panKeys.delete(mapped);
+    };
     const onWheel = (e: WheelEvent) => {
       rig.viewHeight = Math.max(10, Math.min(70, rig.viewHeight + (e.deltaY > 0 ? 3 : -3)));
     };
@@ -547,5 +569,5 @@ function renderHud(
       ${status ? `<span class="status">${status}</span>` : ''}
     </div>
     <div class="hud-agents">${agents}</div>
-    <div class="hud-help">LMB select | RMB move/attack | 1-4 squad | Q/W/E stims | Tab weapon | R aggression | F persuade | G/H/B swarm | [ ] rotate | arrows pan | space pause | -/= sim speed</div>`;
+    <div class="hud-help">LMB select | RMB move/attack | 1-4 squad, 5 all | Z/X/C stims | Tab weapon | R aggression | F persuade | G/H/B swarm | WASD/arrows pan | Q/E rotate | space pause | -/= sim speed</div>`;
 }
