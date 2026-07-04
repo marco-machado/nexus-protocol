@@ -15,6 +15,7 @@ import {
   type Territory,
 } from './meta';
 import { WEAPONS } from '../sim/weapons';
+import { applyPalette, PALETTES, type PaletteName } from '../render/palette';
 import { saveSettings, settings } from './settings';
 
 const GEAR = {
@@ -74,6 +75,9 @@ export class Screens {
         <h2>OPERATOR SETTINGS</h2>
         <h3>ACCESSIBILITY</h3>
         <div class="taxrow">Simulation speed <input type="range" min="50" max="100" step="5" value="${Math.round(settings.simSpeed * 100)}" data-set="simSpeed"/> <b>${Math.round(settings.simSpeed * 100)}%</b></div>
+        <div class="taxrow">Palette ${(Object.keys(PALETTES) as PaletteName[])
+          .map((p) => `<button data-palette="${p}" ${p === settings.palette ? 'class="primary"' : ''}>${PALETTES[p].label}</button>`)
+          .join('')}</div>
         <h3>AUDIO</h3>
         <div class="taxrow">Master <input type="range" min="0" max="100" step="5" value="${Math.round(settings.masterVol * 100)}" data-set="masterVol"/> <b>${pct(settings.masterVol)}</b></div>
         <div class="taxrow">Score <input type="range" min="0" max="100" step="5" value="${Math.round(settings.musicVol * 100)}" data-set="musicVol"/> <b>${pct(settings.musicVol)}</b></div>
@@ -85,7 +89,14 @@ export class Screens {
         <p class="fine">Settings persist independently of operation saves.</p>
       </div>`;
     this.el.onclick = (e) => {
-      if ((e.target as HTMLElement).dataset.act === 'back') onBack();
+      const d = (e.target as HTMLElement).dataset;
+      if (d.act === 'back') onBack();
+      else if (d.palette !== undefined) {
+        settings.palette = d.palette as PaletteName;
+        applyPalette(settings.palette);
+        saveSettings();
+        this.settings(onBack);
+      }
     };
     this.el.oninput = (e) => {
       const t = e.target as HTMLInputElement;

@@ -20,7 +20,6 @@ import { fromFx } from '../sim/fixed';
 import { MAP_W } from '../sim/map';
 import type { SimState } from '../sim/state';
 import {
-  NPC_CIV,
   NPC_GUARD,
   NPC_POLICE,
   NPC_TACTICAL,
@@ -29,17 +28,10 @@ import {
   ST_PERSUADED,
 } from '../sim/units';
 
+import { SCENE_COLORS } from './palette';
+
 const NPC_CAP = 400;
 const PROJ_CAP = 512;
-
-const COLOR_CIV = new Color(0x7a8699);
-const COLOR_PANIC = new Color(0xd98e2b);
-const COLOR_PERSUADED = new Color(0x22d3ee);
-const COLOR_POLICE = new Color(0x3b6fd4);
-const COLOR_TACTICAL = new Color(0x8b1e3f);
-const COLOR_GUARD = new Color(0xc026d3);
-const COLOR_DEAD = new Color(0x2a2f38);
-const COLOR_VIP = new Color(0xfacc15);
 
 export interface GameScene {
   scene: Scene;
@@ -105,13 +97,13 @@ export function createGameScene(state: SimState): GameScene {
   for (let i = 0; i < state.agents.length; i++) {
     const m = new Mesh(
       new BoxGeometry(0.7, 1.8, 0.7),
-      new MeshLambertMaterial({ color: 0x00e5ff, emissive: 0x0a3540 }),
+      new MeshLambertMaterial({ color: SCENE_COLORS.agent, emissive: 0x0a3540 }),
     );
     scene.add(m);
     agentMeshes.push(m);
     const ring = new Mesh(
       new RingGeometry(0.55, 0.75, 24),
-      new MeshBasicMaterial({ color: 0x00ff88 }),
+      new MeshBasicMaterial({ color: SCENE_COLORS.select }),
     );
     ring.rotation.x = -Math.PI / 2;
     ring.position.y = 0.05;
@@ -122,7 +114,7 @@ export function createGameScene(state: SimState): GameScene {
 
   const exfil = new Mesh(
     new CircleGeometry(fromFx(state.mission.exfilR), 32),
-    new MeshBasicMaterial({ color: 0x00ff88, transparent: true, opacity: 0.15 }),
+    new MeshBasicMaterial({ color: SCENE_COLORS.exfil, transparent: true, opacity: 0.15 }),
   );
   exfil.rotation.x = -Math.PI / 2;
   exfil.position.set(fromFx(state.mission.exfilX), 0.03, fromFx(state.mission.exfilZ));
@@ -132,7 +124,7 @@ export function createGameScene(state: SimState): GameScene {
   for (const asset of state.mission.assets) {
     const m = new Mesh(
       new BoxGeometry(0.9, 1.4, 0.9),
-      new MeshLambertMaterial({ color: 0xff5533, emissive: 0x441100 }),
+      new MeshLambertMaterial({ color: SCENE_COLORS.asset, emissive: 0x441100 }),
     );
     m.position.set((asset.cell % MAP_W) + 0.5, 0.7, ((asset.cell / MAP_W) | 0) + 0.5);
     scene.add(m);
@@ -144,10 +136,11 @@ export function createGameScene(state: SimState): GameScene {
     if (!n.missionTarget && !n.vip) continue;
     const m = new Mesh(
       new ConeGeometry(0.3, 0.6, 4),
-      new MeshBasicMaterial({ color: n.vip ? 0xfacc15 : 0xff3344 }),
+      new MeshBasicMaterial({ color: n.vip ? SCENE_COLORS.vip : SCENE_COLORS.target }),
     );
     m.rotation.x = Math.PI;
     m.userData.npcId = n.id;
+    m.userData.vip = n.vip;
     scene.add(m);
     markerMeshes.push(m);
   }
@@ -177,9 +170,11 @@ export function syncScene(
       mesh.rotation.z = Math.PI / 2;
       mesh.position.y = 0.4;
       ring.visible = false;
-      (mesh.material as MeshLambertMaterial).color.set(0x2a2f38);
+      (mesh.material as MeshLambertMaterial).color.copy(SCENE_COLORS.dead);
       return;
     }
+    (mesh.material as MeshLambertMaterial).color.copy(SCENE_COLORS.agent);
+    (ring.material as MeshBasicMaterial).color.copy(SCENE_COLORS.select);
     const x = prevAX[i]! + (fromFx(a.x) - prevAX[i]!) * alpha;
     const z = prevAZ[i]! + (fromFx(a.z) - prevAZ[i]!) * alpha;
     mesh.position.set(x, 0.9, z);
@@ -206,22 +201,22 @@ export function syncScene(
     gs.npcMesh.setMatrixAt(i, dummy.matrix);
     const color =
       n.state === ST_DEAD
-        ? COLOR_DEAD
+        ? SCENE_COLORS.dead
         : n.state === ST_PERSUADED
-          ? COLOR_PERSUADED
+          ? SCENE_COLORS.persuaded
           : n.vip
-            ? COLOR_VIP
+            ? SCENE_COLORS.vip
             : n.state === ST_PANIC
-              ? COLOR_PANIC
+              ? SCENE_COLORS.panic
               : n.kind === NPC_POLICE
-                ? COLOR_POLICE
+                ? SCENE_COLORS.police
                 : n.kind === NPC_TACTICAL
-                  ? COLOR_TACTICAL
+                  ? SCENE_COLORS.tactical
                   : n.kind === NPC_GUARD
-                    ? COLOR_GUARD
+                    ? SCENE_COLORS.guard
                     : n.missionTarget
-                      ? COLOR_VIP
-                      : COLOR_CIV;
+                      ? SCENE_COLORS.vip
+                      : SCENE_COLORS.civ;
     gs.npcMesh.setColorAt(i, color);
   }
   gs.npcMesh.count = count;
@@ -251,6 +246,9 @@ export function syncScene(
       continue;
     }
     m.visible = true;
+    (m.material as MeshBasicMaterial).color.copy(
+      m.userData.vip ? SCENE_COLORS.vip : SCENE_COLORS.target,
+    );
     m.position.set(fromFx(n.x), 2.6 + Math.sin(t) * 0.15, fromFx(n.z));
   }
   void hidden;

@@ -1,4 +1,4 @@
-export type PaletteName = 'default' | 'deuteranopia' | 'contrast';
+import type { PaletteName } from '../render/palette';
 
 export interface Settings {
   simSpeed: number;
