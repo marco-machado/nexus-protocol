@@ -98,6 +98,27 @@
         color: #55627a;
         font-size: 10px;
       }
+      .comms {
+        position: fixed;
+        left: 50%;
+        transform: translateX(-50%);
+        bottom: 130px;
+        z-index: 16;
+        pointer-events: none;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        align-items: center;
+      }
+      .commline {
+        color: #e8eef8;
+        background: rgba(10, 16, 26, 0.85);
+        border-left: 3px solid var(--accent);
+        padding: 5px 12px;
+        font-size: 12px;
+        opacity: 1;
+        transition: opacity 0.6s;
+      }
       .offarrow {
         position: fixed;
         width: 0;
