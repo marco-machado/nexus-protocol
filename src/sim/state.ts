@@ -84,7 +84,7 @@ export function baseState(seed: number, mapSeed: number): SimState {
     agents: [],
     npcs: [],
     projectiles: [],
-    alarm: { heat: 0, level: 0, quietT: 0, spawnT: 0, ax: 0, az: 0, policeBudget: 6, tacticalBudget: 4 },
+    alarm: { heat: 0, level: 0, quietT: 0, spawnT: 0, ax: 0, az: 0, policeBudget: 6, tacticalBudget: 3 },
     swarm: { mode: 0, x: 0, z: 0 },
     mission: { type: 0, status: 0, vipId: -1, exfilX: 0, exfilZ: 0, exfilR: 3 << 16, assets: [] },
     kills: 0,

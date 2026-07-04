@@ -49,7 +49,7 @@ export function createMission(
   const az = (anchor / MAP_W) | 0;
 
   const guardCount =
-    (missionType === MISSION_PERSUADE ? 6 : missionType === MISSION_RAID ? 6 : 5) + extraGuards;
+    (missionType === MISSION_PERSUADE ? 6 : missionType === MISSION_RAID ? 5 : 5) + extraGuards;
   for (let g = 0; g < guardCount; g++) {
     const gx = Math.max(0, Math.min(MAP_W - 1, ax + rand(s, 11) - 5));
     const gz = Math.max(0, Math.min(MAP_H - 1, az + rand(s, 11) - 5));
@@ -69,7 +69,7 @@ export function createMission(
       const cell = cellIdx(cx, cz);
       if (s.map.obstacle[cell] || s.mission.assets.some((asset) => asset.cell === cell)) continue;
       s.map.obstacle[cell] = 1;
-      s.mission.assets.push({ cell, hp: 150, alive: true });
+      s.mission.assets.push({ cell, hp: 120, alive: true });
       placed++;
     }
   } else {
