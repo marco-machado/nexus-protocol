@@ -47,7 +47,7 @@ export function hintsFor(m: MetaState, t: Territory): TutorialHint[] {
     hints.push(
       {
         when: (s) => s.tick >= 20,
-        text: 'Chemical management enabled. Q/W/E adjust Combat/Focus/Surge on selected assets.',
+        text: 'Chemical management enabled. Z/X/C adjust Combat/Focus/Surge on selected assets.',
       },
       {
         when: (s) => s.agents.some((a) => a.alive && a.hp < a.maxHp * 0.6),
