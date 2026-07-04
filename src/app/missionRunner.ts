@@ -2,6 +2,8 @@ import { Plane, Raycaster, Vector2, Vector3 } from 'three';
 import type { WebGPURenderer } from 'three/webgpu';
 import { createRig, updateRig } from '../render/camera';
 import { SCENE_COLORS } from '../render/palette';
+import { createPost } from '../render/post';
+import { createRain } from '../render/rain';
 import { createGameScene, objectiveDone, syncScene } from '../render/scene';
 import { fromFx, toFx } from '../sim/fixed';
 import { CommandQueue, type Command } from '../sim/commands';
@@ -264,6 +266,9 @@ export function runMission(
     };
 
     const perf = opts.perf ? createPerfOverlay() : null;
+    const post = settings.postFx ? createPost(renderer, gs.scene, rig.camera) : null;
+    const rain = settings.rain ? createRain() : null;
+    if (rain) gs.scene.add(rain.mesh);
     const minimap = createMinimap(state);
     const comms = createComms();
     const pendingHints = [...(opts.hints ?? [])];
@@ -429,7 +434,9 @@ export function runMission(
       updateRig(rig, window.innerWidth / window.innerHeight);
 
       syncScene(gs, state, prevAX, prevAZ, prevNX, prevNZ, Math.min(1, acc / TICK_MS), selected);
-      renderer.render(gs.scene, rig.camera);
+      rain?.update(dt, rig.cx, rig.cz);
+      if (post) post.render();
+      else renderer.render(gs.scene, rig.camera);
       minimap.update(state, rig, false);
       updateArrows();
       audio.update(state);
