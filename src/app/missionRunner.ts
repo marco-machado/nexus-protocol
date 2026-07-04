@@ -18,6 +18,7 @@ import {
 import { influence, step, TICK_MS } from '../sim/tick';
 import { NPC_CIV, ST_DEAD, ST_PERSUADED, type AgentSpec } from '../sim/units';
 import { WEAPONS } from '../sim/weapons';
+import { audio } from './audio';
 import { createComms } from './comms';
 import { createMinimap } from './minimap';
 import { createPerfOverlay } from './perfOverlay';
@@ -195,7 +196,10 @@ export function runMission(
       } else if (k === 'f') {
         const ids = selIds();
         const withDevice = ids.find((id) => state.agents[id]!.spec.persuadertron);
-        if (withDevice !== undefined) send({ type: 'persuade', id: withDevice });
+        if (withDevice !== undefined) {
+          send({ type: 'persuade', id: withDevice });
+          audio.persuadePulse();
+        }
       } else if (k === 'g') {
         send({ type: 'swarm', mode: SWARM_FOLLOW, x: 0, z: 0 });
       } else if (k === 'h') {
@@ -263,6 +267,30 @@ export function runMission(
     const minimap = createMinimap(state);
     const comms = createComms();
     const pendingHints = [...(opts.hints ?? [])];
+
+    let prevAlarmLevel = state.alarm.level;
+    let prevDone = false;
+    const prevAlive = state.agents.map((a) => a.alive);
+    const pollEvents = () => {
+      if (state.alarm.level !== prevAlarmLevel) {
+        if (state.alarm.level === 2)
+          comms.push('Corporate tactical units en route. This is now a billable incident.');
+        else if (state.alarm.level === 1 && prevAlarmLevel === 0)
+          comms.push('Local law enforcement engaged. Legal has been notified.');
+        prevAlarmLevel = state.alarm.level;
+      }
+      state.agents.forEach((a, i) => {
+        if (prevAlive[i] && !a.alive) {
+          prevAlive[i] = false;
+          comms.push(`Asset A${i + 1} has been written off. HR will notify next of kin.`);
+        }
+      });
+      const done = objectiveDone(state);
+      if (done && !prevDone && state.mission.status === STATUS_ACTIVE) {
+        comms.push('Objective closed. Proceed to the marked exfiltration zone.');
+      }
+      prevDone = done;
+    };
 
     const arrowLayer = document.createElement('div');
     document.body.appendChild(arrowLayer);
@@ -404,6 +432,7 @@ export function runMission(
       renderer.render(gs.scene, rig.camera);
       minimap.update(state, rig, false);
       updateArrows();
+      audio.update(state);
       if (perf) {
         let npcAlive = 0;
         for (const n of state.npcs) if (n.state !== ST_DEAD) npcAlive++;
@@ -414,6 +443,7 @@ export function runMission(
       if (hudT > 200) {
         hudT = 0;
         renderHud(hud, state, selected, objectiveText, paused);
+        pollEvents();
         for (let i = pendingHints.length - 1; i >= 0; i--) {
           if (pendingHints[i]!.when(state)) {
             comms.push(pendingHints[i]!.text);

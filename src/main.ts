@@ -1,5 +1,6 @@
 import { createRenderer } from './render/renderer';
 import { applyPalette } from './render/palette';
+import { audio } from './app/audio';
 import { Game } from './app/game';
 import { runMission } from './app/missionRunner';
 import { Screens } from './app/screens';
@@ -8,6 +9,13 @@ import { defaultSpec } from './sim/units';
 
 async function main(): Promise<void> {
   applyPalette(settings.palette);
+  const unlock = () => {
+    audio.unlock();
+    window.removeEventListener('pointerdown', unlock);
+    window.removeEventListener('keydown', unlock);
+  };
+  window.addEventListener('pointerdown', unlock);
+  window.addEventListener('keydown', unlock);
   const canvas = document.getElementById('app') as HTMLCanvasElement;
   const hud = document.getElementById('hud') as HTMLElement;
   const screenEl = document.getElementById('screen') as HTMLElement;
