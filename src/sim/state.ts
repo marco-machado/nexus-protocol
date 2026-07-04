@@ -61,6 +61,9 @@ export interface SimState {
   mission: MissionState;
   kills: number;
   civKills: number;
+  // cumulative presentation counters; deterministic but excluded from hashState
+  shotsByWid: number[];
+  fleshHits: number;
 }
 
 export function rand(s: SimState, n: number): number {
@@ -86,5 +89,7 @@ export function baseState(seed: number, mapSeed: number): SimState {
     mission: { type: 0, status: 0, vipId: -1, exfilX: 0, exfilZ: 0, exfilR: 3 << 16, assets: [] },
     kills: 0,
     civKills: 0,
+    shotsByWid: [0, 0, 0, 0],
+    fleshHits: 0,
   };
 }

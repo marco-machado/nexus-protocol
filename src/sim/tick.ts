@@ -145,6 +145,7 @@ function firePellets(
     });
   }
   noises.push({ x: fx, z: fz });
+  s.shotsByWid[wid] = (s.shotsByWid[wid] ?? 0) + 1;
 }
 
 function damageAgent(a: Agent, dmg: number): void {
@@ -568,6 +569,7 @@ function updateProjectiles(s: SimState, noises: Noise[]): void {
         if (!a.alive) continue;
         if (Math.abs(a.x - p.x) < HIT && Math.abs(a.z - p.z) < HIT) {
           damageAgent(a, p.dmg);
+          s.fleshHits++;
           dead = true;
           break;
         }
@@ -577,6 +579,7 @@ function updateProjectiles(s: SimState, noises: Noise[]): void {
         if (n.state === ST_DEAD) continue;
         if (Math.abs(n.x - p.x) < HIT && Math.abs(n.z - p.z) < HIT) {
           n.hp -= p.dmg;
+          s.fleshHits++;
           if (n.hp <= 0) killNpc(s, n);
           else if (n.kind === NPC_CIV && n.state !== ST_PERSUADED) {
             n.state = ST_PANIC;
