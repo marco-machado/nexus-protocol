@@ -31,6 +31,7 @@ export interface AgentSpec {
   perception: number;
   medkits: number;
   persuadertron: boolean;
+  scanner: boolean;
   weapons: WeaponSlot[];
 }
 
@@ -114,6 +115,7 @@ export function defaultSpec(): AgentSpec {
     perception: 10,
     medkits: 1,
     persuadertron: false,
+    scanner: false,
     weapons: [{ wid: 0, ammo: 60 }],
   };
 }
