@@ -246,10 +246,12 @@ export class Screens {
       this.equip(m, t, onLaunch, onBack);
     };
     this.el.onclick = (e) => {
-      const d = (e.target as HTMLElement).dataset;
+      const target = e.target as HTMLElement;
+      const d = target.dataset;
       const sel = m.agents[this.selAgent]!;
-      if (d.agent !== undefined && d.recruit === undefined && d.drop === undefined && d.dropgear === undefined) {
-        this.selAgent = Number(d.agent);
+      const card = target.closest<HTMLElement>('[data-agent]');
+      if (card && d.recruit === undefined && d.drop === undefined && d.dropgear === undefined) {
+        this.selAgent = Number(card.dataset.agent);
         rerender();
       } else if (d.act === 'back') onBack();
       else if (d.act === 'launch') onLaunch();
