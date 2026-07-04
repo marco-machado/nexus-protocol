@@ -16,6 +16,7 @@ import {
 } from './meta';
 import { WEAPONS } from '../sim/weapons';
 import { applyPalette, PALETTES, type PaletteName } from '../render/palette';
+import { audio } from './audio';
 import { saveSettings, settings } from './settings';
 
 const GEAR = {
@@ -31,6 +32,9 @@ export class Screens {
 
   constructor(el: HTMLElement) {
     this.el = el;
+    this.el.addEventListener('click', (e) => {
+      if ((e.target as HTMLElement).closest('button')) audio.uiClick();
+    });
   }
 
   show(): void {
