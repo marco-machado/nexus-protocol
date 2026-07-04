@@ -18,6 +18,7 @@ import { influence, step, TICK_MS } from '../sim/tick';
 import { NPC_CIV, ST_DEAD, ST_PERSUADED, type AgentSpec } from '../sim/units';
 import { WEAPONS } from '../sim/weapons';
 import { createPerfOverlay } from './perfOverlay';
+import { saveSettings, settings } from './settings';
 
 export interface MissionResult {
   won: boolean;
@@ -199,6 +200,10 @@ export function runMission(
       } else if (k === ' ') {
         e.preventDefault();
         paused = !paused;
+      } else if (k === '-' || k === '=') {
+        settings.simSpeed = Math.max(0.5, Math.min(1, settings.simSpeed + (k === '-' ? -0.1 : 0.1)));
+        settings.simSpeed = Math.round(settings.simSpeed * 100) / 100;
+        saveSettings();
       } else if (k === '[') {
         rig.yawStep = (rig.yawStep + 7) % 8;
       } else if (k === ']') {
@@ -281,7 +286,7 @@ export function runMission(
       last = time;
       let simMs = 0;
       if (!paused && state.mission.status === STATUS_ACTIVE) {
-        acc += dt;
+        acc += dt * settings.simSpeed;
         const simStart = performance.now();
         while (acc >= TICK_MS) {
           capturePrev();
@@ -408,8 +413,9 @@ function renderHud(
       <span class="obj">${objective}</span>
       <span class="alarm a${state.alarm.level}">ALERT ${['GREEN', 'AMBER', 'RED'][state.alarm.level]}</span>
       <span class="inf">INFLUENCE ${inf}</span>
+      ${settings.simSpeed < 1 ? `<span class="alarm">SIM ${Math.round(settings.simSpeed * 100)}%</span>` : ''}
       ${status ? `<span class="status">${status}</span>` : ''}
     </div>
     <div class="hud-agents">${agents}</div>
-    <div class="hud-help">LMB select | RMB move/attack | 1-4 squad | Q/W/E stims | Tab weapon | F persuade | G/H/B swarm | [ ] rotate | arrows pan | space pause</div>`;
+    <div class="hud-help">LMB select | RMB move/attack | 1-4 squad | Q/W/E stims | Tab weapon | F persuade | G/H/B swarm | [ ] rotate | arrows pan | space pause | -/= sim speed</div>`;
 }

@@ -15,6 +15,7 @@ import {
   type Territory,
 } from './meta';
 import { WEAPONS } from '../sim/weapons';
+import { saveSettings, settings } from './settings';
 
 const GEAR = {
   persuadertron: { name: 'Persuadertron', price: 500 },
@@ -49,6 +50,7 @@ export class Screens {
         <p class="tag">Corporate acquisitions. Kinetic division.</p>
         ${hasSave ? '<button data-act="continue">RESUME OPERATIONS</button>' : ''}
         <button data-act="new">NEW OPERATION</button>
+        <button data-act="settings">SETTINGS</button>
         <p class="fine">Nexus Corp is an equal-opportunity employer. Asset attrition figures available on request.</p>
       </div>`;
     this.el.onclick = (e) => {
@@ -58,7 +60,45 @@ export class Screens {
         onStart(true);
       } else if (act === 'continue') {
         onStart(false);
+      } else if (act === 'settings') {
+        this.settings(() => this.menu(onStart));
       }
+    };
+  }
+
+  settings(onBack: () => void): void {
+    this.show();
+    const pct = (v: number) => `${Math.round(v * 100)}%`;
+    this.el.innerHTML = `
+      <div class="panel">
+        <h2>OPERATOR SETTINGS</h2>
+        <h3>ACCESSIBILITY</h3>
+        <div class="taxrow">Simulation speed <input type="range" min="50" max="100" step="5" value="${Math.round(settings.simSpeed * 100)}" data-set="simSpeed"/> <b>${Math.round(settings.simSpeed * 100)}%</b></div>
+        <h3>AUDIO</h3>
+        <div class="taxrow">Master <input type="range" min="0" max="100" step="5" value="${Math.round(settings.masterVol * 100)}" data-set="masterVol"/> <b>${pct(settings.masterVol)}</b></div>
+        <div class="taxrow">Score <input type="range" min="0" max="100" step="5" value="${Math.round(settings.musicVol * 100)}" data-set="musicVol"/> <b>${pct(settings.musicVol)}</b></div>
+        <div class="taxrow">Effects <input type="range" min="0" max="100" step="5" value="${Math.round(settings.sfxVol * 100)}" data-set="sfxVol"/> <b>${pct(settings.sfxVol)}</b></div>
+        <h3>VIDEO</h3>
+        <div class="taxrow"><label><input type="checkbox" ${settings.postFx ? 'checked' : ''} data-set="postFx"/> Neon post-processing</label></div>
+        <div class="taxrow"><label><input type="checkbox" ${settings.rain ? 'checked' : ''} data-set="rain"/> Rain</label></div>
+        <div class="btnrow"><button data-act="back">BACK</button></div>
+        <p class="fine">Settings persist independently of operation saves.</p>
+      </div>`;
+    this.el.onclick = (e) => {
+      if ((e.target as HTMLElement).dataset.act === 'back') onBack();
+    };
+    this.el.oninput = (e) => {
+      const t = e.target as HTMLInputElement;
+      const key = t.dataset.set;
+      if (key === 'simSpeed' || key === 'masterVol' || key === 'musicVol' || key === 'sfxVol') {
+        settings[key] = Number(t.value) / 100;
+      } else if (key === 'postFx' || key === 'rain') {
+        settings[key] = t.checked;
+      } else {
+        return;
+      }
+      saveSettings();
+      this.settings(onBack);
     };
   }
 
