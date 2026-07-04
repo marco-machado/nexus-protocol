@@ -16,12 +16,12 @@ export interface Rain {
   update(dt: number, cx: number, cz: number): void;
 }
 
-export function createRain(): Rain {
+export function createRain(cx: number, cz: number): Rain {
   const positions = new Float32Array(COUNT * 6);
   for (let i = 0; i < COUNT; i++) {
-    const x = (Math.random() - 0.5) * AREA * 2;
+    const x = cx + (Math.random() - 0.5) * AREA * 2;
     const y = Math.random() * TOP;
-    const z = (Math.random() - 0.5) * AREA * 2;
+    const z = cz + (Math.random() - 0.5) * AREA * 2;
     positions.set([x, y, z, x + 0.06, y - DROP_LEN, z], i * 6);
   }
   const geo = new BufferGeometry();

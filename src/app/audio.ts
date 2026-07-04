@@ -211,7 +211,7 @@ export const audio = {
       prevShots = [...state.shotsByWid];
       prevHits = state.fleshHits;
       prevDeaths = state.kills + state.civKills;
-      prevLevel = state.alarm.level;
+      prevLevel = -1;
     }
 
     let spawned = 0;
