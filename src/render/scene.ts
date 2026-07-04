@@ -1,9 +1,11 @@
 import {
+  AdditiveBlending,
   AmbientLight,
   BoxGeometry,
   CircleGeometry,
   Color,
   ConeGeometry,
+  CylinderGeometry,
   DirectionalLight,
   DynamicDrawUsage,
   InstancedMesh,
@@ -41,7 +43,10 @@ export interface GameScene {
   ringMeshes: Mesh[];
   assetMeshes: Mesh[];
   markerMeshes: Mesh[];
+  assetMarkers: Mesh[];
   exfil: Mesh;
+  beacon: Mesh;
+  beaconRing: Mesh;
 }
 
 const dummy = new Object3D();
@@ -120,7 +125,35 @@ export function createGameScene(state: SimState): GameScene {
   exfil.position.set(fromFx(state.mission.exfilX), 0.03, fromFx(state.mission.exfilZ));
   scene.add(exfil);
 
+  const beacon = new Mesh(
+    new CylinderGeometry(0.5, 0.9, 14, 12, 1, true),
+    new MeshBasicMaterial({
+      color: SCENE_COLORS.exfil,
+      transparent: true,
+      opacity: 0.12,
+      blending: AdditiveBlending,
+      depthWrite: false,
+    }),
+  );
+  beacon.position.set(fromFx(state.mission.exfilX), 7, fromFx(state.mission.exfilZ));
+  scene.add(beacon);
+
+  const beaconRing = new Mesh(
+    new RingGeometry(0.8, 1.0, 32),
+    new MeshBasicMaterial({
+      color: SCENE_COLORS.exfil,
+      transparent: true,
+      opacity: 0.6,
+      blending: AdditiveBlending,
+      depthWrite: false,
+    }),
+  );
+  beaconRing.rotation.x = -Math.PI / 2;
+  beaconRing.position.set(fromFx(state.mission.exfilX), 0.06, fromFx(state.mission.exfilZ));
+  scene.add(beaconRing);
+
   const assetMeshes: Mesh[] = [];
+  const assetMarkers: Mesh[] = [];
   for (const asset of state.mission.assets) {
     const m = new Mesh(
       new BoxGeometry(0.9, 1.4, 0.9),
@@ -129,6 +162,14 @@ export function createGameScene(state: SimState): GameScene {
     m.position.set((asset.cell % MAP_W) + 0.5, 0.7, ((asset.cell / MAP_W) | 0) + 0.5);
     scene.add(m);
     assetMeshes.push(m);
+    const marker = new Mesh(
+      new ConeGeometry(0.3, 0.6, 4),
+      new MeshBasicMaterial({ color: SCENE_COLORS.asset }),
+    );
+    marker.rotation.x = Math.PI;
+    marker.position.set(m.position.x, 2.6, m.position.z);
+    scene.add(marker);
+    assetMarkers.push(marker);
   }
 
   const markerMeshes: Mesh[] = [];
@@ -150,7 +191,27 @@ export function createGameScene(state: SimState): GameScene {
   sun.position.set(40, 70, 25);
   scene.add(sun);
 
-  return { scene, npcMesh, projMesh, agentMeshes, ringMeshes, assetMeshes, markerMeshes, exfil };
+  return {
+    scene,
+    npcMesh,
+    projMesh,
+    agentMeshes,
+    ringMeshes,
+    assetMeshes,
+    markerMeshes,
+    assetMarkers,
+    exfil,
+    beacon,
+    beaconRing,
+  };
+}
+
+export function objectiveDone(state: SimState): boolean {
+  if (state.mission.type === 2) return state.mission.assets.every((a) => !a.alive);
+  if (state.mission.type === 0)
+    return state.npcs.every((n) => !n.missionTarget || n.state === ST_DEAD);
+  const vip = state.npcs[state.mission.vipId];
+  return vip !== undefined && vip.state === ST_PERSUADED;
 }
 
 export function syncScene(
@@ -249,7 +310,26 @@ export function syncScene(
     (m.material as MeshBasicMaterial).color.copy(
       m.userData.vip ? SCENE_COLORS.vip : SCENE_COLORS.target,
     );
+    m.rotation.y = t * 0.5;
     m.position.set(fromFx(n.x), 2.6 + Math.sin(t) * 0.15, fromFx(n.z));
   }
+  state.mission.assets.forEach((asset, i) => {
+    const m = gs.assetMarkers[i]!;
+    m.visible = asset.alive;
+    (m.material as MeshBasicMaterial).color.copy(SCENE_COLORS.asset);
+    m.rotation.y = t * 0.5;
+    m.position.y = 2.6 + Math.sin(t) * 0.15;
+  });
+
+  const done = objectiveDone(state);
+  const beaconMat = gs.beacon.material as MeshBasicMaterial;
+  const ringMat = gs.beaconRing.material as MeshBasicMaterial;
+  beaconMat.color.copy(SCENE_COLORS.exfil);
+  ringMat.color.copy(SCENE_COLORS.exfil);
+  (gs.exfil.material as MeshBasicMaterial).color.copy(SCENE_COLORS.exfil);
+  beaconMat.opacity = done ? 0.3 : 0.12;
+  const pulse = 1 + ((t * 0.6) % 2);
+  gs.beaconRing.scale.setScalar(pulse * fromFx(state.mission.exfilR) * 0.5);
+  ringMat.opacity = (done ? 0.9 : 0.5) * (1 - ((t * 0.6) % 2) / 2);
   void hidden;
 }
