@@ -109,11 +109,17 @@ Agents earn **Service Records** (kills, missions, persuasions) and procedurally 
 | LMB click/drag | Select agent / box-select |
 | RMB | Move / attack / interact (context) |
 | 1–4 | Select agent; double-tap to center camera |
-| Q/W/E | Adjust Combat / Focus / Surge sliders (selected agents) |
+| 5 | Select the whole squad |
+| Z/X/C | Adjust Combat / Focus / Surge sliders (selected agents) |
+| R | Cycle aggression: Free / Defensive / Hold |
 | Space | Tactical pause (single-player only; 50% slow-mo in co-op) |
 | Tab | Cycle weapons |
 | F | Persuadertron pulse |
-| Scroll / MMB | Zoom / rotate camera |
+| G/H/B | Swarm orders: Follow / Hold Position / Flashmob |
+| WASD / arrows | Pan camera |
+| Q/E | Rotate camera in 45° steps |
+| Scroll | Zoom |
+| -/= | Simulation speed (50–100%) |
 Full remapping; gamepad support via browser Gamepad API. Touch layout for tablets (two-finger camera, tap-to-command).
 ---
 ## 8. Multiplayer
