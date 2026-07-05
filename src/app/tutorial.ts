@@ -9,6 +9,7 @@ import {
   ST_DEAD,
   ST_PERSUADED,
 } from '../sim/units';
+import { VEH_FUEL } from '../sim/vehicles';
 import type { MetaState, Territory } from './meta';
 
 export interface TutorialHint {
@@ -117,6 +118,37 @@ export function hintsFor(m: MetaState, t: Territory, missionType = t.missionType
         text: 'Hostile takeover attempt in progress. Repel every wave or the district transfers to the counterparty.',
       });
     }
+  }
+
+  if (owned <= 3) {
+    hints.push({
+      when: (s) =>
+        s.agents.some(
+          (a) =>
+            a.alive &&
+            s.vehicles.some(
+              (v) =>
+                v.kind !== VEH_FUEL &&
+                v.driver < 0 &&
+                Math.abs(fromFx(v.x) - fromFx(a.x)) < 4 &&
+                Math.abs(fromFx(v.z) - fromFx(a.z)) < 4,
+            ),
+        ),
+      text: 'Company vehicles accept any valid credential chip. Press J to requisition; press J again to dismount.',
+    });
+  }
+
+  if (owned <= 4) {
+    hints.push(
+      {
+        when: (s) => s.env.tod === 2 && s.tick >= 30,
+        text: 'Night operation: counterparty optics are degraded and cloak fields run at half drain.',
+      },
+      {
+        when: (s) => s.env.rain === 1 && s.tick >= 30,
+        text: 'Forecast: rain. Hostile sensor range is reduced 25%. Umbrellas are not reimbursable.',
+      },
+    );
   }
 
   if (missionType === 5) {

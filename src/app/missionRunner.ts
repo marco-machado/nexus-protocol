@@ -30,6 +30,7 @@ import {
 } from '../sim/state';
 import { influence, step, TICK_MS } from '../sim/tick';
 import { NPC_CIV, NPC_ENEMY, ST_DEAD, ST_PERSUADED, type AgentSpec } from '../sim/units';
+import { V_WRECK } from '../sim/vehicles';
 import { WEAPONS } from '../sim/weapons';
 import { audio } from './audio';
 import { createComms } from './comms';
@@ -200,7 +201,23 @@ export function runMission(
           targetNpc = n.id;
         }
       }
+      let targetVeh = -1;
+      const anyDriving = ids.some((id) => state.agents[id]!.driving >= 0);
+      if (targetNpc < 0 && !anyDriving) {
+        for (const veh of state.vehicles) {
+          if (veh.state === V_WRECK) continue;
+          v.set(fromFx(veh.x), 0.5, fromFx(veh.z)).project(rig.camera);
+          const sx = ((v.x + 1) / 2) * window.innerWidth;
+          const sy = ((-v.y + 1) / 2) * window.innerHeight;
+          const d = Math.hypot(sx - e.clientX, (sy - e.clientY) * 0.75);
+          if (d < bestD) {
+            bestD = d;
+            targetVeh = veh.id;
+          }
+        }
+      }
       if (targetNpc >= 0) send({ type: 'attack', ids, npcId: targetNpc });
+      else if (targetVeh >= 0) send({ type: 'attackveh', ids, vehId: targetVeh });
       else send({ type: 'move', ids, x: toFx(Math.max(0.5, Math.min(95.5, g.x))), z: toFx(Math.max(0.5, Math.min(95.5, g.z))) });
     };
 
@@ -256,6 +273,9 @@ export function runMission(
       } else if (k === 'v') {
         const ids = selIds().filter((id) => state.agents[id]!.spec.cloak);
         if (ids.length > 0) send({ type: 'use', ids, gear: GEAR_CLOAK });
+      } else if (k === 'j') {
+        const ids = selIds();
+        if (ids.length > 0) send({ type: 'hijack', id: ids[0]! });
       } else if (k === 't' || k === 'y' || k === 'u' || k === 'k') {
         const gear =
           k === 't' ? GEAR_CHARGE : k === 'y' ? GEAR_MEDBAY : k === 'u' ? GEAR_DRONE : GEAR_EMP;
@@ -346,6 +366,8 @@ export function runMission(
     let prevAlarmLevel = state.alarm.level;
     let prevDone = false;
     let prevWave = state.mission.wave;
+    let prevDriving = false;
+    let prevWrecks = 0;
     const prevAlive = state.agents.map((a) => a.alive);
     const pollEvents = () => {
       if (state.mission.wave !== prevWave) {
@@ -372,6 +394,16 @@ export function runMission(
         comms.push('Objective closed. Proceed to the marked exfiltration zone.');
       }
       prevDone = done;
+      const drivingNow = state.agents.some((a) => a.alive && a.driving >= 0);
+      if (drivingNow && !prevDriving) {
+        comms.push('Vehicle requisitioned. Fleet insurance does not cover pedestrians.');
+      }
+      prevDriving = drivingNow;
+      const wrecksNow = state.vehicles.filter((v) => v.state === V_WRECK).length;
+      if (wrecksNow > prevWrecks && prevWrecks === 0) {
+        comms.push('Motor pool write-off logged. Fuel-adjacent parking remains discouraged.');
+      }
+      prevWrecks = wrecksNow;
     };
 
     const arrowLayer = document.createElement('div');
@@ -589,7 +621,7 @@ function renderHud(
       const cls = a.alive ? (selected[i] ? 'agent sel' : 'agent') : 'agent dead';
       const stim = `C${a.stims[0]} F${a.stims[1]} S${a.stims[2]}`;
       const aggro = ['HOLD', 'DEF', 'FREE'][a.aggression] ?? 'FREE';
-      const flags = `${a.cloakT > 0 ? ' | CLOAK' : ''}${a.stunT > 0 ? ' | JAMMED' : ''}${a.spec.shieldMax > 0 ? ` | SH${a.shield}` : ''}`;
+      const flags = `${a.cloakT > 0 ? ' | CLOAK' : ''}${a.stunT > 0 ? ' | JAMMED' : ''}${a.driving >= 0 ? ' | DRIVING' : ''}${a.spec.shieldMax > 0 ? ` | SH${a.shield}` : ''}`;
       return `<div class="${cls}"><b>A${i + 1}</b> ${a.alive ? a.hp : 'KIA'}<span class="hpbar"><i style="width:${(a.hp / a.maxHp) * 100}%"></i></span><small>${wname} | ${stim} | R${((a.reserve / 10) | 0)} | ${aggro}${flags}</small></div>`;
     })
     .join('');
@@ -644,5 +676,5 @@ function renderHud(
       ${status ? `<span class="status">${status}</span>` : ''}
     </div>
     <div class="hud-agents">${agents}</div>
-    <div class="hud-help">LMB select | RMB move/attack | 1-4 squad, 5 all | Z/X/C stims | Tab weapon | R aggression | F persuade | G/H/B swarm | V cloak | T charge | Y medbay | U drone | K EMP | WASD/arrows pan | Q/E rotate | space pause | -/= sim speed</div>`;
+    <div class="hud-help">LMB select | RMB move/attack | 1-4 squad, 5 all | Z/X/C stims | Tab weapon | R aggression | F persuade | G/H/B swarm | V cloak | J hijack | T charge | Y medbay | U drone | K EMP | WASD/arrows pan | Q/E rotate | space pause | -/= sim speed</div>`;
 }

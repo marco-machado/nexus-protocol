@@ -8,12 +8,15 @@ import {
   campaignAct,
   campaignWon,
   clearSave,
+  CONDITION_NAMES,
   CYCLE_MS,
   DEFENSE_UNREST,
   incomePerCycle,
   researchPerCycle,
   loadMeta,
+  missionConditions,
   newAgent,
+  nextMissionSeed,
   REGION_UNLOCK_OWNED,
   REGIONS,
   regionUnlocked,
@@ -326,9 +329,14 @@ export class Screens {
 
     const needsPersuadertron =
       !defense && t.missionType === 1 && !m.agents.some((a) => a.alive && a.gear.persuadertron);
+    const cond = missionConditions(nextMissionSeed(t, m.ngPlus));
+    const condNotes: string[] = [];
+    if (cond.rain === 1) condNotes.push('counterparty sensor performance degraded 25%; umbrellas are not reimbursable');
+    if (cond.tod === 2) condNotes.push('low light favors cloak fields');
     this.el.innerHTML = `
       <div class="panel equip">
         <div class="topbar"><h2>SQUAD PROVISIONING - ${t.name}${defense ? ' (DEFENSE)' : ''}</h2><span class="credits">${m.credits}cr</span></div>
+        <div class="loglines">&gt; CONDITIONS: ${CONDITION_NAMES[cond.tod]}${cond.rain === 1 ? ' / RAIN' : ''}${condNotes.length > 0 ? ` (${condNotes.join('; ')})` : ''}</div>
         ${needsPersuadertron ? '<div class="loglines">&gt; COMPANY ISSUE: this contract requires a Persuadertron. Equip one before launch.</div>' : ''}
         <div class="cols">
           <div class="col"><h3>SQUAD (click to select)</h3>${agents}</div>

@@ -209,6 +209,19 @@ export function missionSeed(t: Territory, ngPlus: number): number {
   return (t.seed ^ Math.imul(t.attempts, 0x9e3779b9) ^ (ngPlus << 8)) | 0;
 }
 
+// the brief renders before launch() bumps attempts, so both must derive the
+// seed of the UPCOMING attempt from this helper or conditions would diverge
+export function nextMissionSeed(t: Territory, ngPlus: number): number {
+  return (t.seed ^ Math.imul(t.attempts + 1, 0x9e3779b9) ^ (ngPlus << 8)) | 0;
+}
+
+export function missionConditions(seed: number): { tod: number; rain: number } {
+  const h = Math.imul(seed ^ 0x51ed270b, 0x85ebca6b);
+  return { tod: (h >>> 8) % 3, rain: (h >>> 16) % 100 < 35 ? 1 : 0 };
+}
+
+export const CONDITION_NAMES = ['DAYLIGHT', 'DUSK', 'NIGHT'];
+
 export const CYCLE_MS = 30 * 60 * 1000;
 export const OFFLINE_CAP_MS = 24 * 60 * 60 * 1000;
 const RESEARCH_BASE = 6;

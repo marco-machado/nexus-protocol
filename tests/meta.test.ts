@@ -11,8 +11,10 @@ import {
   CYCLE_MS,
   incomePerCycle,
   makeTerritories,
+  missionConditions,
   missionSeed,
   newMeta,
+  nextMissionSeed,
   OFFLINE_CAP_MS,
   processSieges,
   REGIONS,
@@ -340,5 +342,51 @@ describe('act 3 finale and New Game+', () => {
     const t0 = makeTerritories(0)[5]!;
     const t1 = makeTerritories(1)[5]!;
     expect(missionSeed(t1, 1)).not.toBe(missionSeed(t0, 0));
+  });
+});
+
+describe('phase D mission conditions', () => {
+  it('brief and launch agree on the upcoming attempt seed', () => {
+    const t = makeTerritories(0)[7]!;
+    t.attempts = 3;
+    const briefSeed = nextMissionSeed(t, 0);
+    t.attempts++;
+    expect(missionSeed(t, 0)).toBe(briefSeed);
+  });
+
+  it('derives sane condition distributions', () => {
+    let day = 0;
+    let dusk = 0;
+    let night = 0;
+    let rain = 0;
+    const n = 1000;
+    for (let i = 0; i < n; i++) {
+      const c = missionConditions((i * 2654435761) | 0);
+      if (c.tod === 0) day++;
+      else if (c.tod === 1) dusk++;
+      else night++;
+      expect(c.tod === 0 || c.tod === 1 || c.tod === 2).toBe(true);
+      rain += c.rain;
+    }
+    for (const share of [day, dusk, night]) {
+      expect(share).toBeGreaterThan(n * 0.22);
+      expect(share).toBeLessThan(n * 0.45);
+    }
+    expect(rain).toBeGreaterThan(n * 0.25);
+    expect(rain).toBeLessThan(n * 0.45);
+  });
+
+  it('conditions are stable per seed and vary per attempt', () => {
+    const t = makeTerritories(0)[9]!;
+    const a = missionConditions(nextMissionSeed(t, 0));
+    const b = missionConditions(nextMissionSeed(t, 0));
+    expect(b).toEqual(a);
+    let varies = false;
+    for (let i = 0; i < 8 && !varies; i++) {
+      t.attempts++;
+      const c = missionConditions(nextMissionSeed(t, 0));
+      varies = c.tod !== a.tod || c.rain !== a.rain;
+    }
+    expect(varies).toBe(true);
   });
 });

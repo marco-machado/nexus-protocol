@@ -9,8 +9,9 @@ import {
   buildSpec,
   campaignWon,
   loadMeta,
-  missionSeed,
+  missionConditions,
   newMeta,
+  nextMissionSeed,
   REGIONS,
   saveMeta,
   startNgPlus,
@@ -106,6 +107,8 @@ export class Game {
     const missionType = defense ? MISSION_DEFENSE : t.missionType;
     const act = actOfTerritory(t.id);
     const difficulty = this.meta.territories.filter((x) => x.owned).length - 1;
+    const seed = nextMissionSeed(t, this.meta.ngPlus);
+    const cond = missionConditions(seed);
     t.attempts++;
     saveMeta(this.meta);
     const rivalId = defense && t.siege ? t.siege.rival : t.rival;
@@ -115,10 +118,12 @@ export class Game {
       loadoutTier: Math.min(5, act + 1 + this.meta.ngPlus),
       elite: act === 3 || t.hq === true,
       map: REGIONS[t.region]!.mapParams,
+      tod: cond.tod,
+      weather: cond.rain,
     };
     const result = await runMission(
       this.renderer,
-      missionSeed(t, this.meta.ngPlus),
+      seed,
       missionType,
       specs,
       this.hud,
