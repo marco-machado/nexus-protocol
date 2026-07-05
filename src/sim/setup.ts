@@ -13,6 +13,16 @@ import {
 } from './state';
 import { spawnNpc } from './tick';
 import {
+  CAR_COUNT,
+  CAR_DRIVING,
+  createVehicle,
+  isStreetCell,
+  VEH_CAR,
+  VEH_FUEL,
+  VEH_TRAM,
+  V_DRIVE,
+} from './vehicles';
+import {
   createAgent,
   defaultSpec,
   DOCTRINE_BRUTE,
@@ -45,6 +55,88 @@ function enemyWid(idx: number, doctrine: number, tier: number, elite: boolean): 
   if (doctrine === DOCTRINE_STEALTH) return tier >= 4 ? 6 : 3;
   if (doctrine === DOCTRINE_SWARM) return tier >= 3 ? 5 : 2;
   return tier >= 3 ? 4 : 2;
+}
+
+function markObstacle(s: SimState, cell: number): void {
+  s.map.obstacle[cell] = 1;
+  s.map.streetBlocked[cell] = 1;
+}
+
+const FUEL_COUNT = 3;
+
+function spawnVehicles(s: SimState): void {
+  const total = s.map.obstacle.length;
+  const cellX = (c: number) => c % MAP_W;
+  const cellZ = (c: number) => (c / MAP_W) | 0;
+  const avoid: number[] = s.agents.map((a) => cellIdx(a.x >> 16, a.z >> 16));
+  avoid.push(cellIdx(s.mission.exfilX >> 16, s.mission.exfilZ >> 16));
+  const nearAvoid = (cell: number, r: number) =>
+    avoid.some((c) => Math.max(Math.abs(cellX(c) - cellX(cell)), Math.abs(cellZ(c) - cellZ(cell))) <= r);
+
+  const pumps: number[] = [];
+  // stride scan scatters pumps deterministically without consuming rand
+  for (let i = 0; i < total && pumps.length < FUEL_COUNT; i++) {
+    const cell = (i * 2731 + 17) % total;
+    const x = cellX(cell);
+    const z = cellZ(cell);
+    if (s.map.obstacle[cell] || isStreetCell(x, z)) continue;
+    const mx = x % 16;
+    const mz = z % 16;
+    if (mx !== 4 && mx !== 15 && mz !== 4 && mz !== 15) continue;
+    if (pumps.some((c) => Math.abs(cellX(c) - x) + Math.abs(cellZ(c) - z) < 20)) continue;
+    if (s.mission.assets.some((a) => Math.max(Math.abs(cellX(a.cell) - x), Math.abs(cellZ(a.cell) - z)) <= 4)) continue;
+    if (nearAvoid(cell, 5)) continue;
+    markObstacle(s, cell);
+    s.vehicles.push(createVehicle(s.vehicles.length, VEH_FUEL, cell));
+    pumps.push(cell);
+  }
+
+  const lanes: number[] = [];
+  for (let cell = 0; cell < total; cell++) {
+    if (s.map.streetBlocked[cell]) continue;
+    const x = cellX(cell);
+    const z = cellZ(cell);
+    const mx = x % 16;
+    const mz = z % 16;
+    if (mz !== 1 && mz !== 2 && mx !== 1 && mx !== 2) continue;
+    if (nearAvoid(cell, 3)) continue;
+    lanes.push(cell);
+  }
+  const used = new Set<number>();
+  for (let i = 0; i < CAR_COUNT && lanes.length > 0; i++) {
+    let idx = rand(s, lanes.length);
+    let tries = 0;
+    while (used.has(idx) && tries < 50) {
+      idx = rand(s, lanes.length);
+      tries++;
+    }
+    if (used.has(idx)) break;
+    used.add(idx);
+    const cell = lanes[idx]!;
+    const v = createVehicle(s.vehicles.length, VEH_CAR, cell);
+    const mz = cellZ(cell) % 16;
+    const mx = cellX(cell) % 16;
+    if (mz === 1) v.dirX = 1;
+    else if (mz === 2) v.dirX = -1;
+    else if (mx === 2) v.dirZ = 1;
+    else v.dirZ = -1;
+    if (i < CAR_DRIVING) v.state = V_DRIVE;
+    s.vehicles.push(v);
+  }
+
+  const tramDefs = [
+    { a: cellIdx(2, 49), b: cellIdx(93, 49), cell: cellIdx(48, 49), dirX: 1, dirZ: 0 },
+    { a: cellIdx(50, 2), b: cellIdx(50, 93), cell: cellIdx(50, 48), dirX: 0, dirZ: 1 },
+  ];
+  for (const t of tramDefs) {
+    const v = createVehicle(s.vehicles.length, VEH_TRAM, t.cell);
+    v.routeA = t.a;
+    v.routeB = t.b;
+    v.dirX = t.dirX;
+    v.dirZ = t.dirZ;
+    v.state = V_DRIVE;
+    s.vehicles.push(v);
+  }
 }
 
 function spawnEnemySquads(
@@ -144,7 +236,7 @@ export function createMission(
       const cz = Math.max(1, Math.min(MAP_H - 2, az + rand(s, 9) - 4));
       const cell = cellIdx(cx, cz);
       if (s.map.obstacle[cell] || s.mission.assets.some((asset) => asset.cell === cell)) continue;
-      s.map.obstacle[cell] = 1;
+      markObstacle(s, cell);
       s.mission.assets.push({ cell, hp: 120, alive: true });
       placed++;
     }
@@ -156,14 +248,14 @@ export function createMission(
     spawnEnemySquads(s, ax, az, 3, 3, doctrine, tier, true);
     let coreCell = cellIdx(Math.max(1, Math.min(MAP_W - 2, ax)), Math.max(1, Math.min(MAP_H - 2, az)));
     if (s.map.obstacle[coreCell]) coreCell = nearestWalkable(s.map, coreCell);
-    s.map.obstacle[coreCell] = 1;
+    markObstacle(s, coreCell);
     s.mission.assets.push({ cell: coreCell, hp: 800, alive: true });
   } else if (missionType === MISSION_DEFENSE) {
     const cx = Math.max(1, Math.min(MAP_W - 2, ax));
     const cz = Math.max(1, Math.min(MAP_H - 2, az + 20));
     let cell = cellIdx(cx, cz);
     if (s.map.obstacle[cell]) cell = nearestWalkable(s.map, cell);
-    s.map.obstacle[cell] = 1;
+    markObstacle(s, cell);
     s.mission.assets.push({ cell, hp: 500, alive: true });
     s.mission.wavesTotal = 4 + Math.min(2, extraGuards);
     s.mission.waveT = 500;
@@ -174,12 +266,12 @@ export function createMission(
     const pz = Math.max(1, Math.min(MAP_H - 2, az + rand(s, 13) - 6));
     let powerCell = cellIdx(px, pz);
     if (s.map.obstacle[powerCell]) powerCell = nearestWalkable(s.map, powerCell);
-    s.map.obstacle[powerCell] = 1;
+    markObstacle(s, powerCell);
     s.mission.assets.push({ cell: powerCell, hp: 150, alive: true });
 
     let vaultCell = cellIdx(Math.max(1, Math.min(MAP_W - 2, ax)), Math.max(1, Math.min(MAP_H - 2, az)));
     if (s.map.obstacle[vaultCell] || vaultCell === powerCell) vaultCell = nearestWalkable(s.map, vaultCell);
-    s.map.obstacle[vaultCell] = 1;
+    markObstacle(s, vaultCell);
     s.mission.assets.push({ cell: vaultCell, hp: 600, alive: true });
 
     const tech = spawnNpc(s, NPC_CIV, nearestWalkable(s.map, cellIdx(ax + 2, az + 2)));
@@ -206,6 +298,8 @@ export function createMission(
     const cell = s.map.walkable[rand(s, s.map.walkable.length)]!;
     spawnNpc(s, NPC_CIV, cell);
   }
+
+  spawnVehicles(s);
 
   return s;
 }

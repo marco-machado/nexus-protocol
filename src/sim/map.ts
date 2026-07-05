@@ -20,6 +20,7 @@ export interface MapData {
   buildings: Building[];
   walkable: number[];
   edgeCells: number[];
+  streetBlocked: Uint8Array;
 }
 
 export function cellIdx(x: number, z: number): number {
@@ -92,8 +93,10 @@ export function generateMap(seed: number, params: MapParams = {}): MapData {
 
   const walkable: number[] = [];
   const edgeCells: number[] = [];
+  const streetBlocked = new Uint8Array(MAP_W * MAP_H);
   for (let z = 0; z < MAP_H; z++) {
     for (let x = 0; x < MAP_W; x++) {
+      if (x % BLOCK >= STREET && z % BLOCK >= STREET) streetBlocked[cellIdx(x, z)] = 1;
       if (obstacle[cellIdx(x, z)]) continue;
       walkable.push(cellIdx(x, z));
       if (x === 0 || z === 0 || x === MAP_W - 1 || z === MAP_H - 1) {
@@ -102,7 +105,7 @@ export function generateMap(seed: number, params: MapParams = {}): MapData {
     }
   }
 
-  return { w: MAP_W, h: MAP_H, obstacle, buildings, walkable, edgeCells };
+  return { w: MAP_W, h: MAP_H, obstacle, buildings, walkable, edgeCells, streetBlocked };
 }
 
 export function losClear(

@@ -61,6 +61,17 @@ export interface PlaceCommand {
   cell: number;
 }
 
+export interface HijackCommand {
+  type: 'hijack';
+  id: number;
+}
+
+export interface AttackVehCommand {
+  type: 'attackveh';
+  ids: number[];
+  vehId: number;
+}
+
 export type Command =
   | MoveCommand
   | AttackCommand
@@ -70,7 +81,9 @@ export type Command =
   | CycleCommand
   | AggroCommand
   | UseCommand
-  | PlaceCommand;
+  | PlaceCommand
+  | HijackCommand
+  | AttackVehCommand;
 
 export class CommandQueue {
   private byTick = new Map<number, Command[]>();

@@ -29,6 +29,7 @@ export function hashState(s: SimState): number {
     mix(a.stims[0] | (a.stims[1] << 4) | (a.stims[2] << 8) | (a.active << 12));
     mix(a.alive ? 1 : 0);
     mix(a.cloakT | (a.shield << 9) | (a.stunT << 18));
+    mix((a.driving + 2) | ((a.attackVeh + 2) << 8));
   }
   for (const n of s.npcs) {
     mix(n.x);
@@ -41,6 +42,20 @@ export function hashState(s: SimState): number {
     mix(d.x);
     mix(d.z);
     mix(d.hp | (d.kind << 12) | ((d.alive ? 1 : 0) << 16) | (d.charge << 17));
+  }
+  for (const v of s.vehicles) {
+    mix(v.x);
+    mix(v.z);
+    mix(v.hp);
+    mix(
+      v.fuseT |
+        (v.stopT << 8) |
+        (v.kind << 18) |
+        (v.state << 20) |
+        ((v.driver + 1) << 23) |
+        ((v.dirX + 1) << 26) |
+        ((v.dirZ + 1) << 28),
+    );
   }
   return h >>> 0;
 }

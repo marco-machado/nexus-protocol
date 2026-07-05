@@ -3,6 +3,7 @@ import { generateMap, MAP_H, MAP_W, type MapData, type MapParams } from './map';
 import { seedFrom } from './prng';
 import { WEAPONS } from './weapons';
 import type { Agent, Npc, Projectile } from './units';
+import type { Vehicle } from './vehicles';
 
 export const MISSION_ASSASSINATE = 0;
 export const MISSION_PERSUADE = 1;
@@ -111,6 +112,7 @@ export interface SimState {
   projectiles: Projectile[];
   blasts: Blast[];
   deployables: Deployable[];
+  vehicles: Vehicle[];
   smoke: SmokePuff[];
   smokeGrid: Uint8Array;
   alarm: AlarmState;
@@ -145,6 +147,7 @@ export function baseState(seed: number, mapSeed: number, mapParams?: MapParams):
     projectiles: [],
     blasts: [],
     deployables: [],
+    vehicles: [],
     smoke: [],
     smokeGrid: new Uint8Array(MAP_W * MAP_H),
     alarm: { heat: 0, level: 0, quietT: 0, spawnT: 0, ax: 0, az: 0, policeBudget: 6, tacticalBudget: 3 },

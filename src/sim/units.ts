@@ -78,6 +78,8 @@ export interface Agent {
   shield: number;
   shieldT: number;
   stunT: number;
+  driving: number;
+  attackVeh: number;
 }
 
 export interface Npc {
@@ -193,6 +195,8 @@ export function createAgent(id: number, x: Fx, z: Fx, spec: AgentSpec): Agent {
     shield: spec.shieldMax,
     shieldT: 0,
     stunT: 0,
+    driving: -1,
+    attackVeh: -1,
   };
 }
 

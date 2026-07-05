@@ -16,8 +16,10 @@ import {
   MISSION_PURGE,
 } from '../src/sim/state';
 import type { MissionParams } from '../src/sim/setup';
-import { npcSightFx } from '../src/sim/tick';
-import { defaultSpec, DOCTRINE_BRUTE, DOCTRINE_STEALTH, DOCTRINE_SWARM } from '../src/sim/units';
+import { npcSightFx, spawnNpc, step } from '../src/sim/tick';
+import { defaultSpec, DOCTRINE_BRUTE, DOCTRINE_STEALTH, DOCTRINE_SWARM, NPC_CIV } from '../src/sim/units';
+import { createVehicle, HIJACK_RADIUS, VEH_CAR, VEH_FUEL, VEH_TRAM, V_WRECK } from '../src/sim/vehicles';
+import { cellIdx } from '../src/sim/map';
 
 const SEED = 0xc0ffee;
 const TOTAL_TICKS = 1200;
@@ -25,7 +27,7 @@ const CHECKPOINT_EVERY = 200;
 
 // If this hash changes, sim behavior changed: either the change was an
 // intentional gameplay edit (update the constant) or determinism broke.
-const GOLDEN_FINAL_HASH = 0x59c50d87;
+const GOLDEN_FINAL_HASH = 0x93f774c4;
 
 function specs() {
   const lead = defaultSpec();
@@ -180,6 +182,84 @@ describe('phase D environment', () => {
       return hashState(s);
     };
     expect(finalWith(1)).not.toBe(finalWith(0));
+  });
+});
+
+describe('phase D vehicles', () => {
+  it('spawns traffic in every mission', () => {
+    const s = createMission(SEED, MISSION_ASSASSINATE, specs());
+    expect(s.vehicles.filter((v) => v.kind === VEH_CAR).length).toBeGreaterThanOrEqual(4);
+    expect(s.vehicles.filter((v) => v.kind === VEH_TRAM).length).toBe(2);
+    expect(s.vehicles.some((v) => v.kind === VEH_FUEL)).toBe(true);
+  });
+
+  it('hijack boards, drives on streets, run-over bills collateral, exit dismounts', () => {
+    const s = createMission(SEED, MISSION_ASSASSINATE, specs());
+    const car = s.vehicles.find((v) => v.kind === VEH_CAR)!;
+    const a = s.agents[0]!;
+    a.x = car.x + (1 << 16);
+    a.z = car.z;
+    step(s, [{ type: 'hijack', id: 0 }]);
+    expect(a.driving).toBe(car.id);
+    expect(car.driver).toBe(0);
+    step(s, [{ type: 'move', ids: [0], x: toFx(2.5), z: toFx(2.5) }]);
+    expect(car.path.length).toBeGreaterThan(0);
+    for (let i = 1; i <= 4 && i < car.path.length; i++) {
+      spawnNpc(s, NPC_CIV, car.path[i]!);
+    }
+    const sx = car.x;
+    const sz = car.z;
+    for (let i = 0; i < 120; i++) step(s, []);
+    expect(car.x !== sx || car.z !== sz).toBe(true);
+    expect(a.x).toBe(car.x);
+    expect(s.civKills).toBeGreaterThanOrEqual(1);
+    step(s, [{ type: 'hijack', id: 0 }]);
+    expect(a.driving).toBe(-1);
+    expect(car.driver).toBe(-1);
+  });
+
+  it('hijack is rejected beyond the boarding radius', () => {
+    const s = createMission(SEED, MISSION_ASSASSINATE, specs());
+    const a = s.agents[0]!;
+    const nearest = Math.min(...s.vehicles.map((v) => Math.abs(v.x - a.x) + Math.abs(v.z - a.z)));
+    expect(nearest).toBeGreaterThan(HIJACK_RADIUS);
+    step(s, [{ type: 'hijack', id: 0 }]);
+    expect(a.driving).toBe(-1);
+  });
+
+  it('vehicle explosions chain with staggered fuses', () => {
+    const s = createMission(SEED, MISSION_ASSASSINATE, specs());
+    const row: number[] = [];
+    for (let i = 0; i < 3; i++) {
+      const v = createVehicle(s.vehicles.length, VEH_CAR, cellIdx(70 + i, 1));
+      v.dirX = 1;
+      s.vehicles.push(v);
+      row.push(v.id);
+    }
+    const boomsBefore = s.booms;
+    s.vehicles[row[0]!]!.fuseT = 1;
+    const boomTicks: number[] = [];
+    for (let i = 0; i < 40; i++) {
+      const before = s.booms;
+      step(s, []);
+      if (s.booms > before) boomTicks.push(s.tick);
+    }
+    expect(s.booms - boomsBefore).toBeGreaterThanOrEqual(3);
+    for (const id of row) expect(s.vehicles[id]!.state).toBe(V_WRECK);
+    expect(new Set(boomTicks).size).toBe(boomTicks.length);
+  });
+
+  it('vehicle commands replay identically', () => {
+    const script: ReplayEntry[] = [
+      { tick: 5, command: { type: 'move', ids: [0, 1, 2, 3], x: toFx(48.5), z: toFx(49.5) } },
+      { tick: 260, command: { type: 'hijack', id: 0 } },
+      { tick: 280, command: { type: 'move', ids: [0], x: toFx(10.5), z: toFx(49.5) } },
+      { tick: 600, command: { type: 'hijack', id: 0 } },
+      { tick: 620, command: { type: 'attackveh', ids: [1, 2], vehId: 3 } },
+    ];
+    expect(runHashes(MISSION_ASSASSINATE, script, 900)).toEqual(
+      runHashes(MISSION_ASSASSINATE, script, 900),
+    );
   });
 });
 

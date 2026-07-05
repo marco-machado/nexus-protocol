@@ -50,6 +50,37 @@ import {
   ST_WALK,
 } from './units';
 import { PROJ_SPEED_FX, PROJ_SUBSTEPS, WEAPONS } from './weapons';
+import {
+  CAR_BOOM_DMG,
+  CAR_BOOM_R,
+  CAR_HIJACK_SPEED,
+  CAR_SPEED,
+  FUEL_BOOM_DMG,
+  FUEL_BOOM_R,
+  FUSE_CHAIN,
+  FUSE_SHOT,
+  HALT_T,
+  HIJACK_RADIUS,
+  isIntersection,
+  PED_AHEAD,
+  PED_LATERAL,
+  RUNOVER_DMG,
+  RUNOVER_R,
+  TRAM_BOOM_DMG,
+  TRAM_BOOM_R,
+  TRAM_RUNOVER_DMG,
+  TRAM_SPEED,
+  TRAM_STOP_T,
+  VEH_FUEL,
+  VEH_HIT,
+  VEH_TRAM,
+  V_DRIVE,
+  V_HALT,
+  V_HIJACK,
+  V_PARKED,
+  V_WRECK,
+  type Vehicle,
+} from './vehicles';
 
 export const TICK_RATE = 20;
 export const TICK_MS = 1000 / TICK_RATE;
@@ -262,6 +293,252 @@ function killNpc(s: SimState, n: Npc): void {
   else s.kills++;
 }
 
+function streetFacade(map: MapData): MapData {
+  return { ...map, obstacle: map.streetBlocked };
+}
+
+function ejectDriver(s: SimState, v: Vehicle, dmg: number): void {
+  if (v.driver < 0) return;
+  const a = s.agents[v.driver];
+  v.driver = -1;
+  if (!a) return;
+  a.driving = -1;
+  const cell = nearestWalkable(s.map, cellOfFx(v.x, v.z));
+  const [cx, cz] = centerFx(cell);
+  a.x = cx;
+  a.z = cz;
+  a.path = [];
+  a.pathI = 0;
+  a.moving = false;
+  if (a.alive) damageAgent(a, dmg);
+}
+
+function damageVehicle(s: SimState, v: Vehicle, dmg: number, fuse: number): void {
+  if (v.state === V_WRECK || v.fuseT > 0) return;
+  v.hp -= dmg;
+  if (v.hp <= 0) {
+    v.hp = 0;
+    v.fuseT = fuse;
+    ejectDriver(s, v, 30);
+  }
+}
+
+function lineCells(from: number, to: number): number[] {
+  const fx = from % MAP_W;
+  const fz = (from / MAP_W) | 0;
+  const tx = to % MAP_W;
+  const tz = (to / MAP_W) | 0;
+  const sx = Math.sign(tx - fx);
+  const sz = Math.sign(tz - fz);
+  const cells: number[] = [];
+  let x = fx;
+  let z = fz;
+  while (x !== tx || z !== tz) {
+    x += sx;
+    z += sz;
+    cells.push(cellIdx(x, z));
+  }
+  return cells;
+}
+
+function unitAhead(v: Vehicle, x: Fx, z: Fx): boolean {
+  const dx = x - v.x;
+  const dz = z - v.z;
+  const fwd = v.dirX !== 0 ? dx * v.dirX : dz * v.dirZ;
+  const lat = v.dirX !== 0 ? Math.abs(dz) : Math.abs(dx);
+  return fwd > 0 && fwd <= PED_AHEAD && lat < PED_LATERAL;
+}
+
+function pedestrianAhead(s: SimState, v: Vehicle): boolean {
+  for (const a of s.agents) {
+    if (!a.alive || a.driving >= 0) continue;
+    if (unitAhead(v, a.x, a.z)) return true;
+  }
+  for (const n of s.npcs) {
+    if (n.state === ST_DEAD) continue;
+    if (unitAhead(v, n.x, n.z)) return true;
+  }
+  return false;
+}
+
+function runOver(s: SimState, v: Vehicle, dmg: number): void {
+  for (const n of s.npcs) {
+    if (n.state === ST_DEAD) continue;
+    if (Math.abs(n.x - v.x) < RUNOVER_R && Math.abs(n.z - v.z) < RUNOVER_R) hitNpc(s, n, dmg);
+  }
+}
+
+function syncDriver(s: SimState, v: Vehicle): void {
+  const a = s.agents[v.driver];
+  if (a) {
+    a.x = v.x;
+    a.z = v.z;
+  }
+}
+
+function carLeg(s: SimState, v: Vehicle): void {
+  const sb = s.map.streetBlocked;
+  let cx = v.x >> 16;
+  let cz = v.z >> 16;
+  let dx = v.dirX;
+  let dz = v.dirZ;
+  const open = (x: number, z: number) => inBounds(x, z) && sb[cellIdx(x, z)] === 0;
+  if (!open(cx + dx, cz + dz)) {
+    const lx = dz;
+    const lz = -dx;
+    const rx = -dz;
+    const rz = dx;
+    if (open(cx + lx, cz + lz)) {
+      dx = lx;
+      dz = lz;
+    } else if (open(cx + rx, cz + rz)) {
+      dx = rx;
+      dz = rz;
+    } else if (open(cx - dx, cz - dz)) {
+      dx = -dx;
+      dz = -dz;
+    } else {
+      return;
+    }
+  }
+  const cells: number[] = [];
+  for (let i = 0; i < 20; i++) {
+    const nx = cx + dx;
+    const nz = cz + dz;
+    if (!open(nx, nz)) break;
+    cells.push(cellIdx(nx, nz));
+    cx = nx;
+    cz = nz;
+    if (isIntersection(cx, cz) && !isIntersection(cx + dx, cz + dz)) {
+      const roll = rand(s, 4);
+      if (roll < 2) {
+        const tx = roll === 0 ? dz : -dz;
+        const tz = roll === 0 ? -dx : dx;
+        if (open(cx + tx, cz + tz)) {
+          dx = tx;
+          dz = tz;
+        }
+      }
+      break;
+    }
+  }
+  v.dirX = dx;
+  v.dirZ = dz;
+  v.path = cells;
+  v.pathI = 0;
+}
+
+function driveTo(s: SimState, v: Vehicle, x: Fx, z: Fx): void {
+  if (v.kind === VEH_TRAM) {
+    const ax = v.routeA % MAP_W;
+    const az = (v.routeA / MAP_W) | 0;
+    const bx = v.routeB % MAP_W;
+    const bz = (v.routeB / MAP_W) | 0;
+    const cur = cellOfFx(v.x, v.z);
+    const target =
+      az === bz
+        ? cellIdx(Math.max(Math.min(ax, bx), Math.min(Math.max(ax, bx), x >> 16)), az)
+        : cellIdx(ax, Math.max(Math.min(az, bz), Math.min(Math.max(az, bz), z >> 16)));
+    v.path = lineCells(cur, target);
+    v.pathI = 0;
+    return;
+  }
+  const facade = streetFacade(s.map);
+  const from = nearestWalkable(facade, cellOfFx(v.x, v.z));
+  const to = nearestWalkable(facade, cellOfFx(x, z));
+  const p = findPath(facade, from, to);
+  if (p) {
+    v.path = p;
+    v.pathI = 0;
+  }
+}
+
+function vehicleDir(v: Vehicle): void {
+  if (v.pathI >= v.path.length) return;
+  const c = v.path[v.pathI]!;
+  const dx = (c % MAP_W) - (v.x >> 16);
+  const dz = ((c / MAP_W) | 0) - (v.z >> 16);
+  if (dx !== 0 || dz !== 0) {
+    v.dirX = Math.sign(dx);
+    v.dirZ = Math.sign(dz);
+  }
+}
+
+function tramUpdate(s: SimState, v: Vehicle): void {
+  if (v.stopT > 0) {
+    v.stopT--;
+    return;
+  }
+  if (v.state !== V_HIJACK && v.path.length > 0 && (s.tick + v.id * 37) % 200 === 0) {
+    v.stopT = TRAM_STOP_T;
+    return;
+  }
+  if (v.pathI >= v.path.length) {
+    if (v.state === V_HIJACK) return;
+    const cur = cellOfFx(v.x, v.z);
+    if (cur === v.routeA || cur === v.routeB) v.stopT = TRAM_STOP_T;
+    const target = cur === v.routeB ? v.routeA : v.routeB;
+    v.path = lineCells(cur, target);
+    v.pathI = 0;
+    vehicleDir(v);
+    return;
+  }
+  if (v.state !== V_HIJACK && pedestrianAhead(s, v)) return;
+  vehicleDir(v);
+  moveAlong(v, TRAM_SPEED);
+  if (v.state === V_HIJACK) runOver(s, v, TRAM_RUNOVER_DMG);
+}
+
+function updateVehicles(s: SimState, noises: Noise[]): void {
+  for (const v of s.vehicles) {
+    if (v.state === V_WRECK) continue;
+    if (v.fuseT > 0) {
+      if (--v.fuseT === 0) {
+        v.state = V_WRECK;
+        if (v.kind === VEH_FUEL) s.map.obstacle[v.cell] = 0;
+        const dmg = v.kind === VEH_FUEL ? FUEL_BOOM_DMG : v.kind === VEH_TRAM ? TRAM_BOOM_DMG : CAR_BOOM_DMG;
+        const r = v.kind === VEH_FUEL ? FUEL_BOOM_R : v.kind === VEH_TRAM ? TRAM_BOOM_R : CAR_BOOM_R;
+        explodeAt(s, v.x, v.z, dmg, r, noises);
+      }
+      continue;
+    }
+    if (v.kind === VEH_FUEL || v.state === V_PARKED) continue;
+    if (v.kind === VEH_TRAM) {
+      tramUpdate(s, v);
+      if (v.driver >= 0) syncDriver(s, v);
+      continue;
+    }
+    if (v.state === V_HALT) {
+      if (--v.stopT <= 0) v.state = V_DRIVE;
+      continue;
+    }
+    if (v.state === V_DRIVE) {
+      if (v.pathI >= v.path.length) carLeg(s, v);
+      if ((s.tick + v.id) % 2 === 0 && pedestrianAhead(s, v)) {
+        v.state = V_HALT;
+        v.stopT = HALT_T;
+        continue;
+      }
+      moveAlong(v, CAR_SPEED);
+      continue;
+    }
+    if (v.state === V_HIJACK) {
+      const a = s.agents[v.driver];
+      if (!a || !a.alive) {
+        v.driver = -1;
+        v.state = V_PARKED;
+        continue;
+      }
+      if (v.pathI < v.path.length) {
+        vehicleDir(v);
+        moveAlong(v, CAR_HIJACK_SPEED);
+        runOver(s, v, RUNOVER_DMG);
+      }
+      syncDriver(s, v);
+    }
+  }
+}
+
 function hostileToPlayer(n: Npc): boolean {
   return (
     n.state !== ST_DEAD &&
@@ -309,6 +586,11 @@ function applyCommand(s: SimState, c: Command): void {
       for (const id of c.ids) {
         const a = s.agents[id];
         if (!a || !a.alive) continue;
+        if (a.driving >= 0) {
+          const v = s.vehicles[a.driving];
+          if (v) driveTo(s, v, c.x, c.z);
+          continue;
+        }
         const ox = Math.max(0, Math.min(MAP_W - 1, bx + (offset % 2 === 1 ? (offset + 1) >> 1 : -(offset >> 1))));
         const oz = Math.max(0, Math.min(MAP_W - 1, bz + (offset > 1 ? 1 : 0)));
         const target = offset === 0 ? cell : nearestWalkable(s.map, cellIdx(ox, oz));
@@ -336,7 +618,7 @@ function applyCommand(s: SimState, c: Command): void {
       break;
     case 'persuade': {
       const a = s.agents[c.id];
-      if (!a || !a.alive || !a.spec.persuadertron || a.persuadeCd > 0) break;
+      if (!a || !a.alive || !a.spec.persuadertron || a.persuadeCd > 0 || a.driving >= 0) break;
       a.persuadeCd = 30;
       const inf = influence(s);
       for (const n of s.npcs) {
@@ -452,6 +734,60 @@ function applyCommand(s: SimState, c: Command): void {
       });
       break;
     }
+    case 'hijack': {
+      const a = s.agents[c.id];
+      if (!a || !a.alive || a.stunT > 0) break;
+      if (a.driving >= 0) {
+        const v = s.vehicles[a.driving];
+        if (v) {
+          const cell = nearestWalkable(s.map, cellOfFx(v.x, v.z));
+          const [cx, cz] = centerFx(cell);
+          a.x = cx;
+          a.z = cz;
+          v.driver = -1;
+          if (v.state === V_HIJACK) v.state = V_PARKED;
+        }
+        a.driving = -1;
+        a.path = [];
+        a.pathI = 0;
+        a.moving = false;
+        break;
+      }
+      let best: Fx = HIJACK_RADIUS + 1;
+      let pick: Vehicle | null = null;
+      for (const v of s.vehicles) {
+        if (v.kind === VEH_FUEL || v.state === V_WRECK || v.fuseT > 0 || v.driver >= 0) continue;
+        const d = distFx(a.x, a.z, v.x, v.z);
+        if (d < best) {
+          best = d;
+          pick = v;
+        }
+      }
+      if (!pick) break;
+      pick.driver = a.id;
+      pick.state = V_HIJACK;
+      pick.path = [];
+      pick.pathI = 0;
+      a.driving = pick.id;
+      a.cloakT = 0;
+      a.attackTarget = -1;
+      a.attackVeh = -1;
+      a.moving = false;
+      a.path = [];
+      a.pathI = 0;
+      break;
+    }
+    case 'attackveh': {
+      const v = s.vehicles[c.vehId];
+      if (!v || v.state === V_WRECK) break;
+      for (const id of c.ids) {
+        const a = s.agents[id];
+        if (!a || !a.alive || a.driving >= 0) continue;
+        a.attackVeh = c.vehId;
+        a.attackTarget = -1;
+      }
+      break;
+    }
   }
 }
 
@@ -494,6 +830,8 @@ function updateAgent(s: SimState, a: Agent, noises: Noise[]): void {
     a.stunT--;
     return;
   }
+  // driving agents are a steering wheel, not a turret; the vehicle moves them
+  if (a.driving >= 0) return;
 
   if (a.moving) {
     if (moveAlong(a, agentSpeed(a))) a.moving = false;
@@ -511,7 +849,26 @@ function updateAgent(s: SimState, a: Agent, noises: Noise[]): void {
   let tz: Fx | null = null;
   let targetNpc: Npc | null = null;
   let targetAsset: import('./state').Asset | null = null;
-  if (a.attackTarget >= 0) {
+  let targetVeh: Vehicle | null = null;
+  if (a.attackVeh >= 0) {
+    const v = s.vehicles[a.attackVeh];
+    if (!v || v.state === V_WRECK) {
+      a.attackVeh = -1;
+    } else if (
+      distFx(a.x, a.z, v.x, v.z) <= rangeFx &&
+      losClear(s.map, a.x >> 16, a.z >> 16, v.x >> 16, v.z >> 16, true)
+    ) {
+      tx = v.x;
+      tz = v.z;
+      targetVeh = v;
+      a.moving = false;
+      a.path = [];
+      a.pathI = 0;
+    } else if ((s.tick + a.id) % 16 === 0) {
+      if (setPath(s.map, a, nearestWalkable(s.map, cellOfFx(v.x, v.z)))) a.moving = true;
+    }
+  }
+  if (tx === null && a.attackTarget >= 0) {
     const t = s.npcs[a.attackTarget];
     if (t && t.state !== ST_DEAD) {
       if (distFx(a.x, a.z, t.x, t.z) <= rangeFx && losUnits(s, a.x, a.z, t.x, t.z, a.spec.smokeVision)) {
@@ -570,6 +927,8 @@ function updateAgent(s: SimState, a: Agent, noises: Noise[]): void {
       hitNpc(s, targetNpc, contactShot(s, a.x, a.z, slot.wid, noises));
     } else if (targetAsset && distFx(a.x, a.z, tx, tz) <= CQC_RANGE) {
       damageAsset(s, targetAsset, contactShot(s, a.x, a.z, slot.wid, noises), noises);
+    } else if (targetVeh && distFx(a.x, a.z, tx, tz) <= CQC_RANGE) {
+      damageVehicle(s, targetVeh, contactShot(s, a.x, a.z, slot.wid, noises), FUSE_SHOT);
     } else {
       let spreadMul = a.spec.spreadMul;
       spreadMul = ((spreadMul * (100 - 25 * f)) / 100) | 0;
@@ -981,13 +1340,18 @@ function updateProjectiles(s: SimState, noises: Noise[]): void {
               damageAsset(s, asset, p.dmg, noises);
             }
           }
+          for (const v of s.vehicles) {
+            if (v.kind === VEH_FUEL && v.state !== V_WRECK && v.cell === cellIdx(cx, cz)) {
+              damageVehicle(s, v, p.dmg, FUSE_SHOT);
+            }
+          }
         }
         dead = true;
         break;
       }
       const HIT = (1 << 15) - 4000;
       for (const a of s.agents) {
-        if (!a.alive) continue;
+        if (!a.alive || a.driving >= 0) continue;
         if (Math.abs(a.x - p.x) < HIT && Math.abs(a.z - p.z) < HIT) {
           if (p.aoe > 0) explodeAt(s, p.x, p.z, p.dmg, p.aoe, noises);
           else {
@@ -1014,6 +1378,21 @@ function updateProjectiles(s: SimState, noises: Noise[]): void {
             n.state = ST_PANIC;
             n.panicT = 200;
           }
+          dead = true;
+          break;
+        }
+      }
+      if (dead) break;
+      for (const v of s.vehicles) {
+        if (v.kind === VEH_FUEL || v.state === V_WRECK) continue;
+        const hit =
+          (Math.abs(v.x - p.x) < VEH_HIT && Math.abs(v.z - p.z) < VEH_HIT) ||
+          (v.kind === VEH_TRAM &&
+            Math.abs(v.x + (v.dirX << 16) - p.x) < VEH_HIT &&
+            Math.abs(v.z + (v.dirZ << 16) - p.z) < VEH_HIT);
+        if (hit) {
+          if (p.aoe > 0) explodeAt(s, p.x, p.z, p.dmg, p.aoe, noises);
+          else damageVehicle(s, v, p.dmg, FUSE_SHOT);
           dead = true;
           break;
         }
@@ -1097,6 +1476,12 @@ function explodeAt(
           s.map.obstacle[asset.cell] = 0;
         }
       }
+    }
+    for (const v of s.vehicles) {
+      if (v.state === V_WRECK || v.fuseT > 0) continue;
+      const d = distFx(v.x, v.z, x, z);
+      // doubled so an adjacent boom breaches the tank and the chain propagates
+      if (d <= r) damageVehicle(s, v, dmgAt(d) * 2, FUSE_CHAIN);
     }
   }
   addSmoke(s, x, z);
@@ -1363,6 +1748,7 @@ export function step(state: SimState, commands: Command[]): void {
   for (const c of commands) applyCommand(state, c);
   for (const a of state.agents) updateAgent(state, a, noises);
   for (const n of state.npcs) updateNpc(state, n, noises);
+  updateVehicles(state, noises);
   updateDeployables(state, noises);
   updateBlasts(state, noises);
   updateProjectiles(state, noises);

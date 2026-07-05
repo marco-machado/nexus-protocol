@@ -31,4 +31,18 @@ describe('map generation', () => {
   it('density params produce a different layout', () => {
     expect(gridHash(11, { skipMod: 3 })).not.toBe(gridHash(11));
   });
+
+  it('street mask matches the block modulo rule and is building-free', () => {
+    for (const seed of [11, 42, 314]) {
+      const map = generateMap(seed);
+      for (let z = 0; z < map.h; z++) {
+        for (let x = 0; x < map.w; x++) {
+          const cell = x + z * map.w;
+          const street = x % 16 < 4 || z % 16 < 4;
+          expect(map.streetBlocked[cell]).toBe(street ? 0 : 1);
+          if (street) expect(map.obstacle[cell]).toBe(0);
+        }
+      }
+    }
+  });
 });
