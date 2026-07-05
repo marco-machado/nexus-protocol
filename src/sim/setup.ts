@@ -1,4 +1,4 @@
-import { cellIdx, MAP_H, MAP_W } from './map';
+import { cellIdx, MAP_H, MAP_W, type MapParams } from './map';
 import { nearestWalkable } from './path';
 import {
   baseState,
@@ -23,14 +23,21 @@ import {
 
 export const CIV_COUNT = 110;
 
+export interface MissionParams {
+  extraGuards?: number;
+  civCount?: number;
+  map?: MapParams;
+}
+
 export function createMission(
   seed: number,
   missionType: number,
   specs: AgentSpec[],
-  extraGuards = 0,
-  civCount = CIV_COUNT,
+  params: MissionParams = {},
 ): SimState {
-  const s = baseState(seed, seed ^ 0x77aa11);
+  const extraGuards = params.extraGuards ?? 0;
+  const civCount = params.civCount ?? CIV_COUNT;
+  const s = baseState(seed, seed ^ 0x77aa11, params.map);
   s.mission.type = missionType;
 
   const spawnCell = nearestWalkable(s.map, cellIdx(MAP_W >> 1, MAP_H - 3));

@@ -1,6 +1,6 @@
 import type { Command } from './commands';
 import { CommandQueue } from './commands';
-import { createMission } from './setup';
+import { createMission, type MissionParams } from './setup';
 import type { SimState } from './state';
 import { step } from './tick';
 import type { AgentSpec } from './units';
@@ -25,8 +25,9 @@ export function runReplay(
   entries: readonly ReplayEntry[],
   totalTicks: number,
   onTick?: (state: SimState) => void,
+  params?: MissionParams,
 ): SimState {
-  const state = createMission(seed, missionType, specs);
+  const state = createMission(seed, missionType, specs, params);
   const queue = new CommandQueue();
   for (const entry of entries) {
     queue.enqueue(entry.tick, entry.command);

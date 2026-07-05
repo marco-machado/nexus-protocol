@@ -1,5 +1,5 @@
 import type { Fx } from './fixed';
-import { generateMap, MAP_H, MAP_W, type MapData } from './map';
+import { generateMap, MAP_H, MAP_W, type MapData, type MapParams } from './map';
 import { seedFrom } from './prng';
 import { WEAPONS } from './weapons';
 import type { Agent, Npc, Projectile } from './units';
@@ -122,12 +122,12 @@ export function rand(s: SimState, n: number): number {
   return (x >>> 4) % n;
 }
 
-export function baseState(seed: number, mapSeed: number): SimState {
+export function baseState(seed: number, mapSeed: number, mapParams?: MapParams): SimState {
   return {
     tick: 0,
     rng: seedFrom(seed),
     mapSeed,
-    map: generateMap(mapSeed),
+    map: generateMap(mapSeed, mapParams),
     agents: [],
     npcs: [],
     projectiles: [],

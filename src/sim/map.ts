@@ -30,7 +30,18 @@ export function inBounds(x: number, z: number): boolean {
   return x >= 0 && z >= 0 && x < MAP_W && z < MAP_H;
 }
 
-export function generateMap(seed: number): MapData {
+export interface MapParams {
+  skipMod?: number;
+  splitMod?: number;
+  heightBase?: number;
+  heightVar?: number;
+}
+
+export function generateMap(seed: number, params: MapParams = {}): MapData {
+  const skipMod = params.skipMod ?? 6;
+  const splitMod = params.splitMod ?? 3;
+  const heightBase = params.heightBase ?? 4;
+  const heightVar = params.heightVar ?? 14;
   let rng = seedFrom(seed ^ 0x5eed);
   const rand = (n: number) => {
     rng = xorshift32(rng);
@@ -45,10 +56,10 @@ export function generateMap(seed: number): MapData {
       const x0 = bx * BLOCK + STREET;
       const z0 = bz * BLOCK + STREET;
       const size = BLOCK - STREET;
-      if (rand(6) === 0) continue;
+      if (rand(skipMod) === 0) continue;
       const splitX = rand(2) === 0;
       const parts =
-        rand(3) === 0
+        rand(splitMod) === 0
           ? [{ x: x0, z: z0, w: size, d: size }]
           : splitX
             ? [
@@ -66,7 +77,7 @@ export function generateMap(seed: number): MapData {
           z: p.z + inset,
           w: p.w - inset * 2,
           d: p.d - inset * 2,
-          h: 4 + rand(14),
+          h: heightBase + rand(heightVar),
         };
         if (b.w < 2 || b.d < 2) continue;
         buildings.push(b);

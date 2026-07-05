@@ -68,7 +68,7 @@ export function runMission(
   opts: MissionOptions = {},
 ): Promise<MissionResult> {
   return new Promise((resolve) => {
-    const state = createMission(seed, missionType, specs, extraGuards, opts.civCount);
+    const state = createMission(seed, missionType, specs, { extraGuards, civCount: opts.civCount });
     const gs = createGameScene(state);
     const rig = createRig(window.innerWidth / window.innerHeight, fromFx(state.agents[0]!.x), fromFx(state.agents[0]!.z));
     const queue = new CommandQueue();
