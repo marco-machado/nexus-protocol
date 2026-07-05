@@ -21,7 +21,10 @@ export interface MapData {
   walkable: number[];
   edgeCells: number[];
   streetBlocked: Uint8Array;
+  wallHp: Int16Array;
 }
+
+export const WALL_HP = 140;
 
 export function cellIdx(x: number, z: number): number {
   return x + z * MAP_W;
@@ -91,6 +94,18 @@ export function generateMap(seed: number, params: MapParams = {}): MapData {
     }
   }
 
+  // ground-floor perimeter cells are breachable; interiors keep the tower standing
+  const wallHp = new Int16Array(MAP_W * MAP_H);
+  for (const b of buildings) {
+    for (let z = b.z; z < b.z + b.d; z++) {
+      for (let x = b.x; x < b.x + b.w; x++) {
+        if (x === b.x || x === b.x + b.w - 1 || z === b.z || z === b.z + b.d - 1) {
+          wallHp[cellIdx(x, z)] = WALL_HP;
+        }
+      }
+    }
+  }
+
   const walkable: number[] = [];
   const edgeCells: number[] = [];
   const streetBlocked = new Uint8Array(MAP_W * MAP_H);
@@ -105,7 +120,7 @@ export function generateMap(seed: number, params: MapParams = {}): MapData {
     }
   }
 
-  return { w: MAP_W, h: MAP_H, obstacle, buildings, walkable, edgeCells, streetBlocked };
+  return { w: MAP_W, h: MAP_H, obstacle, buildings, walkable, edgeCells, streetBlocked, wallHp };
 }
 
 export function losClear(

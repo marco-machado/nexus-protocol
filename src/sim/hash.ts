@@ -20,6 +20,8 @@ export function hashState(s: SimState): number {
   mix(s.projectiles.length);
   mix(s.blasts.length);
   mix(s.smoke.length);
+  mix(s.breaches.length);
+  for (const c of s.breaches) mix(c);
   for (const a of s.agents) {
     mix(a.x);
     mix(a.z);

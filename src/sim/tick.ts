@@ -297,6 +297,20 @@ function streetFacade(map: MapData): MapData {
   return { ...map, obstacle: map.streetBlocked };
 }
 
+function breachWall(s: SimState, cell: number): void {
+  s.map.wallHp[cell] = 0;
+  s.map.obstacle[cell] = 0;
+  s.breaches.push(cell);
+  const [wx, wz] = centerFx(cell);
+  addSmoke(s, wx, wz);
+}
+
+function damageWall(s: SimState, cell: number, dmg: number): void {
+  if (s.map.wallHp[cell]! <= 0) return;
+  s.map.wallHp[cell] = s.map.wallHp[cell]! - dmg;
+  if (s.map.wallHp[cell]! <= 0) breachWall(s, cell);
+}
+
 function ejectDriver(s: SimState, v: Vehicle, dmg: number): void {
   if (v.driver < 0) return;
   const a = s.agents[v.driver];
@@ -1345,6 +1359,7 @@ function updateProjectiles(s: SimState, noises: Noise[]): void {
               damageVehicle(s, v, p.dmg, FUSE_SHOT);
             }
           }
+          damageWall(s, cellIdx(cx, cz), p.dmg);
         }
         dead = true;
         break;
@@ -1482,6 +1497,18 @@ function explodeAt(
       const d = distFx(v.x, v.z, x, z);
       // doubled so an adjacent boom breaches the tank and the chain propagates
       if (d <= r) damageVehicle(s, v, dmgAt(d) * 2, FUSE_CHAIN);
+    }
+    const bx0 = x >> 16;
+    const bz0 = z >> 16;
+    for (let wz = bz0 - rCells; wz <= bz0 + rCells; wz++) {
+      for (let wx = bx0 - rCells; wx <= bx0 + rCells; wx++) {
+        if (!inBounds(wx, wz)) continue;
+        const cell = cellIdx(wx, wz);
+        if (s.map.wallHp[cell]! <= 0) continue;
+        const [cxw, czw] = centerFx(cell);
+        const d = distFx(cxw, czw, x, z);
+        if (d <= r) damageWall(s, cell, dmgAt(d));
+      }
     }
   }
   addSmoke(s, x, z);

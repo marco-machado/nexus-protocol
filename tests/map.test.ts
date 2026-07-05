@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { generateMap } from '../src/sim/map';
+import { generateMap, WALL_HP } from '../src/sim/map';
 
 // FNV-1a over the obstacle grid; pins the exact default layout so the
 // MapParams refactor cannot silently change generation.
@@ -30,6 +30,31 @@ describe('map generation', () => {
 
   it('density params produce a different layout', () => {
     expect(gridHash(11, { skipMod: 3 })).not.toBe(gridHash(11));
+  });
+
+  it('wall hp covers exactly the building perimeters', () => {
+    const map = generateMap(11);
+    let destructible = 0;
+    const perimeter = new Set<number>();
+    for (const b of map.buildings) {
+      for (let z = b.z; z < b.z + b.d; z++) {
+        for (let x = b.x; x < b.x + b.w; x++) {
+          if (x === b.x || x === b.x + b.w - 1 || z === b.z || z === b.z + b.d - 1) {
+            perimeter.add(x + z * map.w);
+          }
+        }
+      }
+    }
+    for (let cell = 0; cell < map.wallHp.length; cell++) {
+      if (perimeter.has(cell)) {
+        expect(map.wallHp[cell]).toBe(WALL_HP);
+        destructible++;
+      } else {
+        expect(map.wallHp[cell]).toBe(0);
+      }
+    }
+    expect(destructible).toBe(perimeter.size);
+    expect(destructible).toBeGreaterThan(200);
   });
 
   it('street mask matches the block modulo rule and is building-free', () => {

@@ -27,7 +27,7 @@ const CHECKPOINT_EVERY = 200;
 
 // If this hash changes, sim behavior changed: either the change was an
 // intentional gameplay edit (update the constant) or determinism broke.
-const GOLDEN_FINAL_HASH = 0x93f774c4;
+const GOLDEN_FINAL_HASH = 0x913f91e4;
 
 function specs() {
   const lead = defaultSpec();
@@ -247,6 +247,33 @@ describe('phase D vehicles', () => {
     expect(s.booms - boomsBefore).toBeGreaterThanOrEqual(3);
     for (const id of row) expect(s.vehicles[id]!.state).toBe(V_WRECK);
     expect(new Set(boomTicks).size).toBe(boomTicks.length);
+  });
+
+  it('demo charge breaches a storefront wall', () => {
+    const s = createMission(SEED, MISSION_PURGE, phaseBSpecs());
+    let wallCell = -1;
+    let standCell = -1;
+    for (let cell = 0; cell < s.map.wallHp.length && wallCell < 0; cell++) {
+      if (s.map.wallHp[cell]! <= 0) continue;
+      for (const d of [-1, 1, -s.map.w, s.map.w]) {
+        const n = cell + d;
+        if (n >= 0 && n < s.map.obstacle.length && !s.map.obstacle[n]) {
+          wallCell = cell;
+          standCell = n;
+          break;
+        }
+      }
+    }
+    expect(wallCell).toBeGreaterThanOrEqual(0);
+    const a = s.agents[0]!;
+    a.x = ((standCell % s.map.w) << 16) + (1 << 15);
+    a.z = (((standCell / s.map.w) | 0) << 16) + (1 << 15);
+    step(s, [{ type: 'use', ids: [0], gear: GEAR_CHARGE }]);
+    for (let i = 0; i < 80; i++) step(s, []);
+    expect(s.breaches.length).toBeGreaterThan(0);
+    expect(s.breaches).toContain(wallCell);
+    expect(s.map.obstacle[wallCell]).toBe(0);
+    expect(s.map.wallHp[wallCell]).toBe(0);
   });
 
   it('vehicle commands replay identically', () => {

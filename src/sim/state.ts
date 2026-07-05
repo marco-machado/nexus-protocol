@@ -119,6 +119,7 @@ export interface SimState {
   swarm: SwarmState;
   env: EnvState;
   mission: MissionState;
+  breaches: number[];
   kills: number;
   civKills: number;
   // cumulative presentation counters; deterministic but excluded from hashState
@@ -171,6 +172,7 @@ export function baseState(seed: number, mapSeed: number, mapParams?: MapParams):
       trapBudget: 0,
       loot: 0,
     },
+    breaches: [],
     kills: 0,
     civKills: 0,
     shotsByWid: WEAPONS.map(() => 0),
