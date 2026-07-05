@@ -22,6 +22,7 @@ import {
   DEP_TURRET,
   SWARM_FLASHMOB,
   SWARM_HOLD,
+  TOD_NIGHT,
   type Asset,
   type Blast,
   type SmokePuff,
@@ -97,6 +98,22 @@ export function influence(s: SimState): number {
 
 function cellOfFx(x: Fx, z: Fx): number {
   return (x >> 16) + (z >> 16) * MAP_W;
+}
+
+// rain and darkness shrink NPC detection, never player hardware or weapon range
+export function npcSightFx(s: SimState, baseCells: number): Fx {
+  let v = baseCells << 16;
+  if (s.env.rain) v = (v * 3) >> 2;
+  if (s.env.tod === TOD_NIGHT) v = (v * 7) >> 3;
+  return v;
+}
+
+function cloakRevealRange(s: SimState): Fx {
+  return s.env.tod === TOD_NIGHT ? 2 << 16 : CLOAK_REVEAL_RANGE;
+}
+
+function cloakDrain(s: SimState): number {
+  return s.env.tod === TOD_NIGHT ? CLOAK_DRAIN >> 1 : CLOAK_DRAIN;
 }
 
 function centerFx(cell: number): [Fx, Fx] {
@@ -465,7 +482,7 @@ function updateAgent(s: SimState, a: Agent, noises: Noise[]): void {
 
   if (a.cloakT > 0) {
     a.cloakT--;
-    a.reserve -= CLOAK_DRAIN;
+    a.reserve -= cloakDrain(s);
     if (a.reserve <= 0) {
       a.reserve = 0;
       a.cloakT = 0;
@@ -516,7 +533,7 @@ function updateAgent(s: SimState, a: Agent, noises: Noise[]): void {
     for (const n of s.npcs) {
       if (!hostileToPlayer(n)) continue;
       const d = distFx(a.x, a.z, n.x, n.z);
-      if (n.cloakT > 0 && !a.spec.scanner && d > CLOAK_REVEAL_RANGE) continue;
+      if (n.cloakT > 0 && !a.spec.scanner && d > cloakRevealRange(s)) continue;
       if (d <= best && losUnits(s, a.x, a.z, n.x, n.z, a.spec.smokeVision)) {
         best = d;
         tx = n.x;
@@ -604,7 +621,7 @@ function enemySquadMove(s: SimState, n: Npc): void {
   }
   let tx: Fx | null = null;
   let tz: Fx | null = null;
-  let best: Fx = 14 << 16;
+  let best: Fx = npcSightFx(s, 14);
   for (const a of s.agents) {
     if (!a.alive || a.cloakT > 0) continue;
     const d = distFx(n.x, n.z, a.x, a.z);
@@ -857,7 +874,7 @@ function updateNpc(s: SimState, n: Npc, noises: Noise[]): void {
 function npcCombat(s: SimState, n: Npc, noises: Noise[]): void {
   if ((s.tick + n.id) % 5 !== 0 || n.wid < 0) return;
   const w = WEAPONS[n.wid]!;
-  const perception = (n.kind === NPC_GUARD ? 8 : n.kind === NPC_ENEMY ? 12 : 10) << 16;
+  const perception = npcSightFx(s, n.kind === NPC_GUARD ? 8 : n.kind === NPC_ENEMY ? 12 : 10);
   const rangeFx = Math.min(w.range, 12) << 16;
   let tx: Fx | null = null;
   let tz: Fx | null = null;

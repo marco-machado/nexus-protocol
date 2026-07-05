@@ -92,6 +92,15 @@ export interface SwarmState {
   z: Fx;
 }
 
+export interface EnvState {
+  tod: number;
+  rain: number;
+}
+
+export const TOD_DAY = 0;
+export const TOD_DUSK = 1;
+export const TOD_NIGHT = 2;
+
 export interface SimState {
   tick: number;
   rng: number;
@@ -106,6 +115,7 @@ export interface SimState {
   smokeGrid: Uint8Array;
   alarm: AlarmState;
   swarm: SwarmState;
+  env: EnvState;
   mission: MissionState;
   kills: number;
   civKills: number;
@@ -139,6 +149,7 @@ export function baseState(seed: number, mapSeed: number, mapParams?: MapParams):
     smokeGrid: new Uint8Array(MAP_W * MAP_H),
     alarm: { heat: 0, level: 0, quietT: 0, spawnT: 0, ax: 0, az: 0, policeBudget: 6, tacticalBudget: 3 },
     swarm: { mode: 0, x: 0, z: 0 },
+    env: { tod: TOD_DAY, rain: 0 },
     mission: {
       type: 0,
       status: 0,

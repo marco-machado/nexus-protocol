@@ -16,6 +16,7 @@ export function hashState(s: SimState): number {
   mix(s.alarm.level);
   mix(s.mission.status);
   mix(s.mission.stage | (s.mission.wave << 4) | (s.mission.crackT << 8));
+  mix(s.env.tod | (s.env.rain << 4));
   mix(s.projectiles.length);
   mix(s.blasts.length);
   mix(s.smoke.length);

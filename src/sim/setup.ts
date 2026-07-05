@@ -34,6 +34,8 @@ export interface MissionParams {
   doctrine?: number;
   loadoutTier?: number;
   elite?: boolean;
+  tod?: number;
+  weather?: number;
 }
 
 function enemyWid(idx: number, doctrine: number, tier: number, elite: boolean): number {
@@ -91,6 +93,8 @@ export function createMission(
   const s = baseState(seed, seed ^ 0x77aa11, params.map);
   s.mission.type = missionType;
   s.mission.doctrine = doctrine;
+  s.env.tod = params.tod ?? 0;
+  s.env.rain = params.weather ?? 0;
 
   const spawnCell = nearestWalkable(s.map, cellIdx(MAP_W >> 1, MAP_H - 3));
   const sx = spawnCell % MAP_W;

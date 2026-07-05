@@ -16,6 +16,7 @@ import {
   MISSION_PURGE,
 } from '../src/sim/state';
 import type { MissionParams } from '../src/sim/setup';
+import { npcSightFx } from '../src/sim/tick';
 import { defaultSpec, DOCTRINE_BRUTE, DOCTRINE_STEALTH, DOCTRINE_SWARM } from '../src/sim/units';
 
 const SEED = 0xc0ffee;
@@ -24,7 +25,7 @@ const CHECKPOINT_EVERY = 200;
 
 // If this hash changes, sim behavior changed: either the change was an
 // intentional gameplay edit (update the constant) or determinism broke.
-const GOLDEN_FINAL_HASH = 0x02c28687;
+const GOLDEN_FINAL_HASH = 0x59c50d87;
 
 function specs() {
   const lead = defaultSpec();
@@ -147,6 +148,38 @@ describe('phase B mission determinism', () => {
     expect(runHashes(MISSION_HEIST, heistScript, 800)).toEqual(
       runHashes(MISSION_HEIST, heistScript, 800),
     );
+  });
+});
+
+describe('phase D environment', () => {
+  it('scales NPC sight exactly in fixed point', () => {
+    const env = (tod: number, rain: number) => ({ env: { tod, rain } }) as Parameters<typeof npcSightFx>[0];
+    expect(npcSightFx(env(0, 0), 12)).toBe(12 << 16);
+    expect(npcSightFx(env(0, 1), 12)).toBe(9 << 16);
+    expect(npcSightFx(env(2, 0), 12)).toBe(((12 << 16) * 7) >> 3);
+    expect(npcSightFx(env(2, 1), 12)).toBe((((12 << 16) * 3) >> 2) * 7 >> 3);
+    expect(npcSightFx(env(1, 0), 12)).toBe(12 << 16);
+  });
+
+  it('night rain stealth purge replays identically', () => {
+    const params: MissionParams = { doctrine: DOCTRINE_STEALTH, loadoutTier: 4, tod: 2, weather: 1 };
+    const script: ReplayEntry[] = [
+      { tick: 5, command: { type: 'move', ids: [0, 1, 2, 3], x: toFx(48.5), z: toFx(40.5) } },
+      { tick: 60, command: { type: 'use', ids: [0], gear: GEAR_CLOAK } },
+      { tick: 300, command: { type: 'move', ids: [0, 1, 2, 3], x: toFx(48.5), z: toFx(20.5) } },
+    ];
+    expect(runHashes(MISSION_PURGE, script, 900, params)).toEqual(
+      runHashes(MISSION_PURGE, script, 900, params),
+    );
+  });
+
+  it('rain changes combat dynamics, not just the hashed env fields', () => {
+    const finalWith = (weather: number) => {
+      const s = runReplay(SEED, MISSION_ASSASSINATE, specs(), script, TOTAL_TICKS, undefined, { weather });
+      s.env = { tod: 0, rain: 0 };
+      return hashState(s);
+    };
+    expect(finalWith(1)).not.toBe(finalWith(0));
   });
 });
 
