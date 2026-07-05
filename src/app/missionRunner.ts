@@ -218,8 +218,16 @@ export function runMission(
         }
       }
       if (targetNpc >= 0) send({ type: 'attack', ids, npcId: targetNpc });
-      else if (targetVeh >= 0) send({ type: 'attackveh', ids, vehId: targetVeh });
-      else send({ type: 'move', ids, x: toFx(Math.max(0.5, Math.min(95.5, g.x))), z: toFx(Math.max(0.5, Math.min(95.5, g.z))) });
+      else if (targetVeh >= 0 && (e.ctrlKey || e.metaKey)) send({ type: 'attackveh', ids, vehId: targetVeh });
+      else if (targetVeh >= 0) {
+        const veh = state.vehicles[targetVeh]!;
+        send({
+          type: 'move',
+          ids,
+          x: toFx(Math.max(0.5, Math.min(95.5, fromFx(veh.x)))),
+          z: toFx(Math.max(0.5, Math.min(95.5, fromFx(veh.z)))),
+        });
+      } else send({ type: 'move', ids, x: toFx(Math.max(0.5, Math.min(95.5, g.x))), z: toFx(Math.max(0.5, Math.min(95.5, g.z))) });
     };
 
     const keyTimes = new Map<string, number>();
