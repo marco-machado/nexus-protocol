@@ -259,6 +259,10 @@ function pickSiegeTarget(m: MetaState, doctrine: number): Territory | null {
   return pick;
 }
 
+export function syndicateDecapitated(m: MetaState, synId: number): boolean {
+  return !m.territories.some((t) => t.hq && t.rival === synId && !t.owned);
+}
+
 export function processSieges(m: MetaState, now: number): void {
   for (const syn of m.syndicates) {
     for (const t of m.territories) {
@@ -280,6 +284,7 @@ export function processSieges(m: MetaState, now: number): void {
   const act = campaignAct(m);
   if (act < 2) return;
   for (const syn of m.syndicates) {
+    if (syndicateDecapitated(m, syn.id)) continue;
     if (!m.territories.some((t) => !t.owned && t.rival === syn.id)) continue;
     if (m.territories.some((t) => t.siege?.rival === syn.id)) continue;
     if (syn.nextStrikeAt === 0) {
@@ -582,9 +587,14 @@ export function applyResult(
       );
     }
   } else if (won && !t.owned) {
+    const wasHqOf = t.hq ? t.rival : -1;
     t.owned = true;
     t.rival = -1;
-    lines.push(`${t.name} transferred to Nexus management.`);
+    if (wasHqOf >= 0) {
+      lines.push(`${m.syndicates[wasHqOf]!.name} board liquidated. Their arcology transfers to Nexus management.`);
+    } else {
+      lines.push(`${t.name} transferred to Nexus management.`);
+    }
   } else if (!won) {
     lines.push('Contract unfulfilled. The board has noted this.');
   }
@@ -610,6 +620,22 @@ export function applyResult(
 
 export function campaignWon(m: MetaState): boolean {
   return m.territories.every((t) => t.owned);
+}
+
+export function startNgPlus(m: MetaState, now: number = Date.now()): void {
+  m.ngPlus++;
+  m.territories = makeTerritories(m.ngPlus);
+  m.regionsUnlocked = 1;
+  m.cycle = 0;
+  m.econMs = 0;
+  m.lastSeen = now;
+  for (const syn of m.syndicates) {
+    syn.nextStrikeAt = 0;
+    syn.strikes = 0;
+  }
+  m.log = [
+    `New operation authorized (NG+${m.ngPlus}). Rival dispositions remixed; assets, arsenal, and research carry over.`,
+  ];
 }
 
 const SAVE_KEY = 'nexus-protocol-save-v2';

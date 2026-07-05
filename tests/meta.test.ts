@@ -19,7 +19,9 @@ import {
   regionUnlocked,
   researchPerCycle,
   SIEGE_DEADLINE_MS,
+  startNgPlus,
   strikeInterval,
+  syndicateDecapitated,
   updateRegionUnlocks,
   type MetaState,
 } from '../src/app/meta';
@@ -284,5 +286,59 @@ describe('service records and veteran quirks', () => {
     const info = applyResult(m, m.territories[0]!, false, 0, 0, survivors, {});
     expect(info.lines.some((l) => l.includes('Steady Hands'))).toBe(false);
     expect(info.lines.some((l) => l.includes('written off'))).toBe(true);
+  });
+});
+
+describe('act 3 finale and New Game+', () => {
+  it('stops a syndicate from striking once its HQ is captured', () => {
+    const m = newMeta(0);
+    m.regionsUnlocked = 8;
+    expect(syndicateDecapitated(m, 0)).toBe(false);
+    const hq = m.territories[37]!;
+    hq.owned = true;
+    hq.rival = -1;
+    expect(syndicateDecapitated(m, 0)).toBe(true);
+    m.syndicates[0]!.nextStrikeAt = 1;
+    processSieges(m, 1000);
+    expect(m.territories.some((t) => t.siege?.rival === 0)).toBe(false);
+  });
+
+  it('announces the board liquidation when an HQ falls', () => {
+    const m = newMeta(0);
+    const hq = m.territories[38]!;
+    const survivors = m.agents.map(() => true);
+    const info = applyResult(m, hq, true, 0, 0, survivors, {});
+    expect(hq.owned).toBe(true);
+    expect(info.lines.some((l) => l.includes('board liquidated'))).toBe(true);
+  });
+
+  it('carries assets into NG+ and remixes the world', () => {
+    const m = newMeta(0);
+    m.credits = 99999;
+    m.weaponPts = 520;
+    m.augPts = 380;
+    m.arsenal[8] = 2;
+    m.agents[0]!.kills = 77;
+    for (const t of m.territories) t.owned = true;
+    m.regionsUnlocked = 8;
+    const rivalsBefore = makeTerritories(0).map((t) => t.rival).join(',');
+    startNgPlus(m, 5000);
+    expect(m.ngPlus).toBe(1);
+    expect(m.credits).toBe(99999);
+    expect(m.weaponPts).toBe(520);
+    expect(m.arsenal[8]).toBe(2);
+    expect(m.agents[0]!.kills).toBe(77);
+    expect(m.territories.filter((t) => t.owned).map((t) => t.id)).toEqual([0]);
+    expect(m.regionsUnlocked).toBe(1);
+    expect(m.lastSeen).toBe(5000);
+    expect(m.territories.every((t) => t.attempts === 0 && !t.siege)).toBe(true);
+    expect(m.territories.map((t) => t.rival).join(',')).not.toBe(rivalsBefore);
+    expect(m.syndicates.every((s) => s.nextStrikeAt === 0 && s.strikes === 0)).toBe(true);
+  });
+
+  it('varies mission seeds between NG+ cycles', () => {
+    const t0 = makeTerritories(0)[5]!;
+    const t1 = makeTerritories(1)[5]!;
+    expect(missionSeed(t1, 1)).not.toBe(missionSeed(t0, 0));
   });
 });

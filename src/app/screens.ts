@@ -436,24 +436,28 @@ export class Screens {
           ${info.salvage ? `<div>&gt; Augment salvage: +${info.salvage}cr</div>` : ''}
         </div>
         <div class="topbar"><span class="credits">BALANCE ${m.credits}cr</span></div>
-        <button class="primary" data-act="continue">${campaignWon(m) ? 'FINALIZE REGION' : 'RETURN TO OPERATIONS'}</button>
+        <button class="primary" data-act="continue">${campaignWon(m) ? 'FINALIZE GLOBAL ACQUISITION' : 'RETURN TO OPERATIONS'}</button>
       </div>`;
     this.el.onclick = (e) => {
       if ((e.target as HTMLElement).dataset.act === 'continue') onContinue();
     };
   }
 
-  victory(m: MetaState, onNewGame: () => void): void {
+  victory(m: MetaState, onNgPlus: () => void, onNewGame: () => void): void {
     this.show();
     this.el.innerHTML = `
       <div class="panel menu">
-        <h1>REGION<span>SECURED</span></h1>
-        <p class="tag">All five districts under Nexus management. The board is... satisfied. For now.</p>
+        <h1>GLOBAL<span>MONOPOLY</span></h1>
+        <p class="tag">All forty territories under Nexus management. Three rival boards liquidated.${m.ngPlus > 0 ? ` (NG+${m.ngPlus})` : ''} The board demands growth.</p>
         <div class="loglines">${m.log.slice(0, 6).map((l) => `<div>&gt; ${l}</div>`).join('')}</div>
-        <button data-act="new">NEW OPERATION</button>
+        <button class="primary" data-act="ngplus">NEW GAME+ (RETAIN ASSETS, HARDER RIVALS)</button>
+        <button data-act="new">NEW OPERATION (CLEAN LEDGER)</button>
       </div>`;
     this.el.onclick = (e) => {
-      if ((e.target as HTMLElement).dataset.act === 'new') {
+      const act = (e.target as HTMLElement).dataset.act;
+      if (act === 'ngplus') {
+        onNgPlus();
+      } else if (act === 'new') {
         clearSave();
         onNewGame();
       }

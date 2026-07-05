@@ -13,6 +13,7 @@ import {
   newMeta,
   REGIONS,
   saveMeta,
+  startNgPlus,
   type MetaState,
   type Territory,
 } from './meta';
@@ -65,7 +66,15 @@ export class Game {
     advanceTime(this.meta, Date.now());
     saveMeta(this.meta);
     if (campaignWon(this.meta)) {
-      this.screens.victory(this.meta, () => this.start());
+      this.screens.victory(
+        this.meta,
+        () => {
+          startNgPlus(this.meta);
+          saveMeta(this.meta);
+          this.map();
+        },
+        () => this.start(),
+      );
       return;
     }
     this.screens.worldMap(this.meta, (t, defense) => this.equip(t, defense));
