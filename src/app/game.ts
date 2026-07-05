@@ -99,9 +99,10 @@ export class Game {
     const difficulty = this.meta.territories.filter((x) => x.owned).length - 1;
     t.attempts++;
     saveMeta(this.meta);
+    const rivalId = defense && t.siege ? t.siege.rival : t.rival;
     const simParams: MissionParams = {
       extraGuards: Math.min(4, difficulty),
-      doctrine: t.rival >= 0 ? this.meta.syndicates[t.rival]!.doctrine : -1,
+      doctrine: rivalId >= 0 ? this.meta.syndicates[rivalId]!.doctrine : -1,
       loadoutTier: Math.min(5, act + 1 + this.meta.ngPlus),
       elite: act === 3 || t.hq === true,
       map: REGIONS[t.region]!.mapParams,

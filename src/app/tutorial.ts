@@ -111,6 +111,12 @@ export function hintsFor(m: MetaState, t: Territory, missionType = t.missionType
       when: (s) => s.tick >= 20,
       text: 'Perimeter budget authorized: click places a turret, shift-click places a trap, Enter locks the layout.',
     });
+    if (t.siege) {
+      hints.push({
+        when: (s) => s.tick >= 60,
+        text: 'Hostile takeover attempt in progress. Repel every wave or the district transfers to the counterparty.',
+      });
+    }
   }
 
   if (missionType === 5) {

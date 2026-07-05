@@ -10,11 +10,16 @@ import {
   missionSeed,
   newMeta,
   OFFLINE_CAP_MS,
+  processSieges,
   REGIONS,
   regionUnlocked,
   researchPerCycle,
+  SIEGE_DEADLINE_MS,
+  strikeInterval,
   updateRegionUnlocks,
+  type MetaState,
 } from '../src/app/meta';
+import { DOCTRINE_BRUTE, DOCTRINE_STEALTH, DOCTRINE_SWARM } from '../src/sim/units';
 
 describe('phase C world generation', () => {
   const world = makeTerritories();
@@ -157,5 +162,84 @@ describe('real-time economy', () => {
     expect(m.credits).toBe(credits);
     expect(m.cycle).toBe(0);
     expect(m.lastSeen).toBe(0);
+  });
+});
+
+describe('rival sieges', () => {
+  function act2Meta(): MetaState {
+    const m = newMeta(0);
+    m.regionsUnlocked = 3;
+    m.territories[1]!.owned = true;
+    m.territories[2]!.owned = true;
+    return m;
+  }
+
+  function forceStrike(m: MetaState, synId: number, now: number): void {
+    m.syndicates[synId]!.nextStrikeAt = now;
+    processSieges(m, now);
+  }
+
+  it('schedules a first strike instead of striking immediately', () => {
+    const m = act2Meta();
+    processSieges(m, 1000);
+    expect(m.territories.some((t) => t.siege)).toBe(false);
+    expect(m.syndicates.every((s) => s.nextStrikeAt > 1000)).toBe(true);
+  });
+
+  it('does not strike in act 1', () => {
+    const m = newMeta(0);
+    processSieges(m, 1000);
+    expect(m.syndicates.every((s) => s.nextStrikeAt === 0)).toBe(true);
+  });
+
+  it('targets by doctrine', () => {
+    const m = act2Meta();
+    const [a, b, c] = [m.territories[0]!, m.territories[1]!, m.territories[2]!];
+    a.baseIncome = 5000;
+    a.unrest = 30;
+    b.baseIncome = 2000;
+    b.unrest = 0;
+    c.baseIncome = 3000;
+    c.unrest = 80;
+
+    const brute = m.syndicates.find((s) => s.doctrine === DOCTRINE_BRUTE)!;
+    const stealth = m.syndicates.find((s) => s.doctrine === DOCTRINE_STEALTH)!;
+    const swarm = m.syndicates.find((s) => s.doctrine === DOCTRINE_SWARM)!;
+
+    forceStrike(m, brute.id, 1000);
+    expect(a.siege?.rival).toBe(brute.id);
+    forceStrike(m, stealth.id, 1000);
+    expect(b.siege?.rival).toBe(stealth.id);
+    forceStrike(m, swarm.id, 1000);
+    expect(c.siege?.rival).toBe(swarm.id);
+  });
+
+  it('flips the territory to the besieger when the deadline lapses', () => {
+    const m = act2Meta();
+    const syn = m.syndicates[0]!;
+    forceStrike(m, syn.id, 1000);
+    const sieged = m.territories.find((t) => t.siege)!;
+    processSieges(m, 1000 + SIEGE_DEADLINE_MS - 1);
+    expect(sieged.owned).toBe(true);
+    processSieges(m, 1000 + SIEGE_DEADLINE_MS);
+    expect(sieged.owned).toBe(false);
+    expect(sieged.rival).toBe(syn.id);
+    expect(sieged.siege).toBeUndefined();
+    expect(sieged.unrest).toBe(40);
+  });
+
+  it('runs at most one siege per syndicate at a time', () => {
+    const m = act2Meta();
+    const syn = m.syndicates[0]!;
+    forceStrike(m, syn.id, 1000);
+    syn.nextStrikeAt = 2000;
+    processSieges(m, 2000);
+    expect(m.territories.filter((t) => t.siege?.rival === syn.id).length).toBe(1);
+  });
+
+  it('shortens strike intervals in act 3 and NG+', () => {
+    expect(strikeInterval(3, 0)).toBeLessThan(strikeInterval(2, 0));
+    expect(strikeInterval(2, 1)).toBeLessThan(strikeInterval(2, 0));
+    expect(strikeInterval(2, 9)).toBeGreaterThan(0);
   });
 });

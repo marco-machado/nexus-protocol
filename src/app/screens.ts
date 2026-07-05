@@ -183,15 +183,19 @@ export class Screens {
           : t.rival >= 0
             ? `<b class="riv">${m.syndicates[t.rival]!.name}</b>`
             : '<b class="neutral">NEUTRAL</b>';
+        const siegeMs = t.siege ? Math.max(0, t.siege.deadline - m.lastSeen) : 0;
+        const siegeBanner = t.siege
+          ? `<div class="siege">SIEGE: ${m.syndicates[t.siege.rival]!.name} strikes in ${Math.floor(siegeMs / 3600000)}h ${Math.ceil((siegeMs % 3600000) / 60000)}m</div>`
+          : '';
         const body = t.owned
-          ? `<div>Income share <b>${Math.round((t.baseIncome * t.taxRate) / 100)}cr</b>/cycle</div>
+          ? `${siegeBanner}<div>Income share <b>${Math.round((t.baseIncome * t.taxRate) / 100)}cr</b>/cycle</div>
              <div class="taxrow">Tax <input type="range" min="10" max="50" step="5" value="${t.taxRate}" data-tax="${t.id}"/> <b>${t.taxRate}%</b></div>
              <div>Unrest <span class="unrest ${t.unrest > 60 ? 'hot' : ''}">${t.unrest}</span>/100</div>
-             ${t.unrest >= DEFENSE_UNREST ? `<button data-defend="${t.id}">DEFENSE CONTRACT</button>` : ''}`
+             ${t.siege ? `<button class="primary" data-defend="${t.id}">REPEL TAKEOVER</button>` : t.unrest >= DEFENSE_UNREST ? `<button data-defend="${t.id}">DEFENSE CONTRACT</button>` : ''}`
           : `<div>Est. income <b>${t.baseIncome}cr</b> base</div>
              <div>Contract: <b>${CONTRACT_NAMES[t.missionType]}</b>${t.hq ? ' <span class="hqtag">RIVAL HQ ARCOLOGY</span>' : ''}</div>
              <button data-contract="${t.id}">OPEN CONTRACT</button>`;
-        return `<div class="terr ${t.owned ? 'owned' : ''}"><h3>${t.name} ${owner}</h3>${body}</div>`;
+        return `<div class="terr ${t.owned ? 'owned' : ''}${t.siege ? ' sieged' : ''}"><h3>${t.name} ${owner}</h3>${body}</div>`;
       })
       .join('');
     const bar = (label: string, pts: number, need: number) =>

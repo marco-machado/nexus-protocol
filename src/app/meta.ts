@@ -226,6 +226,76 @@ export function researchPerCycle(m: MetaState): number {
   return RESEARCH_BASE + Math.floor(incomePerCycle(m) / RESEARCH_DIV);
 }
 
+export const SIEGE_DEADLINE_MS = 4 * 60 * 60 * 1000;
+const STRIKE_JITTER_MS = 2 * 60 * 60 * 1000;
+
+function hash32(a: number, b: number): number {
+  let h = Math.imul(a + 1, 0x9e3779b9) ^ Math.imul(b + 1, 0x85ebca6b);
+  h ^= h >>> 13;
+  h = Math.imul(h, 0xc2b2ae35);
+  h ^= h >>> 16;
+  return h >>> 0;
+}
+
+export function strikeInterval(act: number, ngPlus: number): number {
+  const base = act >= 3 ? 5 * 60 * 60 * 1000 : 8 * 60 * 60 * 1000;
+  return base - ((base / 5) | 0) * Math.min(3, ngPlus);
+}
+
+function pickSiegeTarget(m: MetaState, doctrine: number): Territory | null {
+  let pick: Territory | null = null;
+  for (const t of m.territories) {
+    if (!t.owned || t.siege) continue;
+    if (!pick) {
+      pick = t;
+    } else if (doctrine === DOCTRINE_BRUTE) {
+      if (t.baseIncome > pick.baseIncome) pick = t;
+    } else if (doctrine === DOCTRINE_STEALTH) {
+      if (t.unrest < pick.unrest) pick = t;
+    } else if (t.unrest > pick.unrest) {
+      pick = t;
+    }
+  }
+  return pick;
+}
+
+export function processSieges(m: MetaState, now: number): void {
+  for (const syn of m.syndicates) {
+    for (const t of m.territories) {
+      if (t.siege?.rival !== syn.id) continue;
+      if (!t.owned) {
+        t.siege = undefined;
+      } else if (now >= t.siege.deadline) {
+        t.owned = false;
+        t.rival = syn.id;
+        t.unrest = 40;
+        t.siege = undefined;
+        m.log.unshift(`${t.name} seized by ${syn.name}. Territory struck from the ledger.`);
+      }
+      // a syndicate runs at most one siege, so at most one flip per call
+      break;
+    }
+  }
+
+  const act = campaignAct(m);
+  if (act < 2) return;
+  for (const syn of m.syndicates) {
+    if (!m.territories.some((t) => !t.owned && t.rival === syn.id)) continue;
+    if (m.territories.some((t) => t.siege?.rival === syn.id)) continue;
+    if (syn.nextStrikeAt === 0) {
+      syn.nextStrikeAt = now + strikeInterval(act, m.ngPlus) / 2 + (hash32(syn.id, syn.strikes) % STRIKE_JITTER_MS);
+      continue;
+    }
+    if (now < syn.nextStrikeAt) continue;
+    const target = pickSiegeTarget(m, syn.doctrine);
+    if (!target) continue;
+    target.siege = { rival: syn.id, deadline: now + SIEGE_DEADLINE_MS };
+    syn.strikes++;
+    syn.nextStrikeAt = now + strikeInterval(act, m.ngPlus) + (hash32(syn.id, syn.strikes) % STRIKE_JITTER_MS);
+    m.log.unshift(`${syn.name} moving on ${target.name}. Defense contract posted; deadline 4 hours.`);
+  }
+}
+
 export function advanceTime(m: MetaState, now: number): void {
   const elapsed = Math.max(0, Math.min(OFFLINE_CAP_MS, now - m.lastSeen));
   m.lastSeen = now;
@@ -251,6 +321,7 @@ export function advanceTime(m: MetaState, now: number): void {
     m.weaponPts += Math.round((pts * m.researchSplit) / 100);
     m.augPts += Math.round((pts * (100 - m.researchSplit)) / 100);
   }
+  processSieges(m, now);
   m.log.length = Math.min(m.log.length, 12);
 }
 
@@ -431,14 +502,24 @@ export function applyResult(
   }
 
   if (opts.defense) {
+    const siege = t.siege;
+    t.siege = undefined;
     if (won) {
       t.unrest = Math.max(0, t.unrest - 50);
-      lines.push(`${t.name} secured. Unrest suppressed; the invoice is in the mail.`);
+      if (siege) {
+        lines.push(`${m.syndicates[siege.rival]!.name} takeover bid repelled. ${t.name} remains on the ledger.`);
+      } else {
+        lines.push(`${t.name} secured. Unrest suppressed; the invoice is in the mail.`);
+      }
     } else {
       t.owned = false;
-      t.rival = -1;
+      t.rival = siege ? siege.rival : -1;
       t.unrest = 40;
-      lines.push(`${t.name} overrun. Territory struck from the ledger.`);
+      lines.push(
+        siege
+          ? `${t.name} seized by ${m.syndicates[siege.rival]!.name}. Territory struck from the ledger.`
+          : `${t.name} overrun. Territory struck from the ledger.`,
+      );
     }
   } else if (won && !t.owned) {
     t.owned = true;
