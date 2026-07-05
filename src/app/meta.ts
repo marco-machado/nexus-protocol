@@ -209,6 +209,51 @@ export function missionSeed(t: Territory, ngPlus: number): number {
   return (t.seed ^ Math.imul(t.attempts, 0x9e3779b9) ^ (ngPlus << 8)) | 0;
 }
 
+export const CYCLE_MS = 30 * 60 * 1000;
+export const OFFLINE_CAP_MS = 24 * 60 * 60 * 1000;
+const RESEARCH_BASE = 6;
+const RESEARCH_DIV = 150;
+
+export function incomePerCycle(m: MetaState): number {
+  let income = 0;
+  for (const t of m.territories) {
+    if (t.owned) income += Math.round((t.baseIncome * t.taxRate) / 100);
+  }
+  return income;
+}
+
+export function researchPerCycle(m: MetaState): number {
+  return RESEARCH_BASE + Math.floor(incomePerCycle(m) / RESEARCH_DIV);
+}
+
+export function advanceTime(m: MetaState, now: number): void {
+  const elapsed = Math.max(0, Math.min(OFFLINE_CAP_MS, now - m.lastSeen));
+  m.lastSeen = now;
+  m.econMs += elapsed;
+  while (m.econMs >= CYCLE_MS) {
+    m.econMs -= CYCLE_MS;
+    m.cycle++;
+    const income = incomePerCycle(m);
+    m.credits += income;
+    for (const t of m.territories) {
+      if (!t.owned) continue;
+      t.unrest = Math.max(0, Math.min(120, t.unrest + Math.round((t.taxRate - 20) / 5)));
+    }
+    for (const t of m.territories) {
+      if (t.owned && t.unrest >= 100) {
+        t.owned = false;
+        t.rival = -1;
+        t.unrest = 40;
+        m.log.unshift(`${t.name} lost to civil unrest. Re-acquisition contract issued.`);
+      }
+    }
+    const pts = RESEARCH_BASE + Math.floor(income / RESEARCH_DIV);
+    m.weaponPts += Math.round((pts * m.researchSplit) / 100);
+    m.augPts += Math.round((pts * (100 - m.researchSplit)) / 100);
+  }
+  m.log.length = Math.min(m.log.length, 12);
+}
+
 export function makeTerritories(ngPlus = 0): Territory[] {
   return Array.from({ length: REGIONS.length * 5 }, (_, id) => {
     const region = (id / 5) | 0;
@@ -341,7 +386,6 @@ export function buildSpec(a: MetaAgent): AgentSpec {
 export interface DebriefInfo {
   won: boolean;
   territory: Territory;
-  income: number;
   collateralFine: number;
   salvage: number;
   loot: number;
@@ -362,7 +406,6 @@ export function applyResult(
   survivors: boolean[],
   opts: ResultOptions = {},
 ): DebriefInfo {
-  m.cycle++;
   const lines: string[] = [];
   let salvage = 0;
 
@@ -405,36 +448,20 @@ export function applyResult(
     lines.push('Contract unfulfilled. The board has noted this.');
   }
 
-  let income = 0;
-  for (const terr of m.territories) {
-    if (!terr.owned) continue;
-    income += Math.round((terr.baseIncome * terr.taxRate) / 100);
-    terr.unrest = Math.max(0, Math.min(120, terr.unrest + Math.round((terr.taxRate - 20) / 5)));
-  }
-  m.credits += income;
-
-  for (const terr of m.territories) {
-    if (terr.owned && terr.unrest >= 100) {
-      terr.owned = false;
-      terr.rival = -1;
-      terr.unrest = 40;
-      lines.push(`${terr.name} lost to civil unrest. Re-acquisition contract issued.`);
-    }
-  }
-
   const collateralFine = civKills * 60;
   if (collateralFine > 0) {
     m.credits -= collateralFine;
     lines.push(`PR remediation invoice: ${collateralFine}cr (${civKills} demographic units).`);
   }
 
-  const pts = won ? 45 : 20;
+  const pts = won ? 15 : 5;
   m.weaponPts += Math.round((pts * m.researchSplit) / 100);
   m.augPts += Math.round((pts * (100 - m.researchSplit)) / 100);
+  lines.push(`Field data forwarded to R&D: +${pts} research.`);
 
   updateRegionUnlocks(m);
 
-  const info: DebriefInfo = { won, territory: t, income, collateralFine, salvage, loot, lines };
+  const info: DebriefInfo = { won, territory: t, collateralFine, salvage, loot, lines };
   m.log.unshift(...lines);
   m.log.length = Math.min(m.log.length, 12);
   return info;

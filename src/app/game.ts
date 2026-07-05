@@ -4,6 +4,7 @@ import type { MissionParams } from '../sim/setup';
 import { runMission } from './missionRunner';
 import {
   actOfTerritory,
+  advanceTime,
   applyResult,
   buildSpec,
   campaignWon,
@@ -30,6 +31,7 @@ const OBJECTIVES = [
 
 export class Game {
   private meta: MetaState = newMeta();
+  private mapTimer = 0;
 
   constructor(
     private renderer: WebGPURenderer,
@@ -38,22 +40,44 @@ export class Game {
   ) {}
 
   start(): void {
+    this.stopMapTimer();
     this.screens.menu((fresh) => {
       this.meta = fresh ? newMeta() : (loadMeta() ?? newMeta());
+      const before = this.meta.credits;
+      advanceTime(this.meta, Date.now());
+      if (this.meta.credits > before) {
+        this.meta.log.unshift(`Ledger reconciled: +${this.meta.credits - before}cr accrued while offline.`);
+      }
       saveMeta(this.meta);
       this.map();
     });
   }
 
+  private stopMapTimer(): void {
+    if (this.mapTimer) {
+      clearInterval(this.mapTimer);
+      this.mapTimer = 0;
+    }
+  }
+
   private map(): void {
+    this.stopMapTimer();
+    advanceTime(this.meta, Date.now());
+    saveMeta(this.meta);
     if (campaignWon(this.meta)) {
       this.screens.victory(this.meta, () => this.start());
       return;
     }
     this.screens.worldMap(this.meta, (t, defense) => this.equip(t, defense));
+    this.mapTimer = window.setInterval(() => {
+      advanceTime(this.meta, Date.now());
+      saveMeta(this.meta);
+      this.screens.worldMap(this.meta, (t, defense) => this.equip(t, defense));
+    }, 60_000);
   }
 
   private equip(t: Territory, defense = false): void {
+    this.stopMapTimer();
     this.screens.equip(
       this.meta,
       t,
@@ -97,6 +121,7 @@ export class Game {
     aliveIdx.forEach((metaIdx, specIdx) => {
       survivors[metaIdx] = result.survivors[specIdx] ?? false;
     });
+    advanceTime(this.meta, Date.now());
     const info = applyResult(this.meta, t, result.won, result.kills, result.civKills, survivors, {
       loot: result.loot,
       defense,

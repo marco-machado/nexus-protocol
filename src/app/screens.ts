@@ -7,7 +7,10 @@ import {
   campaignAct,
   campaignWon,
   clearSave,
+  CYCLE_MS,
   DEFENSE_UNREST,
+  incomePerCycle,
+  researchPerCycle,
   loadMeta,
   newAgent,
   REGION_UNLOCK_OWNED,
@@ -202,7 +205,7 @@ export class Screens {
       </div>`;
     this.el.innerHTML = `
       <div class="panel map">
-        <div class="topbar"><h2>GLOBAL OPERATIONS</h2><span class="credits">${m.credits}cr</span><span>ACT ${campaignAct(m)}</span><span>CYCLE ${m.cycle}</span></div>
+        <div class="topbar"><h2>GLOBAL OPERATIONS</h2><span class="credits">${m.credits}cr</span><span>+${incomePerCycle(m) * 2}cr/hr</span><span>R&amp;D +${researchPerCycle(m) * 2}/hr</span><span>ACT ${campaignAct(m)}</span><span>CYCLE ${m.cycle} (next in ${Math.max(1, Math.ceil((CYCLE_MS - m.econMs) / 60000))}m)</span></div>
         <div class="regiontabs">${tabs}</div>
         ${charterNote}
         <div class="terrgrid">${terr}</div>
@@ -421,7 +424,6 @@ export class Screens {
         <h2 class="${info.won ? 'good' : 'bad'}">${verdict}</h2>
         <div class="loglines">
           ${info.lines.map((l) => `<div>&gt; ${l}</div>`).join('')}
-          <div>&gt; Territory income posted: ${info.income}cr</div>
           ${info.salvage ? `<div>&gt; Augment salvage: +${info.salvage}cr</div>` : ''}
         </div>
         <div class="topbar"><span class="credits">BALANCE ${m.credits}cr</span></div>
