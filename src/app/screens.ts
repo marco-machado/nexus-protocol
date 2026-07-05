@@ -187,9 +187,9 @@ export class Screens {
           : t.rival >= 0
             ? `<b class="riv">${m.syndicates[t.rival]!.name}</b>`
             : '<b class="neutral">NEUTRAL</b>';
-        const siegeMs = t.siege ? Math.max(0, t.siege.deadline - m.lastSeen) : 0;
+        const siegeMin = t.siege ? Math.ceil(Math.max(0, t.siege.deadline - m.lastSeen) / 60000) : 0;
         const siegeBanner = t.siege
-          ? `<div class="siege">SIEGE: ${m.syndicates[t.siege.rival]!.name} strikes in ${Math.floor(siegeMs / 3600000)}h ${Math.ceil((siegeMs % 3600000) / 60000)}m</div>`
+          ? `<div class="siege">SIEGE: ${m.syndicates[t.siege.rival]!.name} strikes in ${Math.floor(siegeMin / 60)}h ${siegeMin % 60}m</div>`
           : '';
         const body = t.owned
           ? `${siegeBanner}<div>Income share <b>${Math.round((t.baseIncome * t.taxRate) / 100)}cr</b>/cycle</div>
