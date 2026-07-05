@@ -72,8 +72,12 @@ export function nearestWalkable(map: MapData, cell: number): number {
 
 const cameFrom = new Int32Array(MAP_W * MAP_H);
 
+// diagnostic counters for perf probes; never part of SimState or the hash
+export const pathStats = { calls: 0, aborts: 0, expansions: 0 };
+
 export function findPath(map: MapData, from: number, to: number): number[] | null {
   const goal = nearestWalkable(map, to);
+  pathStats.calls++;
   if (from === goal) return [];
   gScore.fill(BIG);
   closed.fill(0);
@@ -92,6 +96,7 @@ export function findPath(map: MapData, from: number, to: number): number[] | nul
     closed[cur] = 1;
     expansions++;
     if (cur === goal) {
+      pathStats.expansions += expansions;
       const path: number[] = [];
       let n = cur;
       while (n !== from) {
@@ -124,5 +129,7 @@ export function findPath(map: MapData, from: number, to: number): number[] | nul
       }
     }
   }
+  pathStats.expansions += expansions;
+  if (expansions >= MAX_EXPAND) pathStats.aborts++;
   return null;
 }
