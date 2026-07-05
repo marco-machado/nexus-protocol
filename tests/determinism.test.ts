@@ -12,9 +12,11 @@ import {
   MISSION_ASSASSINATE,
   MISSION_DEFENSE,
   MISSION_HEIST,
+  MISSION_HQ,
   MISSION_PURGE,
 } from '../src/sim/state';
-import { defaultSpec } from '../src/sim/units';
+import type { MissionParams } from '../src/sim/setup';
+import { defaultSpec, DOCTRINE_BRUTE, DOCTRINE_STEALTH, DOCTRINE_SWARM } from '../src/sim/units';
 
 const SEED = 0xc0ffee;
 const TOTAL_TICKS = 1200;
@@ -22,7 +24,7 @@ const CHECKPOINT_EVERY = 200;
 
 // If this hash changes, sim behavior changed: either the change was an
 // intentional gameplay edit (update the constant) or determinism broke.
-const GOLDEN_FINAL_HASH = 0xa5731097;
+const GOLDEN_FINAL_HASH = 0x02c28687;
 
 function specs() {
   const lead = defaultSpec();
@@ -82,11 +84,24 @@ function phaseBSpecs() {
   return [lead, defaultSpec(), defaultSpec(), defaultSpec()];
 }
 
-function runHashes(missionType: number, entries: ReplayEntry[], ticks: number): number[] {
+function runHashes(
+  missionType: number,
+  entries: ReplayEntry[],
+  ticks: number,
+  params?: MissionParams,
+): number[] {
   const hashes: number[] = [];
-  runReplay(SEED, missionType, phaseBSpecs(), entries, ticks, (state) => {
-    if (state.tick % 100 === 0) hashes.push(hashState(state));
-  });
+  runReplay(
+    SEED,
+    missionType,
+    phaseBSpecs(),
+    entries,
+    ticks,
+    (state) => {
+      if (state.tick % 100 === 0) hashes.push(hashState(state));
+    },
+    params,
+  );
   return hashes;
 }
 
@@ -131,6 +146,52 @@ describe('phase B mission determinism', () => {
     ];
     expect(runHashes(MISSION_HEIST, heistScript, 800)).toEqual(
       runHashes(MISSION_HEIST, heistScript, 800),
+    );
+  });
+});
+
+describe('phase C doctrine determinism', () => {
+  const advanceScript: ReplayEntry[] = [
+    { tick: 5, command: { type: 'move', ids: [0, 1, 2, 3], x: toFx(48.5), z: toFx(40.5) } },
+    { tick: 200, command: { type: 'move', ids: [0, 1, 2, 3], x: toFx(48.5), z: toFx(20.5) } },
+    { tick: 400, command: { type: 'use', ids: [0], gear: GEAR_EMP } },
+  ];
+
+  it('brute-doctrine purge replays identically', () => {
+    const params: MissionParams = { doctrine: DOCTRINE_BRUTE, loadoutTier: 4 };
+    expect(runHashes(MISSION_PURGE, advanceScript, 900, params)).toEqual(
+      runHashes(MISSION_PURGE, advanceScript, 900, params),
+    );
+  });
+
+  it('stealth-doctrine purge replays identically', () => {
+    const params: MissionParams = { doctrine: DOCTRINE_STEALTH, loadoutTier: 4 };
+    expect(runHashes(MISSION_PURGE, advanceScript, 900, params)).toEqual(
+      runHashes(MISSION_PURGE, advanceScript, 900, params),
+    );
+  });
+
+  it('swarm-doctrine purge replays identically', () => {
+    const params: MissionParams = { doctrine: DOCTRINE_SWARM, loadoutTier: 3 };
+    expect(runHashes(MISSION_PURGE, advanceScript, 900, params)).toEqual(
+      runHashes(MISSION_PURGE, advanceScript, 900, params),
+    );
+  });
+
+  it('HQ assault with elite squads and dense map replays identically', () => {
+    const params: MissionParams = {
+      doctrine: DOCTRINE_BRUTE,
+      loadoutTier: 5,
+      elite: true,
+      map: { skipMod: 8, heightBase: 8 },
+    };
+    const hqScript: ReplayEntry[] = [
+      { tick: 5, command: { type: 'move', ids: [0, 1, 2, 3], x: toFx(48.5), z: toFx(30.5) } },
+      { tick: 250, command: { type: 'use', ids: [0], gear: GEAR_CHARGE } },
+      { tick: 450, command: { type: 'use', ids: [0], gear: GEAR_EMP } },
+    ];
+    expect(runHashes(MISSION_HQ, hqScript, 900, params)).toEqual(
+      runHashes(MISSION_HQ, hqScript, 900, params),
     );
   });
 });

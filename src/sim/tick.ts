@@ -14,6 +14,7 @@ import {
   MISSION_PURGE,
   MISSION_DEFENSE,
   MISSION_HEIST,
+  MISSION_HQ,
   DEP_CHARGE,
   DEP_DRONE,
   DEP_MEDBAY,
@@ -29,6 +30,8 @@ import {
   Agent,
   AGENT_SPEED,
   createNpc,
+  DOCTRINE_STEALTH,
+  DOCTRINE_SWARM,
   Npc,
   npcSpeed,
   NPC_CIV,
@@ -36,6 +39,7 @@ import {
   NPC_GUARD,
   NPC_POLICE,
   NPC_TACTICAL,
+  PANIC_SPEED,
   Projectile,
   RESERVE_MAX,
   ST_DEAD,
@@ -61,6 +65,11 @@ const SHIELD_HIT_LOCKOUT = 100;
 const EMP_RADIUS = 8 << 16;
 const EMP_STUN = 140;
 const PULSE_STUN = 40;
+const MOB_GRAB_RADIUS = 6 << 16;
+const MOB_STUN = 25;
+const CLOAK_REVEAL_RANGE = 3 << 16;
+const NPC_CLOAK_T = 200;
+const NPC_CLOAK_CADENCE = 120;
 const CHARGE_FUSE = 60;
 const CHARGE_DMG = 250;
 const CHARGE_R = 2;
@@ -201,6 +210,7 @@ function damageAgent(a: Agent, dmg: number): void {
 
 function hitNpc(s: SimState, n: Npc, dmg: number): void {
   n.hp -= dmg;
+  n.cloakT = 0;
   s.fleshHits++;
   if (n.hp <= 0) killNpc(s, n);
   else if (n.kind === NPC_CIV && n.state !== ST_PERSUADED) {
@@ -505,6 +515,7 @@ function updateAgent(s: SimState, a: Agent, noises: Noise[]): void {
     for (const n of s.npcs) {
       if (!hostileToPlayer(n)) continue;
       const d = distFx(a.x, a.z, n.x, n.z);
+      if (n.cloakT > 0 && !a.spec.scanner && d > CLOAK_REVEAL_RANGE) continue;
       if (d <= best && losUnits(s, a.x, a.z, n.x, n.z, a.spec.smokeVision)) {
         best = d;
         tx = n.x;
@@ -626,6 +637,7 @@ function enemyPulse(s: SimState, n: Npc): void {
     return;
   }
   if ((s.tick + n.id) % 10 !== 0) return;
+  const swarmDoc = s.mission.doctrine === DOCTRINE_SWARM;
   let fired = false;
   for (const a of s.agents) {
     if (!a.alive || distFx(n.x, n.z, a.x, a.z) > PERSUADE_RADIUS) continue;
@@ -645,18 +657,79 @@ function enemyPulse(s: SimState, n: Npc): void {
       p.state = ST_IDLE;
     }
   }
-  if (fired) n.pulseT = 300;
+  if (swarmDoc) {
+    let grabbed = 0;
+    for (const c of s.npcs) {
+      if (grabbed >= 3) break;
+      if (c.kind !== NPC_CIV || c.enemyMaster >= 0 || c.vip || c.missionTarget) continue;
+      if (c.state !== ST_IDLE && c.state !== ST_WALK) continue;
+      if (distFx(n.x, n.z, c.x, c.z) > MOB_GRAB_RADIUS) continue;
+      c.enemyMaster = n.id;
+      c.path = [];
+      c.pathI = 0;
+      grabbed++;
+    }
+    if (grabbed > 0) fired = true;
+  }
+  if (fired) n.pulseT = swarmDoc ? 180 : 300;
+}
+
+function mobCiv(s: SimState, n: Npc): void {
+  const master = s.npcs[n.enemyMaster];
+  if (!master || master.state === ST_DEAD || master.state === ST_PERSUADED) {
+    n.enemyMaster = -1;
+    n.state = ST_PANIC;
+    n.panicT = 120;
+    return;
+  }
+  if (n.repathT > 0) n.repathT--;
+  if (n.cooldown > 0) n.cooldown--;
+  let target: Agent | null = null;
+  let best: Fx = 1 << 30;
+  for (const a of s.agents) {
+    if (!a.alive || a.cloakT > 0) continue;
+    const d = distFx(n.x, n.z, a.x, a.z);
+    if (d < best) {
+      best = d;
+      target = a;
+    }
+  }
+  if (target && best <= 1 << 16 && n.cooldown === 0) {
+    if (!target.spec.persuadeImmune) target.stunT = Math.max(target.stunT, MOB_STUN);
+    n.cooldown = 50;
+  } else if (target && n.repathT === 0) {
+    n.repathT = 25 + (n.id % 8);
+    setPath(s.map, n, nearestWalkable(s.map, cellOfFx(target.x, target.z)));
+  }
+  moveAlong(n, PANIC_SPEED);
 }
 
 function updateNpc(s: SimState, n: Npc, noises: Noise[]): void {
   if (n.state === ST_DEAD) return;
   if (n.stunT > 0) {
     n.stunT--;
+    n.cloakT = 0;
     return;
+  }
+  if (n.kind === NPC_CIV && n.enemyMaster >= 0) {
+    if (n.state === ST_PERSUADED) {
+      n.enemyMaster = -1;
+    } else if (n.state === ST_IDLE || n.state === ST_WALK) {
+      mobCiv(s, n);
+      return;
+    }
   }
   if (n.cooldown > 0) n.cooldown--;
   if (n.repathT > 0) n.repathT--;
-  if (n.kind === NPC_ENEMY && (n.state === ST_IDLE || n.state === ST_WALK)) enemyPulse(s, n);
+  if (n.kind === NPC_ENEMY && (n.state === ST_IDLE || n.state === ST_WALK)) {
+    if (s.mission.doctrine === DOCTRINE_STEALTH) {
+      if (n.cloakT > 0) n.cloakT--;
+      else if ((s.tick + n.id) % NPC_CLOAK_CADENCE === 0) n.cloakT = NPC_CLOAK_T;
+    }
+    enemyPulse(s, n);
+  } else if (n.cloakT > 0) {
+    n.cloakT = 0;
+  }
 
   switch (n.state) {
     case ST_IDLE:
@@ -823,6 +896,7 @@ function npcCombat(s: SimState, n: Npc, noises: Noise[]): void {
         firePellets(s, n.x, n.z, tx, tz, n.wid, 150, false, noises);
       }
       n.cooldown = w.cooldown + 12;
+      n.cloakT = 0;
     } else if (best > rangeFx && n.repathT === 0) {
       n.repathT = 25;
       if (setPath(s.map, n, nearestWalkable(s.map, cellOfFx(tx, tz)))) n.state = ST_WALK;
@@ -851,7 +925,7 @@ function persuadedCombat(s: SimState, n: Npc, noises: Noise[]): void {
   const w = WEAPONS[n.wid]!;
   const rangeFx = w.range << 16;
   for (const h of s.npcs) {
-    if (!hostileToPlayer(h)) continue;
+    if (!hostileToPlayer(h) || h.cloakT > 0) continue;
     const d = distFx(n.x, n.z, h.x, h.z);
     if (d <= rangeFx && losUnits(s, n.x, n.z, h.x, h.z)) {
       if (d <= CQC_RANGE) {
@@ -1045,7 +1119,7 @@ function updateDeployables(s: SimState, noises: Noise[]): void {
       let tz: Fx | null = null;
       let best: Fx = TURRET_RANGE;
       for (const n of s.npcs) {
-        if (!hostileToPlayer(n)) continue;
+        if (!hostileToPlayer(n) || n.cloakT > 0) continue;
         const dist = distFx(d.x, d.z, n.x, n.z);
         if (dist < best && losUnits(s, d.x, d.z, n.x, n.z)) {
           best = dist;
@@ -1239,6 +1313,11 @@ function checkMission(s: SimState): void {
     }
     case MISSION_HEIST:
       objectiveDone = !(m.assets[1]?.alive ?? true);
+      break;
+    case MISSION_HQ:
+      objectiveDone =
+        !(m.assets[0]?.alive ?? true) &&
+        s.npcs.every((n) => n.kind !== NPC_ENEMY || n.state === ST_DEAD || n.state === ST_PERSUADED);
       break;
   }
   if (!EXFIL_NEED_OBJECTIVE || objectiveDone) {

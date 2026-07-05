@@ -4,6 +4,7 @@ import {
   baseState,
   MISSION_DEFENSE,
   MISSION_HEIST,
+  MISSION_HQ,
   MISSION_PERSUADE,
   MISSION_PURGE,
   MISSION_RAID,
@@ -14,6 +15,9 @@ import { spawnNpc } from './tick';
 import {
   createAgent,
   defaultSpec,
+  DOCTRINE_BRUTE,
+  DOCTRINE_STEALTH,
+  DOCTRINE_SWARM,
   npcHp,
   NPC_CIV,
   NPC_ENEMY,
@@ -27,6 +31,49 @@ export interface MissionParams {
   extraGuards?: number;
   civCount?: number;
   map?: MapParams;
+  doctrine?: number;
+  loadoutTier?: number;
+  elite?: boolean;
+}
+
+function enemyWid(leader: boolean, doctrine: number, tier: number, elite: boolean): number {
+  if (leader) return elite ? 8 : tier >= 4 ? 6 : 3;
+  if (doctrine === DOCTRINE_BRUTE) return tier >= 4 ? 7 : tier >= 3 ? 4 : 2;
+  if (doctrine === DOCTRINE_STEALTH) return tier >= 4 ? 6 : 3;
+  if (doctrine === DOCTRINE_SWARM) return tier >= 3 ? 5 : 2;
+  return tier >= 3 ? 4 : 2;
+}
+
+function spawnEnemySquads(
+  s: SimState,
+  ax: number,
+  az: number,
+  squads: number,
+  size: number,
+  doctrine: number,
+  tier: number,
+  elite: boolean,
+): void {
+  for (let sq = 0; sq < squads; sq++) {
+    const off = squads === 2 ? (sq === 0 ? -12 : 12) : (sq - 1) * 14;
+    const sqx = Math.max(2, Math.min(MAP_W - 3, ax + off + rand(s, 7) - 3));
+    const sqz = Math.max(2, Math.min(MAP_H - 3, az + rand(s, 9) - 4));
+    for (let e = 0; e < size; e++) {
+      const cell = nearestWalkable(
+        s.map,
+        cellIdx(
+          Math.max(0, Math.min(MAP_W - 1, sqx + rand(s, 5) - 2)),
+          Math.max(0, Math.min(MAP_H - 1, sqz + rand(s, 5) - 2)),
+        ),
+      );
+      const enemy = spawnNpc(s, NPC_ENEMY, cell);
+      enemy.squad = sq;
+      enemy.missionTarget = true;
+      enemy.wid = enemyWid(e === 0, doctrine, tier, elite);
+      if (elite) enemy.hp = 200;
+      if (doctrine === DOCTRINE_BRUTE) enemy.hp += 40;
+    }
+  }
 }
 
 export function createMission(
@@ -37,8 +84,12 @@ export function createMission(
 ): SimState {
   const extraGuards = params.extraGuards ?? 0;
   const civCount = params.civCount ?? CIV_COUNT;
+  const doctrine = params.doctrine ?? -1;
+  const tier = params.loadoutTier ?? (extraGuards >= 2 ? 3 : 2);
+  const elite = params.elite ?? false;
   const s = baseState(seed, seed ^ 0x77aa11, params.map);
   s.mission.type = missionType;
+  s.mission.doctrine = doctrine;
 
   const spawnCell = nearestWalkable(s.map, cellIdx(MAP_W >> 1, MAP_H - 3));
   const sx = spawnCell % MAP_W;
@@ -93,24 +144,15 @@ export function createMission(
       placed++;
     }
   } else if (missionType === MISSION_PURGE) {
-    const squadSize = 3;
-    for (let sq = 0; sq < 2; sq++) {
-      const sqx = Math.max(2, Math.min(MAP_W - 3, ax + (sq === 0 ? -12 : 12) + rand(s, 7) - 3));
-      const sqz = Math.max(2, Math.min(MAP_H - 3, az + rand(s, 9) - 4));
-      for (let e = 0; e < squadSize; e++) {
-        const cell = nearestWalkable(
-          s.map,
-          cellIdx(
-            Math.max(0, Math.min(MAP_W - 1, sqx + rand(s, 5) - 2)),
-            Math.max(0, Math.min(MAP_H - 1, sqz + rand(s, 5) - 2)),
-          ),
-        );
-        const enemy = spawnNpc(s, NPC_ENEMY, cell);
-        enemy.squad = sq;
-        enemy.missionTarget = true;
-        enemy.wid = e === 0 ? 3 : extraGuards >= 2 ? 4 : 2;
-      }
-    }
+    const squads = doctrine === DOCTRINE_SWARM ? 3 : 2;
+    const size = doctrine === DOCTRINE_SWARM ? 2 : doctrine === DOCTRINE_BRUTE ? 4 : 3;
+    spawnEnemySquads(s, ax, az, squads, size, doctrine, tier, elite);
+  } else if (missionType === MISSION_HQ) {
+    spawnEnemySquads(s, ax, az, 3, doctrine === DOCTRINE_BRUTE ? 4 : 3, doctrine, tier, true);
+    let coreCell = cellIdx(Math.max(1, Math.min(MAP_W - 2, ax)), Math.max(1, Math.min(MAP_H - 2, az)));
+    if (s.map.obstacle[coreCell]) coreCell = nearestWalkable(s.map, coreCell);
+    s.map.obstacle[coreCell] = 1;
+    s.mission.assets.push({ cell: coreCell, hp: 800, alive: true });
   } else if (missionType === MISSION_DEFENSE) {
     const cx = Math.max(1, Math.min(MAP_W - 2, ax));
     const cz = Math.max(1, Math.min(MAP_H - 2, az + 20));

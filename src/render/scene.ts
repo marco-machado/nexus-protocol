@@ -27,6 +27,7 @@ import {
   DEP_TRAP,
   DEP_TURRET,
   MISSION_DEFENSE,
+  MISSION_HQ,
   MISSION_PURGE,
   type SimState,
 } from '../sim/state';
@@ -64,6 +65,7 @@ export interface GameScene {
 }
 
 const dummy = new Object3D();
+const npcTint = new Color();
 const hidden = new Matrix4().makeScale(0, 0, 0);
 
 const NEON_COLORS = [0x00e5ff, 0xff2fd6, 0xff9f1c, 0x7c4dff];
@@ -297,6 +299,11 @@ export function objectiveDone(state: SimState): boolean {
       !state.npcs.some((n) => n.raider && n.state !== ST_DEAD && n.state !== ST_PERSUADED)
     );
   if (m.type === 5) return !(m.assets[1]?.alive ?? true);
+  if (m.type === MISSION_HQ)
+    return (
+      !(m.assets[0]?.alive ?? true) &&
+      state.npcs.every((n) => n.kind !== NPC_ENEMY || n.state === ST_DEAD || n.state === ST_PERSUADED)
+    );
   const vip = state.npcs[m.vipId];
   return vip !== undefined && vip.state === ST_PERSUADED;
 }
@@ -343,13 +350,16 @@ export function syncScene(
     if (n.state === ST_DEAD) {
       dummy.position.set(x, 0.3, z);
       dummy.rotation.set(0, 0, Math.PI / 2);
+      dummy.scale.set(1, 1, 1);
     } else {
       dummy.position.set(x, 0.8, z);
       dummy.rotation.set(0, 0, 0);
+      dummy.scale.setScalar(n.cloakT > 0 ? 0.45 : 1);
     }
     dummy.updateMatrix();
     gs.npcMesh.setMatrixAt(i, dummy.matrix);
-    const color =
+    dummy.scale.set(1, 1, 1);
+    let color =
       n.state === ST_DEAD
         ? SCENE_COLORS.dead
         : n.state === ST_PERSUADED
@@ -369,6 +379,10 @@ export function syncScene(
                       : n.missionTarget
                         ? SCENE_COLORS.vip
                         : SCENE_COLORS.civ;
+    if (n.state !== ST_DEAD) {
+      if (n.cloakT > 0) color = npcTint.copy(SCENE_COLORS.enemy).multiplyScalar(0.3);
+      else if (n.enemyMaster >= 0) color = npcTint.copy(SCENE_COLORS.civ).lerp(SCENE_COLORS.enemy, 0.45);
+    }
     gs.npcMesh.setColorAt(i, color);
   }
   gs.npcMesh.count = count;

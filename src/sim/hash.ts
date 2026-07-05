@@ -34,6 +34,7 @@ export function hashState(s: SimState): number {
     mix(n.z);
     mix(n.hp | (n.state << 16) | (n.kind << 20));
     mix(n.stunT | ((n.raider ? 1 : 0) << 8));
+    mix(n.cloakT | ((n.enemyMaster + 1) << 9));
   }
   for (const d of s.deployables) {
     mix(d.x);

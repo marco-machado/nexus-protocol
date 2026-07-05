@@ -10,6 +10,7 @@ export const MISSION_RAID = 2;
 export const MISSION_PURGE = 3;
 export const MISSION_DEFENSE = 4;
 export const MISSION_HEIST = 5;
+export const MISSION_HQ = 6;
 
 export const DEP_TURRET = 0;
 export const DEP_TRAP = 1;
@@ -58,6 +59,7 @@ export interface SmokePuff {
 export interface MissionState {
   type: number;
   status: number;
+  doctrine: number;
   vipId: number;
   exfilX: Fx;
   exfilZ: Fx;
@@ -140,6 +142,7 @@ export function baseState(seed: number, mapSeed: number, mapParams?: MapParams):
     mission: {
       type: 0,
       status: 0,
+      doctrine: -1,
       vipId: -1,
       exfilX: 0,
       exfilZ: 0,

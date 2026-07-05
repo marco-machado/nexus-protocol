@@ -11,6 +11,11 @@ export const NPC_TACTICAL = 2;
 export const NPC_GUARD = 3;
 export const NPC_ENEMY = 4;
 
+export const DOCTRINE_NONE = -1;
+export const DOCTRINE_BRUTE = 0;
+export const DOCTRINE_STEALTH = 1;
+export const DOCTRINE_SWARM = 2;
+
 export const AGGRO_HOLD = 0;
 export const AGGRO_DEFENSIVE = 1;
 export const AGGRO_FREE = 2;
@@ -98,6 +103,8 @@ export interface Npc {
   squad: number;
   pulseT: number;
   raider: boolean;
+  cloakT: number;
+  enemyMaster: number;
 }
 
 export interface Projectile {
@@ -206,6 +213,8 @@ export function createNpc(id: number, kind: number, cell: number, mapW: number):
     squad: -1,
     pulseT: 0,
     raider: false,
+    cloakT: 0,
+    enemyMaster: -1,
     ammo: 999,
     cooldown: 0,
     panicT: 0,
