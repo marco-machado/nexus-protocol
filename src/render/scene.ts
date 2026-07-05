@@ -464,7 +464,7 @@ export function syncScene(
     dummy.scale.set(1, wreck ? 0.55 : 1, 1);
     dummy.updateMatrix();
     mesh.setMatrixAt(idx, dummy.matrix);
-    npcTint.set(wreck ? 0x14161a : v.kind === VEH_TRAM ? 0x2e6f6a : 0x3d4b63);
+    npcTint.set(wreck ? 0x14161a : v.kind === VEH_TRAM ? 0x2e6f6a : 0x7d8fb3);
     if (!wreck && v.fuseT > 0 && (state.tick & 4) !== 0) npcTint.set(0xff5a3c);
     if (!wreck && v.driver >= 0) npcTint.lerp(SCENE_COLORS.agent, 0.35);
     mesh.setColorAt(idx, npcTint);
