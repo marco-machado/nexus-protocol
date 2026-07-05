@@ -1,7 +1,14 @@
 import { fromFx } from '../sim/fixed';
 import type { SimState } from '../sim/state';
 import { influence } from '../sim/tick';
-import { NPC_CIV, ST_DEAD, ST_PERSUADED } from '../sim/units';
+import {
+  DOCTRINE_BRUTE,
+  DOCTRINE_STEALTH,
+  DOCTRINE_SWARM,
+  NPC_CIV,
+  ST_DEAD,
+  ST_PERSUADED,
+} from '../sim/units';
 import type { MetaState, Territory } from './meta';
 
 export interface TutorialHint {
@@ -77,6 +84,26 @@ export function hintsFor(m: MetaState, t: Territory, missionType = t.missionType
       when: (s) => s.tick >= 40,
       text: 'Rival assets carry Persuadertrons of their own. Their pulse jams unaugmented agents at close range.',
     });
+  }
+
+  if (t.rival >= 0 && (missionType === 3 || missionType === 6)) {
+    const doctrine = m.syndicates[t.rival]?.doctrine;
+    if (doctrine === DOCTRINE_BRUTE) {
+      hints.push({
+        when: (s) => hostileNear(s, 14),
+        text: 'Counterparty profile: HELIOS COMBINE favors overwhelming ordnance. Expect reinforced assets and heavy weapons.',
+      });
+    } else if (doctrine === DOCTRINE_STEALTH) {
+      hints.push({
+        when: (s) => s.tick >= 60,
+        text: 'Counterparty profile: MIRAGE DYNAMICS runs cloak fields. Scanners or point-blank contact reveal their assets.',
+      });
+    } else if (doctrine === DOCTRINE_SWARM) {
+      hints.push({
+        when: (s) => s.tick >= 60,
+        text: 'Counterparty profile: CHORUS COLLECTIVE conscripts bystanders. Mobs stun on contact; collateral still invoices.',
+      });
+    }
   }
 
   if (missionType === 4) {

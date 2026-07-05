@@ -1,4 +1,13 @@
-import { defaultSpec, type AgentSpec, type WeaponSlot } from '../sim/units';
+import type { MapParams } from '../sim/map';
+import { MISSION_HQ } from '../sim/state';
+import {
+  defaultSpec,
+  DOCTRINE_BRUTE,
+  DOCTRINE_STEALTH,
+  DOCTRINE_SWARM,
+  type AgentSpec,
+  type WeaponSlot,
+} from '../sim/units';
 import { WEAPONS } from '../sim/weapons';
 
 export const AUG_SLOTS = [
@@ -79,24 +88,48 @@ export interface MetaAgent {
   augments: Partial<Record<AugKey, number>>;
   kills: number;
   missions: number;
+  persuasions: number;
   loadout: number[];
   gear: MetaGear;
+}
+
+export interface Siege {
+  rival: number;
+  deadline: number;
 }
 
 export interface Territory {
   id: number;
   name: string;
+  region: number;
   owned: boolean;
+  rival: number;
   missionType: number;
   seed: number;
+  attempts: number;
   taxRate: number;
   unrest: number;
   baseIncome: number;
+  hq?: boolean;
+  siege?: Siege;
+}
+
+export interface Syndicate {
+  id: number;
+  name: string;
+  doctrine: number;
+  nextStrikeAt: number;
+  strikes: number;
 }
 
 export interface MetaState {
+  version: number;
   credits: number;
   cycle: number;
+  lastSeen: number;
+  econMs: number;
+  ngPlus: number;
+  regionsUnlocked: number;
   arsenal: Record<number, number>;
   persuadertrons: number;
   armors: number;
@@ -110,7 +143,96 @@ export interface MetaState {
   augPts: number;
   agents: MetaAgent[];
   territories: Territory[];
+  syndicates: Syndicate[];
   log: string[];
+}
+
+export interface RegionDef {
+  name: string;
+  mapParams: MapParams;
+  missionMix: number[];
+}
+
+export const REGIONS: RegionDef[] = [
+  { name: 'HOME ARC', mapParams: {}, missionMix: [0, 1, 0, 2, 1] },
+  { name: 'GREY HARBOR', mapParams: { skipMod: 5 }, missionMix: [2, 0, 1, 2, 3] },
+  { name: 'IRONFIELD SPRAWL', mapParams: { splitMod: 2, heightBase: 5 }, missionMix: [3, 1, 5, 0, 2] },
+  { name: 'MERIDIAN FLATS', mapParams: { skipMod: 4, heightVar: 8 }, missionMix: [0, 3, 1, 5, 2] },
+  { name: 'NEON BASIN', mapParams: { skipMod: 8, heightBase: 6 }, missionMix: [3, 5, 0, 1, 3] },
+  { name: 'SPIRE DISTRICT', mapParams: { splitMod: 4, heightVar: 20 }, missionMix: [5, 2, 3, 0, 1] },
+  { name: 'CORDON BELT', mapParams: { skipMod: 9, splitMod: 2, heightBase: 8 }, missionMix: [3, 0, 5, 3, 2] },
+  { name: 'ARCOLOGY CORE', mapParams: { skipMod: 10, splitMod: 2, heightBase: 10, heightVar: 18 }, missionMix: [1, 5, MISSION_HQ, MISSION_HQ, MISSION_HQ] },
+];
+
+const DISTRICT_NAMES = [
+  'HOME OFFICE', 'LEDGER HEIGHTS', 'ESCROW', 'AUDIT ALLEY', 'DIVIDEND ROW',
+  'DOCKSIDE', 'TIDEWALL', 'SALTWORKS', 'GREY GATE', 'BRINE MARKET',
+  'FOUNDRY ROW', 'SLAGTOWN', 'PISTON YARD', 'CRUCIBLE', 'VENT CITY',
+  'MERIDIAN', 'FLATLINE', 'CULVERT', 'GRAVEL PARK', 'LOW EIGHT',
+  'GLOW MARKET', 'STATIC ROW', 'PULSE JUNCTION', 'MIRROR DEN', 'AFTERIMAGE',
+  'NEEDLE PARK', 'HALO WALK', 'VERTIGO ROW', 'CROWN SHADOW', 'THE SPIRE',
+  'CHECKPOINT NINE', 'WIRE GARDEN', 'BULWARK', 'GRIDLOCK', 'PALISADE',
+  'PRIME LATTICE', 'CHROME ATRIUM', 'HELIOS SEAT', 'MIRAGE SEAT', 'CHORUS SEAT',
+];
+
+const SYNDICATE_DEFS = [
+  { name: 'HELIOS COMBINE', doctrine: DOCTRINE_BRUTE },
+  { name: 'MIRAGE DYNAMICS', doctrine: DOCTRINE_STEALTH },
+  { name: 'CHORUS COLLECTIVE', doctrine: DOCTRINE_SWARM },
+];
+
+export function actOfTerritory(id: number): number {
+  return id < 10 ? 1 : id < 28 ? 2 : 3;
+}
+
+export function campaignAct(m: MetaState): number {
+  return actOfTerritory(m.regionsUnlocked * 5 - 1);
+}
+
+export function regionUnlocked(m: MetaState, region: number): boolean {
+  return region < m.regionsUnlocked;
+}
+
+export const REGION_UNLOCK_OWNED = 3;
+
+export function updateRegionUnlocks(m: MetaState): void {
+  while (m.regionsUnlocked < REGIONS.length) {
+    const prev = m.regionsUnlocked - 1;
+    const ownedInPrev = m.territories.filter((t) => t.region === prev && t.owned).length;
+    if (ownedInPrev < REGION_UNLOCK_OWNED) break;
+    m.regionsUnlocked++;
+    m.log.unshift(`Regional charter extended: ${REGIONS[m.regionsUnlocked - 1]!.name} is now in scope.`);
+  }
+}
+
+export function missionSeed(t: Territory, ngPlus: number): number {
+  return (t.seed ^ Math.imul(t.attempts, 0x9e3779b9) ^ (ngPlus << 8)) | 0;
+}
+
+export function makeTerritories(ngPlus = 0): Territory[] {
+  return Array.from({ length: REGIONS.length * 5 }, (_, id) => {
+    const region = (id / 5) | 0;
+    const slot = id % 5;
+    const missionType = REGIONS[region]!.missionMix[slot]!;
+    const hq = missionType === MISSION_HQ;
+    let rival = (region + ngPlus) % 3;
+    if (((Math.imul(id + 1 + ngPlus, 2654435761) >>> 27) & 3) === 0) rival = (rival + 1) % 3;
+    if (hq) rival = id - 37;
+    return {
+      id,
+      name: `SECTOR ${String(id + 1).padStart(2, '0')} "${DISTRICT_NAMES[id]}"`,
+      region,
+      owned: id === 0,
+      rival: id === 0 ? -1 : rival,
+      missionType,
+      seed: 1013 * id + 29 * (region + 1),
+      attempts: 0,
+      taxRate: 30,
+      unrest: id === 0 ? 10 : 0,
+      baseIncome: 1800 + 220 * id,
+      ...(hq ? { hq: true } : {}),
+    };
+  });
 }
 
 // research points needed per weapon tier (index = tier) and augment level (index = level)
@@ -130,10 +252,15 @@ export function augLevelUnlocked(m: MetaState, level: number): boolean {
   return m.augPts >= (AUG_LEVEL_PTS[level] ?? Infinity);
 }
 
-export function newMeta(): MetaState {
+export function newMeta(now: number = Date.now()): MetaState {
   return {
+    version: 2,
     credits: 1400,
     cycle: 0,
+    lastSeen: now,
+    econMs: 0,
+    ngPlus: 0,
+    regionsUnlocked: 1,
     arsenal: { 0: 4, 1: 1 },
     persuadertrons: 1,
     armors: 0,
@@ -146,13 +273,14 @@ export function newMeta(): MetaState {
     weaponPts: 0,
     augPts: 0,
     agents: Array.from({ length: 4 }, (_, i) => newAgent(i)),
-    territories: [
-      { id: 0, name: 'SECTOR 01 "HOME OFFICE"', owned: true, missionType: 0, seed: 11, taxRate: 30, unrest: 10, baseIncome: 1800 },
-      { id: 1, name: 'SECTOR 02 "GREY HARBOR"', owned: false, missionType: 3, seed: 99, taxRate: 30, unrest: 0, baseIncome: 2200 },
-      { id: 2, name: 'SECTOR 03 "MERIDIAN"', owned: false, missionType: 1, seed: 42, taxRate: 30, unrest: 0, baseIncome: 2600 },
-      { id: 3, name: 'SECTOR 04 "IRONFIELD"', owned: false, missionType: 2, seed: 7, taxRate: 30, unrest: 0, baseIncome: 3000 },
-      { id: 4, name: 'SECTOR 05 "THE SPIRE"', owned: false, missionType: 5, seed: 314, taxRate: 30, unrest: 0, baseIncome: 3600 },
-    ],
+    territories: makeTerritories(),
+    syndicates: SYNDICATE_DEFS.map((sd, i) => ({
+      id: i,
+      name: sd.name,
+      doctrine: sd.doctrine,
+      nextStrikeAt: 0,
+      strikes: 0,
+    })),
     log: ['Nexus divisional charter granted. One district under management.'],
   };
 }
@@ -164,6 +292,7 @@ export function newAgent(i: number): MetaAgent {
     augments: {},
     kills: 0,
     missions: 0,
+    persuasions: 0,
     loadout: [0],
     gear: {
       persuadertron: false,
@@ -264,11 +393,13 @@ export function applyResult(
       lines.push(`${t.name} secured. Unrest suppressed; the invoice is in the mail.`);
     } else {
       t.owned = false;
+      t.rival = -1;
       t.unrest = 40;
       lines.push(`${t.name} overrun. Territory struck from the ledger.`);
     }
   } else if (won && !t.owned) {
     t.owned = true;
+    t.rival = -1;
     lines.push(`${t.name} transferred to Nexus management.`);
   } else if (!won) {
     lines.push('Contract unfulfilled. The board has noted this.');
@@ -285,6 +416,7 @@ export function applyResult(
   for (const terr of m.territories) {
     if (terr.owned && terr.unrest >= 100) {
       terr.owned = false;
+      terr.rival = -1;
       terr.unrest = 40;
       lines.push(`${terr.name} lost to civil unrest. Re-acquisition contract issued.`);
     }
@@ -300,6 +432,8 @@ export function applyResult(
   m.weaponPts += Math.round((pts * m.researchSplit) / 100);
   m.augPts += Math.round((pts * (100 - m.researchSplit)) / 100);
 
+  updateRegionUnlocks(m);
+
   const info: DebriefInfo = { won, territory: t, income, collateralFine, salvage, loot, lines };
   m.log.unshift(...lines);
   m.log.length = Math.min(m.log.length, 12);
@@ -310,11 +444,13 @@ export function campaignWon(m: MetaState): boolean {
   return m.territories.every((t) => t.owned);
 }
 
-const SAVE_KEY = 'nexus-protocol-save-v1';
+const SAVE_KEY = 'nexus-protocol-save-v2';
+const OLD_SAVE_KEY = 'nexus-protocol-save-v1';
 
 export function saveMeta(m: MetaState): void {
   try {
     localStorage.setItem(SAVE_KEY, JSON.stringify(m));
+    localStorage.removeItem(OLD_SAVE_KEY);
   } catch {
     // storage may be unavailable; the run simply won't persist
   }
@@ -325,30 +461,7 @@ export function loadMeta(): MetaState | null {
     const raw = localStorage.getItem(SAVE_KEY);
     if (!raw) return null;
     const m = JSON.parse(raw) as MetaState;
-    m.scanners ??= 0;
-    m.cloaks ??= 0;
-    m.drones ??= 0;
-    m.shields ??= 0;
-    m.medbays ??= 0;
-    for (const a of m.agents) {
-      a.gear.scanner ??= false;
-      a.gear.cloak ??= false;
-      a.gear.drone ??= false;
-      a.gear.shield ??= false;
-      a.gear.medbay ??= false;
-      a.gear.charges ??= 0;
-      a.gear.emps ??= 0;
-      if (Array.isArray(a.augments)) {
-        const levels: Partial<Record<AugKey, number>> = {};
-        for (const key of a.augments as AugKey[]) levels[key] = 1;
-        a.augments = levels;
-      }
-    }
-    // pre-Phase B saves predate the purge/heist contract intel on these sectors
-    for (const t of m.territories) {
-      if (t.id === 1 && t.missionType === 0) t.missionType = 3;
-      if (t.id === 4 && t.missionType === 0) t.missionType = 5;
-    }
+    if (m.version !== 2) return null;
     return m;
   } catch {
     return null;

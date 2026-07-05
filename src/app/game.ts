@@ -1,12 +1,16 @@
 import type { WebGPURenderer } from 'three/webgpu';
 import { MISSION_DEFENSE } from '../sim/state';
+import type { MissionParams } from '../sim/setup';
 import { runMission } from './missionRunner';
 import {
+  actOfTerritory,
   applyResult,
   buildSpec,
   campaignWon,
   loadMeta,
+  missionSeed,
   newMeta,
+  REGIONS,
   saveMeta,
   type MetaState,
   type Territory,
@@ -21,6 +25,7 @@ const OBJECTIVES = [
   'Purge the rival squads (needs influence 15 to persuade them)',
   'Hold the Nexus relay against all waves',
   'Cut power, persuade the technician, open the vault, exfiltrate',
+  'Purge the arcology garrison and destroy the HQ core, then exfiltrate',
 ];
 
 export class Game {
@@ -66,15 +71,25 @@ export class Game {
       return;
     }
     const missionType = defense ? MISSION_DEFENSE : t.missionType;
+    const act = actOfTerritory(t.id);
     const difficulty = this.meta.territories.filter((x) => x.owned).length - 1;
+    t.attempts++;
+    saveMeta(this.meta);
+    const simParams: MissionParams = {
+      extraGuards: Math.min(4, difficulty),
+      doctrine: t.rival >= 0 ? this.meta.syndicates[t.rival]!.doctrine : -1,
+      loadoutTier: Math.min(5, act + 1 + this.meta.ngPlus),
+      elite: act === 3 || t.hq === true,
+      map: REGIONS[t.region]!.mapParams,
+    };
     const result = await runMission(
       this.renderer,
-      t.seed + this.meta.cycle * 7919 + difficulty,
+      missionSeed(t, this.meta.ngPlus),
       missionType,
       specs,
       this.hud,
       OBJECTIVES[missionType] ?? 'Contract',
-      Math.min(4, difficulty),
+      simParams,
       { hints: hintsFor(this.meta, t, missionType) },
     );
     const aliveIdx = this.meta.agents.map((a, i) => (a.alive ? i : -1)).filter((i) => i >= 0);

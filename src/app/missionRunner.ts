@@ -17,7 +17,7 @@ import {
 } from '../sim/commands';
 import { hashState } from '../sim/hash';
 import { Recorder } from '../sim/replay';
-import { createMission } from '../sim/setup';
+import { createMission, type MissionParams } from '../sim/setup';
 import {
   DEP_TRAP,
   DEP_TURRET,
@@ -64,11 +64,11 @@ export function runMission(
   specs: AgentSpec[],
   hud: HTMLElement,
   objectiveText: string,
-  extraGuards = 0,
+  simParams: MissionParams = {},
   opts: MissionOptions = {},
 ): Promise<MissionResult> {
   return new Promise((resolve) => {
-    const state = createMission(seed, missionType, specs, { extraGuards, civCount: opts.civCount });
+    const state = createMission(seed, missionType, specs, { ...simParams, civCount: opts.civCount ?? simParams.civCount });
     const gs = createGameScene(state);
     const rig = createRig(window.innerWidth / window.innerHeight, fromFx(state.agents[0]!.x), fromFx(state.agents[0]!.z));
     const queue = new CommandQueue();

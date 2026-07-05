@@ -31,7 +31,7 @@ async function main(): Promise<void> {
       spec.weapons = [{ wid: 2, ammo: 100000 }];
       return spec;
     });
-    void runMission(renderer, 0xbeef, 0, specs, hud, 'PERF STRESS', 4, {
+    void runMission(renderer, 0xbeef, 0, specs, hud, 'PERF STRESS', { extraGuards: 4 }, {
       civCount,
       perf: true,
     });

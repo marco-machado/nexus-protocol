@@ -4,11 +4,15 @@ import {
   augLevel,
   augLevelUnlocked,
   buildSpec,
+  campaignAct,
   campaignWon,
   clearSave,
   DEFENSE_UNREST,
   loadMeta,
   newAgent,
+  REGION_UNLOCK_OWNED,
+  REGIONS,
+  regionUnlocked,
   saveMeta,
   WEAPON_TIER_PTS,
   weaponTierUnlocked,
@@ -42,6 +46,7 @@ const CONTRACT_NAMES = [
   'SQUAD PURGE',
   'DEFENSE',
   'VAULT HEIST',
+  'HQ ASSAULT',
 ];
 const RECRUIT_COST = 800;
 const SLOT_CAP = 8;
@@ -65,6 +70,7 @@ function slotsUsed(a: import('./meta').MetaAgent): number {
 export class Screens {
   private el: HTMLElement;
   private selAgent = 0;
+  private selRegion = -1;
 
   constructor(el: HTMLElement) {
     this.el = el;
@@ -156,16 +162,31 @@ export class Screens {
 
   worldMap(m: MetaState, onContract: (t: Territory, defense?: boolean) => void): void {
     this.show();
+    if (this.selRegion < 0 || this.selRegion >= m.regionsUnlocked) this.selRegion = m.regionsUnlocked - 1;
+    const tabs = REGIONS.map((r, i) => {
+      const locked = !regionUnlocked(m, i);
+      const ownedCount = m.territories.filter((t) => t.region === i && t.owned).length;
+      return `<button data-region="${i}" ${locked ? 'disabled' : ''} class="${i === this.selRegion ? 'primary' : ''}">${locked ? `${r.name} [LOCKED]` : `${r.name} ${ownedCount}/5`}</button>`;
+    }).join('');
+    const nextLocked = m.regionsUnlocked < REGIONS.length;
+    const charterNote = nextLocked
+      ? `<div class="fine">Charter extension: manage ${REGION_UNLOCK_OWNED} districts in ${REGIONS[m.regionsUnlocked - 1]!.name} to open ${REGIONS[m.regionsUnlocked]!.name}.</div>`
+      : '';
     const terr = m.territories
+      .filter((t) => t.region === this.selRegion)
       .map((t) => {
-        const owner = t.owned ? '<b class="own">NEXUS</b>' : '<b class="riv">RIVAL</b>';
+        const owner = t.owned
+          ? '<b class="own">NEXUS</b>'
+          : t.rival >= 0
+            ? `<b class="riv">${m.syndicates[t.rival]!.name}</b>`
+            : '<b class="neutral">NEUTRAL</b>';
         const body = t.owned
           ? `<div>Income share <b>${Math.round((t.baseIncome * t.taxRate) / 100)}cr</b>/cycle</div>
              <div class="taxrow">Tax <input type="range" min="10" max="50" step="5" value="${t.taxRate}" data-tax="${t.id}"/> <b>${t.taxRate}%</b></div>
              <div>Unrest <span class="unrest ${t.unrest > 60 ? 'hot' : ''}">${t.unrest}</span>/100</div>
              ${t.unrest >= DEFENSE_UNREST ? `<button data-defend="${t.id}">DEFENSE CONTRACT</button>` : ''}`
           : `<div>Est. income <b>${t.baseIncome}cr</b> base</div>
-             <div>Contract: <b>${CONTRACT_NAMES[t.missionType]}</b></div>
+             <div>Contract: <b>${CONTRACT_NAMES[t.missionType]}</b>${t.hq ? ' <span class="hqtag">RIVAL HQ ARCOLOGY</span>' : ''}</div>
              <button data-contract="${t.id}">OPEN CONTRACT</button>`;
         return `<div class="terr ${t.owned ? 'owned' : ''}"><h3>${t.name} ${owner}</h3>${body}</div>`;
       })
@@ -181,14 +202,19 @@ export class Screens {
       </div>`;
     this.el.innerHTML = `
       <div class="panel map">
-        <div class="topbar"><h2>GLOBAL OPERATIONS</h2><span class="credits">${m.credits}cr</span><span>CYCLE ${m.cycle}</span></div>
+        <div class="topbar"><h2>GLOBAL OPERATIONS</h2><span class="credits">${m.credits}cr</span><span>ACT ${campaignAct(m)}</span><span>CYCLE ${m.cycle}</span></div>
+        <div class="regiontabs">${tabs}</div>
+        ${charterNote}
         <div class="terrgrid">${terr}</div>
         ${research}
         <div class="loglines">${m.log.slice(0, 4).map((l) => `<div>&gt; ${l}</div>`).join('')}</div>
       </div>`;
     this.el.onclick = (e) => {
       const d = (e.target as HTMLElement).dataset;
-      if (d.contract !== undefined) onContract(m.territories[Number(d.contract)]!);
+      if (d.region !== undefined) {
+        this.selRegion = Number(d.region);
+        this.worldMap(m, onContract);
+      } else if (d.contract !== undefined) onContract(m.territories[Number(d.contract)]!);
       else if (d.defend !== undefined) onContract(m.territories[Number(d.defend)]!, true);
     };
     this.el.oninput = (e) => {
