@@ -126,7 +126,11 @@ export interface SimState {
   shotsByWid: number[];
   fleshHits: number;
   booms: number;
+  // per-tick presentation events; cleared at the start of each step, excluded from hashState
+  events: number[];
 }
+
+export const EV_NO_ROUTE = 1;
 
 export function rand(s: SimState, n: number): number {
   let x = s.rng | 0;
@@ -178,5 +182,6 @@ export function baseState(seed: number, mapSeed: number, mapParams?: MapParams):
     shotsByWid: WEAPONS.map(() => 0),
     fleshHits: 0,
     booms: 0,
+    events: [],
   };
 }

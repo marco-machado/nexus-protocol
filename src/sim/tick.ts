@@ -23,6 +23,7 @@ import {
   SWARM_FLASHMOB,
   SWARM_HOLD,
   TOD_NIGHT,
+  EV_NO_ROUTE,
   type Asset,
   type Blast,
   type SmokePuff,
@@ -464,6 +465,8 @@ function driveTo(s: SimState, v: Vehicle, x: Fx, z: Fx): void {
   if (p) {
     v.path = p;
     v.pathI = 0;
+  } else {
+    s.events.push(EV_NO_ROUTE);
   }
 }
 
@@ -1771,6 +1774,7 @@ function checkMission(s: SimState): void {
 }
 
 export function step(state: SimState, commands: Command[]): void {
+  state.events.length = 0;
   const noises: Noise[] = [];
   for (const c of commands) applyCommand(state, c);
   for (const a of state.agents) updateAgent(state, a, noises);

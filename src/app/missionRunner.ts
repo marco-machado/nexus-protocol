@@ -22,6 +22,7 @@ import { createMission, type MissionParams } from '../sim/setup';
 import {
   DEP_TRAP,
   DEP_TURRET,
+  EV_NO_ROUTE,
   MISSION_DEFENSE,
   SWARM_FLASHMOB,
   SWARM_FOLLOW,
@@ -500,6 +501,7 @@ export function runMission(
     let last = performance.now();
     let acc = 0;
     let hudT = 0;
+    let lastNoRouteTick = -100;
 
     renderer.setAnimationLoop((time: number) => {
       const dt = Math.min(time - last, 250);
@@ -511,6 +513,10 @@ export function runMission(
         while (acc >= TICK_MS) {
           capturePrev();
           step(state, queue.drain(state.tick));
+          if (state.events.includes(EV_NO_ROUTE) && state.tick - lastNoRouteTick > 20) {
+            lastNoRouteTick = state.tick;
+            comms.push('No drivable route to that position. Motor pool suggests a destination with roads.');
+          }
           acc -= TICK_MS;
         }
         simMs = performance.now() - simStart;
