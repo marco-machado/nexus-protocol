@@ -36,9 +36,10 @@ export interface MissionParams {
   elite?: boolean;
 }
 
-function enemyWid(leader: boolean, doctrine: number, tier: number, elite: boolean): number {
-  if (leader) return elite ? 8 : tier >= 4 ? 6 : 3;
-  if (doctrine === DOCTRINE_BRUTE) return tier >= 4 ? 7 : tier >= 3 ? 4 : 2;
+function enemyWid(idx: number, doctrine: number, tier: number, elite: boolean): number {
+  if (idx === 0) return elite ? 8 : tier >= 4 ? 6 : 3;
+  // launchers alternate with miniguns so heavy squads pressure without one-volley wipes
+  if (doctrine === DOCTRINE_BRUTE) return tier >= 4 && idx % 2 === 1 ? 7 : tier >= 3 ? 4 : 2;
   if (doctrine === DOCTRINE_STEALTH) return tier >= 4 ? 6 : 3;
   if (doctrine === DOCTRINE_SWARM) return tier >= 3 ? 5 : 2;
   return tier >= 3 ? 4 : 2;
@@ -69,9 +70,9 @@ function spawnEnemySquads(
       const enemy = spawnNpc(s, NPC_ENEMY, cell);
       enemy.squad = sq;
       enemy.missionTarget = true;
-      enemy.wid = enemyWid(e === 0, doctrine, tier, elite);
+      enemy.wid = enemyWid(e, doctrine, tier, elite);
       if (elite) enemy.hp = 200;
-      if (doctrine === DOCTRINE_BRUTE) enemy.hp += 40;
+      else if (doctrine === DOCTRINE_BRUTE) enemy.hp += 40;
     }
   }
 }
@@ -148,7 +149,7 @@ export function createMission(
     const size = doctrine === DOCTRINE_SWARM ? 2 : doctrine === DOCTRINE_BRUTE ? 4 : 3;
     spawnEnemySquads(s, ax, az, squads, size, doctrine, tier, elite);
   } else if (missionType === MISSION_HQ) {
-    spawnEnemySquads(s, ax, az, 3, doctrine === DOCTRINE_BRUTE ? 4 : 3, doctrine, tier, true);
+    spawnEnemySquads(s, ax, az, 3, 3, doctrine, tier, true);
     let coreCell = cellIdx(Math.max(1, Math.min(MAP_W - 2, ax)), Math.max(1, Math.min(MAP_H - 2, az)));
     if (s.map.obstacle[coreCell]) coreCell = nearestWalkable(s.map, coreCell);
     s.map.obstacle[coreCell] = 1;

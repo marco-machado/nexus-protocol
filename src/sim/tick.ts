@@ -67,6 +67,7 @@ const EMP_STUN = 140;
 const PULSE_STUN = 40;
 const MOB_GRAB_RADIUS = 6 << 16;
 const MOB_STUN = 25;
+const MOB_CAP = 4;
 const CLOAK_REVEAL_RANGE = 3 << 16;
 const NPC_CLOAK_T = 200;
 const NPC_CLOAK_CADENCE = 120;
@@ -527,7 +528,7 @@ function updateAgent(s: SimState, a: Agent, noises: Noise[]): void {
   if (
     tx === null &&
     a.aggression > 0 &&
-    (s.mission.type === MISSION_RAID || s.mission.type === MISSION_HEIST)
+    (s.mission.type === MISSION_RAID || s.mission.type === MISSION_HEIST || s.mission.type === MISSION_HQ)
   ) {
     for (const asset of s.mission.assets) {
       if (!asset.alive) continue;
@@ -658,9 +659,11 @@ function enemyPulse(s: SimState, n: Npc): void {
     }
   }
   if (swarmDoc) {
+    let mob = 0;
+    for (const c of s.npcs) if (c.enemyMaster === n.id && c.state !== ST_DEAD) mob++;
     let grabbed = 0;
     for (const c of s.npcs) {
-      if (grabbed >= 3) break;
+      if (grabbed >= 3 || mob + grabbed >= MOB_CAP) break;
       if (c.kind !== NPC_CIV || c.enemyMaster >= 0 || c.vip || c.missionTarget) continue;
       if (c.state !== ST_IDLE && c.state !== ST_WALK) continue;
       if (distFx(n.x, n.z, c.x, c.z) > MOB_GRAB_RADIUS) continue;
@@ -1169,8 +1172,18 @@ function updateDefense(s: SimState): void {
   if (m.wave >= m.wavesTotal) return;
   m.wave++;
   m.waveT = 520;
-  const count = 2 + m.wave;
-  const kind = m.wave <= 1 ? NPC_POLICE : m.wave <= 3 ? NPC_TACTICAL : NPC_ENEMY;
+  // persuasion swarms send conscripted crowds instead of pulse-carrying agents
+  const swarmDoc = m.doctrine === DOCTRINE_SWARM;
+  const count = 2 + m.wave + (swarmDoc ? 2 : 0);
+  const kind = swarmDoc
+    ? m.wave <= 1
+      ? NPC_POLICE
+      : NPC_TACTICAL
+    : m.wave <= 1
+      ? NPC_POLICE
+      : m.wave <= 3
+        ? NPC_TACTICAL
+        : NPC_ENEMY;
   const held = m.assets[0];
   for (let i = 0; i < count; i++) {
     const edge = s.map.edgeCells[rand(s, s.map.edgeCells.length)]!;
