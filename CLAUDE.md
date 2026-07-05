@@ -14,7 +14,7 @@ There is no lint/format tooling configured in this repo.
 
 ## Architecture
 
-This is a browser isometric squad-tactics game (Three.js + WebGPU, TypeScript, Vite). The design vision is in `docs/design.md`; the current code covers the MVP slice plus Phase B content depth (all 6 mission types, 10 weapons across tiers 1-5, equipment deployables, augment V1-V3 behind research thresholds). `docs/roadmap.md` tracks milestone-by-milestone implementation status (M0-M7 and release phases A-F) against the design doc.
+This is a browser isometric squad-tactics game (Three.js + WebGPU, TypeScript, Vite). The design vision is in `docs/design.md`; the current code covers the MVP slice plus Phase B content depth (all 7 mission types including HQ assault, 10 weapons across tiers 1-5, equipment deployables, augment V1-V3 behind research thresholds) and Phase C world/campaign (40 territories in 8 regions, three rival syndicate doctrines with real-time counterattack sieges, acts 1-3 with New Game+, real-time income/research in the app layer only, veteran quirks). `docs/roadmap.md` tracks milestone-by-milestone implementation status (M0-M7 and release phases A-F) against the design doc.
 
 The codebase has three layers with a strict one-way dependency: `sim` → `app` → `render` never reaches back into `app`/`sim` state mutation.
 

@@ -2,11 +2,11 @@
 
 Status legend: [DONE] implemented and verified in code, [PARTIAL] implemented with gaps noted, [TODO] not started.
 
-Snapshot as of 2026-07-04, updated after the Phase B implementation pass. Verified against the working tree and a passing `npm test` (determinism replays for all six mission types plus pinned golden hash). Sources: `docs/design.md` (GDD), the MVP build plan, and the M0 slice plan. Performance measurements live in `docs/perf.md`.
+Snapshot as of 2026-07-05, updated after the Phase C implementation pass. Verified against the working tree and a passing `npm test` (determinism replays for all seven mission types plus pinned golden hash, world-generation and economy unit tests). Sources: `docs/design.md` (GDD), the MVP build plan, and the M0 slice plan. Performance measurements live in `docs/perf.md`.
 
 ## 1. Where the project stands
 
-The MVP vertical slice defined in GDD section 12 is functionally complete, and Phase B (content depth) is now implemented on top of it: all six mission types, the full tier 1-5 weapon and equipment set, and augment V1-V3 per slot, gated behind extended research thresholds. The architecture rule that could not be retrofitted (deterministic fixed-point command-driven sim) is in place and test-enforced. The only Phase A remainder is the manual perf run on a Windows iGPU laptop. Everything beyond that is Phase C+ full-release scope.
+The MVP vertical slice defined in GDD section 12 is functionally complete, Phase B (content depth) is implemented on top of it, and Phase C (world and campaign) is now in: the full 40-territory/8-region world, three rival syndicates with doctrines that counterattack in real time, campaign acts 1-3 with HQ arcology finales and New Game+, real-time income/research, and service records with veteran quirks. The architecture rule that could not be retrofitted (deterministic fixed-point command-driven sim) is in place and test-enforced. The only Phase A remainder is the manual perf run on a Windows iGPU laptop. Everything beyond that is Phase D+ full-release scope.
 
 ## 2. MVP milestone validation (M0-M7)
 
@@ -98,14 +98,16 @@ Close section 3 plus M7. Exit criterion: a stranger can click a link, learn the 
 - [DONE] Heist missions (SECTOR 05): staged power relay, vault technician persuasion, vault crack (technician near the door with power down, or 600 HP of ordnance as the loud route), then exfil; vault loot pays out in the debrief
 - Balance verified by headless bot probes (3 seeds per new type): purge and heist probe 3/3 winnable, defense 2/3 with the loss a genuine squad wipe. `GOLDEN_FINAL_HASH` re-pinned; determinism replay tests now cover all three new mission types plus cloak/charge/EMP/placement commands
 
-### Phase C — World and campaign
-- 40 territories across 8 regions; territory data model already supports ownership, tax, unrest, seed
-- Three rival AI syndicates with doctrines (brute force, stealth tech, persuasion swarms) that counterattack and flip territories
-- Campaign acts 1-3 with escalating enemy loadouts, rival HQ arcology finale missions, New Game+
-- Real-time income accrual (capped at 24h offline) and real-time research, replacing per-cycle ticks
-- Service records and veteran quirks on top of the existing kill/mission tracking
-- Map variety: multiple seeds or handcrafted districts per territory (single fixed seed today)
-- Already done: 5-territory region, tax/unrest/rebellion loop, two research tracks, permadeath and salvage
+### Phase C — World and campaign [DONE]
+- [DONE] 40 territories across 8 regions, generated from a `REGIONS` table (name, map density params, mission mix) in `src/app/meta.ts`. Save format bumped to v2 (`nexus-protocol-save-v2`, `version` field, fresh start; v1 saves are not migrated and the stale key is cleaned up on first save)
+- [DONE] Three rival syndicates with doctrines, in-sim and in-meta: HELIOS COMBINE (brute force: bigger squads, +40 HP, launcher/minigun loadouts), MIRAGE DYNAMICS (stealth tech: enemies re-cloak on a cadence, break cloak on firing/damage, auto-targeting needs a scanner or close range), CHORUS COLLECTIVE (persuasion swarms: 180-tick enemy pulses that also conscript up to 4 civilians per enemy into stunning mobs; killing mob civilians still bills collateral). Doctrine reaches the sim as `MissionParams.doctrine`; `Npc` gained `cloakT`/`enemyMaster`, both folded into `hashState` (the one intentional golden re-pin of the phase)
+- [DONE] Counterattacks: from act 2, each non-decapitated syndicate schedules real-time strikes (8h act 2 / 5h act 3, -20% per NG+, deterministic hash jitter) that place a 4-hour siege on an owned territory chosen by doctrine (brute: max income, stealth: min unrest, swarm: max unrest). Sieges show a countdown and a REPEL TAKEOVER defense contract that inherits the besieger's doctrine; a lapsed deadline or lost defense flips the territory to the rival. One siege per syndicate at a time caps offline losses at three territories
+- [DONE] Campaign acts 1-3 on the 10/28 territory boundaries; regions unlock at 3 owned districts in the previous region (high-water, never re-locks). Act and NG+ tier drive enemy `loadoutTier` and the `elite` flag (200 HP, tier 4-5 weapons) via `game.ts`. New `MISSION_HQ` (type 6) finale per syndicate: three elite doctrine-flavored squads plus an 800 HP arcology core; purge condition AND core destruction, then exfil. Capturing an HQ decapitates the syndicate (no further strikes). New Game+ carries credits/research/arsenal/agents, remixes rival ownership, and resets the world to the home sector
+- [DONE] Real-time economy: `advanceTime` runs the cycle math (income, unrest drift, rebellion, funding-scaled research) once per 30-minute cycle, clamped to a 24h offline cap, with negative clock deltas ignored. Runs on load, on map view, on a 60s map refresh, and before each debrief. Missions keep loot/salvage/fines/capture plus a +15/+5 research bonus
+- [DONE] Service records and veteran quirks: persuasions tracked per agent; data-driven `QUIRKS` table (Steady Hands, Scar Tissue, Marathoner, Cold Blood, Silver Tongue) applied in `buildSpec` using existing `AgentSpec` fields only; commendation lines on newly crossed thresholds; badges in the equip screen
+- [DONE] Map variety: `generateMap(seed, MapParams)` density/height params (defaults bit-identical, pinned by an obstacle-grid hash test) themed per region, and mission seeds vary per attempt and NG+ via `missionSeed`
+- Balance verified by headless bot probes (act-3 era gear: tier-4/5 weapons, V2 augments): HQ assault 3/3 winnable per doctrine, act-3 elite purge 3/3, swarm-doctrine defense 2/3 with the loss a genuine final-wave relay demolition. Probe-driven fixes: brute elites alternate launcher/minigun and do not stack the brute HP bonus, HQ garrisons are flat 3x3, swarm defense waves send conscripted police/tactical crowds instead of pulse-carrying agents, and agents can auto-target the HQ core
+- Deviations: rival AI runs in the app layer on wall clock (the sim stays wall-clock-free); "multiple seeds + density params" chosen over handcrafted districts; defense-type contracts still never appear as capture missions
 
 ### Phase D — City simulation upgrades
 Riskiest full-release tech after multiplayer; gate each item on the Phase A perf baseline.
