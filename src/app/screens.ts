@@ -134,7 +134,7 @@ export class Screens {
         <div class="taxrow">Effects <input type="range" min="0" max="100" step="5" value="${Math.round(settings.sfxVol * 100)}" data-set="sfxVol"/> <b>${pct(settings.sfxVol)}</b></div>
         <h3>VIDEO</h3>
         <div class="taxrow"><label><input type="checkbox" ${settings.postFx ? 'checked' : ''} data-set="postFx"/> Neon post-processing</label></div>
-        <div class="taxrow"><label><input type="checkbox" ${settings.rain ? 'checked' : ''} data-set="rain"/> Rain</label></div>
+        <div class="taxrow"><label><input type="checkbox" ${settings.rain ? 'checked' : ''} data-set="rain"/> Weather effects (rain falls when the contract forecast says so)</label></div>
         <div class="btnrow"><button data-act="back">BACK</button></div>
         <p class="fine">Settings persist independently of operation saves.</p>
       </div>`;

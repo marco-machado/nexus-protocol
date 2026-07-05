@@ -40,6 +40,7 @@ import {
   ST_PANIC,
   ST_PERSUADED,
 } from '../sim/units';
+import { VEH_CAR, VEH_FUEL, VEH_TRAM, V_WRECK } from '../sim/vehicles';
 
 import { SCENE_COLORS } from './palette';
 
@@ -47,6 +48,8 @@ const NPC_CAP = 400;
 const PROJ_CAP = 512;
 const DEP_CAP = 24;
 const SMOKE_CAP = 96;
+export const CAR_CAP = 16;
+const RUBBLE_CAP = 160;
 
 export interface GameScene {
   scene: Scene;
@@ -54,6 +57,14 @@ export interface GameScene {
   projMesh: InstancedMesh;
   depMesh: InstancedMesh;
   smokeMesh: InstancedMesh;
+  carMesh: InstancedMesh;
+  tramMesh: InstancedMesh;
+  fuelMeshes: Map<number, Mesh>;
+  rubbleMesh: InstancedMesh;
+  groundFloorMesh: InstancedMesh;
+  cellToGround: Map<number, number>;
+  breachCursor: number;
+  rubbleCount: number;
   agentMeshes: Mesh[];
   ringMeshes: Mesh[];
   assetMeshes: Mesh[];
@@ -63,6 +74,13 @@ export interface GameScene {
   beacon: Mesh;
   beaconRing: Mesh;
 }
+
+// index = tod (day, dusk, night); night keeps the original hardcoded look
+const LIGHTING = [
+  { amb: 0xbfd0e0, ambI: 1.1, dir: 0xfff2d8, dirI: 1.5, pos: [50, 90, 30], bg: 0x8fa6bd, fog: 0.0035, neon: 0.35, ground: 0x2a3140 },
+  { amb: 0xc9a68a, ambI: 0.85, dir: 0xff9a5a, dirI: 1.0, pos: [60, 40, 25], bg: 0x1a1016, fog: 0.005, neon: 1, ground: 0x14121a },
+  { amb: 0x8fa8d8, ambI: 0.9, dir: 0xa9c2f0, dirI: 1.1, pos: [40, 70, 25], bg: 0x05070d, fog: 0.006, neon: 1, ground: 0x0c1017 },
+] as const;
 
 const dummy = new Object3D();
 const npcTint = new Color();
@@ -111,16 +129,49 @@ function createNeonStrips(state: SimState): InstancedMesh {
 
 export function createGameScene(state: SimState): GameScene {
   const scene = new Scene();
-  scene.background = new Color(0x05070d);
-  scene.fog = new FogExp2(0x05070d, 0.006);
+  const light = LIGHTING[Math.max(0, Math.min(2, state.env.tod))]!;
+  const rain = state.env.rain === 1;
+  const bg = new Color(light.bg);
+  if (rain) bg.multiplyScalar(0.8);
+  scene.background = bg;
+  scene.fog = new FogExp2(bg.getHex(), light.fog + (rain ? 0.002 : 0));
 
+  const groundColor = new Color(light.ground);
+  if (rain) groundColor.multiplyScalar(0.8);
   const ground = new Mesh(
     new PlaneGeometry(MAP_W, MAP_W),
-    new MeshLambertMaterial({ color: 0x0c1017 }),
+    new MeshLambertMaterial({ color: groundColor }),
   );
   ground.rotation.x = -Math.PI / 2;
   ground.position.set(MAP_W / 2, 0, MAP_W / 2);
   scene.add(ground);
+
+  // ground floors are per-cell instances so breaches can knock single cells out;
+  // the upper mass stays one box per building and never changes
+  const cellToGround = new Map<number, number>();
+  let groundCells = 0;
+  for (const b of state.map.buildings) groundCells += b.w * b.d;
+  const groundFloorMesh = new InstancedMesh(
+    new BoxGeometry(1, 1, 1),
+    new MeshLambertMaterial({ color: 0x1d2939 }),
+    groundCells,
+  );
+  let gi = 0;
+  for (const b of state.map.buildings) {
+    for (let z = b.z; z < b.z + b.d; z++) {
+      for (let x = b.x; x < b.x + b.w; x++) {
+        dummy.position.set(x + 0.5, 1.5, z + 0.5);
+        dummy.scale.set(1, 3, 1);
+        dummy.updateMatrix();
+        groundFloorMesh.setMatrixAt(gi, dummy.matrix);
+        cellToGround.set(x + z * MAP_W, gi);
+        gi++;
+      }
+    }
+  }
+  dummy.scale.set(1, 1, 1);
+  groundFloorMesh.instanceMatrix.needsUpdate = true;
+  scene.add(groundFloorMesh);
 
   const buildings = new InstancedMesh(
     new BoxGeometry(1, 1, 1),
@@ -128,15 +179,63 @@ export function createGameScene(state: SimState): GameScene {
     state.map.buildings.length,
   );
   state.map.buildings.forEach((b, i) => {
-    dummy.position.set(b.x + b.w / 2, b.h / 2, b.z + b.d / 2);
-    dummy.scale.set(b.w, b.h, b.d);
+    dummy.position.set(b.x + b.w / 2, 3 + (b.h - 3) / 2, b.z + b.d / 2);
+    dummy.scale.set(b.w, b.h - 3, b.d);
     dummy.updateMatrix();
     buildings.setMatrixAt(i, dummy.matrix);
     dummy.scale.set(1, 1, 1);
   });
   buildings.instanceMatrix.needsUpdate = true;
   scene.add(buildings);
-  scene.add(createNeonStrips(state));
+  const strips = createNeonStrips(state);
+  if (light.neon < 1 && strips.instanceColor) {
+    const col = new Color();
+    for (let i = 0; i < strips.count; i++) {
+      strips.getColorAt(i, col);
+      strips.setColorAt(i, col.multiplyScalar(light.neon));
+    }
+    strips.instanceColor.needsUpdate = true;
+  }
+  scene.add(strips);
+
+  const rubbleMesh = new InstancedMesh(
+    new BoxGeometry(0.9, 0.35, 0.9),
+    new MeshLambertMaterial({ color: 0x11161f }),
+    RUBBLE_CAP,
+  );
+  rubbleMesh.instanceMatrix.setUsage(DynamicDrawUsage);
+  rubbleMesh.count = 0;
+  scene.add(rubbleMesh);
+
+  const carMesh = new InstancedMesh(
+    new BoxGeometry(0.85, 0.55, 1.7),
+    new MeshLambertMaterial(),
+    CAR_CAP,
+  );
+  carMesh.instanceMatrix.setUsage(DynamicDrawUsage);
+  carMesh.count = 0;
+  scene.add(carMesh);
+
+  const tramMesh = new InstancedMesh(
+    new BoxGeometry(1.0, 0.8, 2.8),
+    new MeshLambertMaterial(),
+    2,
+  );
+  tramMesh.instanceMatrix.setUsage(DynamicDrawUsage);
+  tramMesh.count = 0;
+  scene.add(tramMesh);
+
+  const fuelMeshes = new Map<number, Mesh>();
+  state.vehicles.forEach((v, i) => {
+    if (v.kind !== VEH_FUEL) return;
+    const pump = new Mesh(
+      new BoxGeometry(0.8, 1.2, 0.8),
+      new MeshLambertMaterial({ color: 0x8a4a12, emissive: 0xff7a1c, emissiveIntensity: 0.5 }),
+    );
+    pump.position.set((v.cell % MAP_W) + 0.5, 0.6, ((v.cell / MAP_W) | 0) + 0.5);
+    scene.add(pump);
+    fuelMeshes.set(i, pump);
+  });
 
   const npcMesh = new InstancedMesh(
     new BoxGeometry(0.55, 1.6, 0.55),
@@ -263,9 +362,9 @@ export function createGameScene(state: SimState): GameScene {
     markerMeshes.push(m);
   }
 
-  scene.add(new AmbientLight(0x8fa8d8, 0.9));
-  const moon = new DirectionalLight(0xa9c2f0, 1.1);
-  moon.position.set(40, 70, 25);
+  scene.add(new AmbientLight(light.amb, light.ambI));
+  const moon = new DirectionalLight(light.dir, light.dirI);
+  moon.position.set(light.pos[0], light.pos[1], light.pos[2]);
   scene.add(moon);
 
   return {
@@ -274,6 +373,14 @@ export function createGameScene(state: SimState): GameScene {
     projMesh,
     depMesh,
     smokeMesh,
+    carMesh,
+    tramMesh,
+    fuelMeshes,
+    rubbleMesh,
+    groundFloorMesh,
+    cellToGround,
+    breachCursor: 0,
+    rubbleCount: 0,
     agentMeshes,
     ringMeshes,
     assetMeshes,
@@ -315,9 +422,78 @@ export function syncScene(
   prevAZ: Float64Array,
   prevNX: Float64Array,
   prevNZ: Float64Array,
+  prevVX: Float64Array,
+  prevVZ: Float64Array,
   alpha: number,
   selected: boolean[],
 ): void {
+  // consume new breaches: drop the ground-floor cell, leave rubble
+  while (gs.breachCursor < state.breaches.length) {
+    const cell = state.breaches[gs.breachCursor]!;
+    const gi = gs.cellToGround.get(cell);
+    if (gi !== undefined) {
+      gs.groundFloorMesh.setMatrixAt(gi, hidden);
+      gs.groundFloorMesh.instanceMatrix.needsUpdate = true;
+    }
+    if (gs.rubbleCount < RUBBLE_CAP) {
+      dummy.position.set((cell % MAP_W) + 0.5, 0.18, ((cell / MAP_W) | 0) + 0.5);
+      dummy.rotation.set(0, ((cell * 2654435761) >>> 27) / 5, 0);
+      dummy.scale.set(1, 1, 1);
+      dummy.updateMatrix();
+      gs.rubbleMesh.setMatrixAt(gs.rubbleCount, dummy.matrix);
+      gs.rubbleCount++;
+      gs.rubbleMesh.count = gs.rubbleCount;
+      gs.rubbleMesh.instanceMatrix.needsUpdate = true;
+    }
+    gs.breachCursor++;
+  }
+  dummy.rotation.set(0, 0, 0);
+
+  const vX = new Float64Array(state.vehicles.length);
+  const vZ = new Float64Array(state.vehicles.length);
+  state.vehicles.forEach((v, i) => {
+    const px = i < prevVX.length ? prevVX[i]! : fromFx(v.x);
+    const pz = i < prevVZ.length ? prevVZ[i]! : fromFx(v.z);
+    vX[i] = px + (fromFx(v.x) - px) * alpha;
+    vZ[i] = pz + (fromFx(v.z) - pz) * alpha;
+  });
+
+  let ci = 0;
+  let ti = 0;
+  state.vehicles.forEach((v, i) => {
+    if (v.kind === VEH_FUEL) {
+      const pump = gs.fuelMeshes.get(i);
+      if (pump && v.state === V_WRECK && pump.scale.y !== 0.3) {
+        pump.scale.y = 0.3;
+        pump.position.y = 0.2;
+        const mat = pump.material as MeshLambertMaterial;
+        mat.color.set(0x181818);
+        mat.emissiveIntensity = 0;
+      }
+      return;
+    }
+    const mesh = v.kind === VEH_CAR ? gs.carMesh : gs.tramMesh;
+    const idx = v.kind === VEH_CAR ? ci++ : ti++;
+    if (idx >= (v.kind === VEH_CAR ? CAR_CAP : 2)) return;
+    const wreck = v.state === V_WRECK;
+    dummy.position.set(vX[i]!, wreck ? 0.16 : 0.3, vZ[i]!);
+    dummy.rotation.set(0, Math.atan2(v.dirX, v.dirZ || (v.dirX !== 0 ? 0 : 1)), 0);
+    dummy.scale.set(1, wreck ? 0.55 : 1, 1);
+    dummy.updateMatrix();
+    mesh.setMatrixAt(idx, dummy.matrix);
+    npcTint.set(wreck ? 0x14161a : v.kind === VEH_TRAM ? 0x2e6f6a : 0x3d4b63);
+    if (!wreck && v.fuseT > 0 && (state.tick & 4) !== 0) npcTint.set(0xff5a3c);
+    if (!wreck && v.driver >= 0) npcTint.lerp(SCENE_COLORS.agent, 0.35);
+    mesh.setColorAt(idx, npcTint);
+  });
+  dummy.scale.set(1, 1, 1);
+  gs.carMesh.count = Math.min(ci, CAR_CAP);
+  gs.tramMesh.count = Math.min(ti, 2);
+  gs.carMesh.instanceMatrix.needsUpdate = true;
+  gs.tramMesh.instanceMatrix.needsUpdate = true;
+  if (gs.carMesh.instanceColor) gs.carMesh.instanceColor.needsUpdate = true;
+  if (gs.tramMesh.instanceColor) gs.tramMesh.instanceColor.needsUpdate = true;
+
   state.agents.forEach((a, i) => {
     const mesh = gs.agentMeshes[i]!;
     const ring = gs.ringMeshes[i]!;
@@ -332,9 +508,10 @@ export function syncScene(
     mat.color.copy(a.stunT > 0 ? SCENE_COLORS.dead : SCENE_COLORS.agent);
     mat.opacity = a.cloakT > 0 ? 0.3 : 1;
     (ring.material as MeshBasicMaterial).color.copy(SCENE_COLORS.select);
-    const x = prevAX[i]! + (fromFx(a.x) - prevAX[i]!) * alpha;
-    const z = prevAZ[i]! + (fromFx(a.z) - prevAZ[i]!) * alpha;
-    mesh.position.set(x, 0.9, z);
+    const driving = a.driving >= 0 && a.driving < state.vehicles.length;
+    const x = driving ? vX[a.driving]! : prevAX[i]! + (fromFx(a.x) - prevAX[i]!) * alpha;
+    const z = driving ? vZ[a.driving]! : prevAZ[i]! + (fromFx(a.z) - prevAZ[i]!) * alpha;
+    mesh.position.set(x, driving ? 1.0 : 0.9, z);
     ring.position.x = x;
     ring.position.z = z;
     ring.visible = selected[i] ?? false;
@@ -489,5 +666,4 @@ export function syncScene(
   const pulse = 1 + ((t * 0.6) % 2);
   gs.beaconRing.scale.setScalar(pulse * fromFx(state.mission.exfilR) * 0.5);
   ringMat.opacity = (done ? 0.9 : 0.5) * (1 - ((t * 0.6) % 2) / 2);
-  void hidden;
 }

@@ -79,6 +79,8 @@ export function runMission(
     const prevAZ = new Float64Array(state.agents.length);
     const prevNX = new Float64Array(NPC_CAP);
     const prevNZ = new Float64Array(NPC_CAP);
+    const prevVX = new Float64Array(state.vehicles.length);
+    const prevVZ = new Float64Array(state.vehicles.length);
     const capturePrev = () => {
       state.agents.forEach((a, i) => {
         prevAX[i] = fromFx(a.x);
@@ -89,6 +91,10 @@ export function runMission(
         prevNX[i] = fromFx(state.npcs[i]!.x);
         prevNZ[i] = fromFx(state.npcs[i]!.z);
       }
+      state.vehicles.forEach((v, i) => {
+        prevVX[i] = fromFx(v.x);
+        prevVZ[i] = fromFx(v.z);
+      });
     };
     capturePrev();
 
@@ -331,7 +337,7 @@ export function runMission(
 
     const perf = opts.perf ? createPerfOverlay() : null;
     const post = settings.postFx ? createPost(renderer, gs.scene, rig.camera) : null;
-    const rain = settings.rain ? createRain(rig.cx, rig.cz) : null;
+    const rain = settings.rain && state.env.rain === 1 ? createRain(rig.cx, rig.cz) : null;
     if (rain) gs.scene.add(rain.mesh);
     const minimap = createMinimap(state);
     const comms = createComms();
@@ -504,7 +510,7 @@ export function runMission(
       }
       updateRig(rig, window.innerWidth / window.innerHeight);
 
-      syncScene(gs, state, prevAX, prevAZ, prevNX, prevNZ, Math.min(1, acc / TICK_MS), selected);
+      syncScene(gs, state, prevAX, prevAZ, prevNX, prevNZ, prevVX, prevVZ, Math.min(1, acc / TICK_MS), selected);
       rain?.update(dt, rig.cx, rig.cz);
       if (post) post.render();
       else renderer.render(gs.scene, rig.camera);

@@ -31,10 +31,21 @@ async function main(): Promise<void> {
       spec.weapons = [{ wid: 2, ammo: 100000 }];
       return spec;
     });
-    void runMission(renderer, 0xbeef, 0, specs, hud, 'PERF STRESS', { extraGuards: 4 }, {
-      civCount,
-      perf: true,
-    });
+    const tod = Number(params.get('tod') ?? '2');
+    const rain = Number(params.get('rain') ?? '0');
+    void runMission(
+      renderer,
+      0xbeef,
+      0,
+      specs,
+      hud,
+      'PERF STRESS',
+      { extraGuards: 4, tod: Number.isFinite(tod) ? tod : 2, weather: rain === 1 ? 1 : 0 },
+      {
+        civCount,
+        perf: true,
+      },
+    );
     return;
   }
 
