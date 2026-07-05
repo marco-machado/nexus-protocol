@@ -1,6 +1,7 @@
 import { Plane, Raycaster, Vector2, Vector3 } from 'three';
 import type { WebGPURenderer } from 'three/webgpu';
 import { createRig, updateRig } from '../render/camera';
+import { NPC_CAP } from '../render/crowd';
 import { SCENE_COLORS } from '../render/palette';
 import { createPost } from '../render/post';
 import { createRain } from '../render/rain';
@@ -50,7 +51,6 @@ export interface MissionResult {
   loot: number;
 }
 
-const NPC_CAP = 400;
 
 export interface MissionOptions {
   civCount?: number;
@@ -542,7 +542,9 @@ export function runMission(
       }
       updateRig(rig, window.innerWidth / window.innerHeight);
 
-      syncScene(gs, state, prevAX, prevAZ, prevNX, prevNZ, prevVX, prevVZ, Math.min(1, acc / TICK_MS), selected);
+      const alpha = Math.min(1, acc / TICK_MS);
+      syncScene(gs, state, prevAX, prevAZ, prevVX, prevVZ, alpha, selected);
+      gs.crowd.update(state, prevNX, prevNZ, alpha, dt, rig);
       rain?.update(dt, rig.cx, rig.cz);
       if (post) post.render();
       else renderer.render(gs.scene, rig.camera);

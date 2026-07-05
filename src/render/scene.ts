@@ -31,20 +31,12 @@ import {
   MISSION_PURGE,
   type SimState,
 } from '../sim/state';
-import {
-  NPC_ENEMY,
-  NPC_GUARD,
-  NPC_POLICE,
-  NPC_TACTICAL,
-  ST_DEAD,
-  ST_PANIC,
-  ST_PERSUADED,
-} from '../sim/units';
+import { NPC_ENEMY, ST_DEAD, ST_PERSUADED } from '../sim/units';
 import { VEH_CAR, VEH_FUEL, VEH_TRAM, V_WRECK } from '../sim/vehicles';
 
+import { createCrowd, type Crowd } from './crowd';
 import { SCENE_COLORS } from './palette';
 
-const NPC_CAP = 400;
 const PROJ_CAP = 512;
 const DEP_CAP = 24;
 const SMOKE_CAP = 96;
@@ -53,7 +45,7 @@ const RUBBLE_CAP = 160;
 
 export interface GameScene {
   scene: Scene;
-  npcMesh: InstancedMesh;
+  crowd: Crowd;
   projMesh: InstancedMesh;
   depMesh: InstancedMesh;
   smokeMesh: InstancedMesh;
@@ -237,14 +229,7 @@ export function createGameScene(state: SimState): GameScene {
     fuelMeshes.set(i, pump);
   });
 
-  const npcMesh = new InstancedMesh(
-    new BoxGeometry(0.55, 1.6, 0.55),
-    new MeshLambertMaterial(),
-    NPC_CAP,
-  );
-  npcMesh.instanceMatrix.setUsage(DynamicDrawUsage);
-  npcMesh.count = 0;
-  scene.add(npcMesh);
+  const crowd = createCrowd(scene);
 
   const projMesh = new InstancedMesh(
     new BoxGeometry(0.12, 0.12, 0.5),
@@ -369,7 +354,7 @@ export function createGameScene(state: SimState): GameScene {
 
   return {
     scene,
-    npcMesh,
+    crowd,
     projMesh,
     depMesh,
     smokeMesh,
@@ -420,8 +405,6 @@ export function syncScene(
   state: SimState,
   prevAX: Float64Array,
   prevAZ: Float64Array,
-  prevNX: Float64Array,
-  prevNZ: Float64Array,
   prevVX: Float64Array,
   prevVZ: Float64Array,
   alpha: number,
@@ -516,55 +499,6 @@ export function syncScene(
     ring.position.z = z;
     ring.visible = selected[i] ?? false;
   });
-
-  const count = Math.min(state.npcs.length, NPC_CAP);
-  for (let i = 0; i < count; i++) {
-    const n = state.npcs[i]!;
-    const px = i < prevNX.length ? prevNX[i]! : fromFx(n.x);
-    const pz = i < prevNZ.length ? prevNZ[i]! : fromFx(n.z);
-    const x = px + (fromFx(n.x) - px) * alpha;
-    const z = pz + (fromFx(n.z) - pz) * alpha;
-    if (n.state === ST_DEAD) {
-      dummy.position.set(x, 0.3, z);
-      dummy.rotation.set(0, 0, Math.PI / 2);
-      dummy.scale.set(1, 1, 1);
-    } else {
-      dummy.position.set(x, 0.8, z);
-      dummy.rotation.set(0, 0, 0);
-      dummy.scale.setScalar(n.cloakT > 0 ? 0.45 : 1);
-    }
-    dummy.updateMatrix();
-    gs.npcMesh.setMatrixAt(i, dummy.matrix);
-    dummy.scale.set(1, 1, 1);
-    let color =
-      n.state === ST_DEAD
-        ? SCENE_COLORS.dead
-        : n.state === ST_PERSUADED
-          ? SCENE_COLORS.persuaded
-          : n.vip
-            ? SCENE_COLORS.vip
-            : n.state === ST_PANIC
-              ? SCENE_COLORS.panic
-              : n.kind === NPC_POLICE
-                ? SCENE_COLORS.police
-                : n.kind === NPC_TACTICAL
-                  ? SCENE_COLORS.tactical
-                  : n.kind === NPC_GUARD
-                    ? SCENE_COLORS.guard
-                    : n.kind === NPC_ENEMY
-                      ? SCENE_COLORS.enemy
-                      : n.missionTarget
-                        ? SCENE_COLORS.vip
-                        : SCENE_COLORS.civ;
-    if (n.state !== ST_DEAD) {
-      if (n.cloakT > 0) color = npcTint.copy(SCENE_COLORS.enemy).multiplyScalar(0.3);
-      else if (n.enemyMaster >= 0) color = npcTint.copy(SCENE_COLORS.civ).lerp(SCENE_COLORS.enemy, 0.45);
-    }
-    gs.npcMesh.setColorAt(i, color);
-  }
-  gs.npcMesh.count = count;
-  gs.npcMesh.instanceMatrix.needsUpdate = true;
-  if (gs.npcMesh.instanceColor) gs.npcMesh.instanceColor.needsUpdate = true;
 
   const pcount = Math.min(state.projectiles.length, PROJ_CAP);
   for (let i = 0; i < pcount; i++) {
