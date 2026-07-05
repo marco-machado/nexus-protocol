@@ -1,4 +1,5 @@
 import {
+  agentQuirks,
   AUG_SLOTS,
   AUG_LEVEL_PTS,
   augLevel,
@@ -309,11 +310,15 @@ export class Screens {
         const augText = AUG_SLOTS.filter((slot) => augLevel(a, slot.key) > 0)
           .map((slot) => `${slot.name} V${augLevel(a, slot.key)}`)
           .join(', ');
+        const quirkChips = agentQuirks(a)
+          .map((q) => `<span class="chip gold" title="${q.desc}">${q.name}</span>`)
+          .join('');
         return `<div class="acard ${i === this.selAgent ? 'sel' : ''}" data-agent="${i}">
           <h4>${a.name}</h4>
-          <small>HP ${spec.maxHp} | missions ${a.missions} | kills ${a.kills} | SLOTS ${slotsUsed(a)}/${SLOT_CAP}</small>
+          <small>HP ${spec.maxHp} | missions ${a.missions} | kills ${a.kills} | persuasions ${a.persuasions} | SLOTS ${slotsUsed(a)}/${SLOT_CAP}</small>
           <div>${load || '<i>unarmed</i>'}</div>
           <div class="chips">${chips}</div>
+          ${quirkChips ? `<div class="chips">${quirkChips}</div>` : ''}
           <small>${augText || 'no augments'}</small>
         </div>`;
       })

@@ -126,6 +126,7 @@ export class Game {
     const info = applyResult(this.meta, t, result.won, result.kills, result.civKills, survivors, {
       loot: result.loot,
       defense,
+      persuaded: result.persuaded,
     });
     saveMeta(this.meta);
     this.screens.debrief(info, this.meta, () => this.map());

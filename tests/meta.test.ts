@@ -3,6 +3,10 @@ import { MISSION_DEFENSE, MISSION_HQ } from '../src/sim/state';
 import {
   actOfTerritory,
   advanceTime,
+  agentQuirks,
+  applyResult,
+  buildSpec,
+  newAgent,
   campaignAct,
   CYCLE_MS,
   incomePerCycle,
@@ -241,5 +245,44 @@ describe('rival sieges', () => {
     expect(strikeInterval(3, 0)).toBeLessThan(strikeInterval(2, 0));
     expect(strikeInterval(2, 1)).toBeLessThan(strikeInterval(2, 0));
     expect(strikeInterval(2, 9)).toBeGreaterThan(0);
+  });
+});
+
+describe('service records and veteran quirks', () => {
+  it('applies quirk modifiers to the built spec at their thresholds', () => {
+    const rookie = newAgent(0);
+    const vet = newAgent(1);
+    vet.missions = 20;
+    vet.kills = 50;
+    vet.persuasions = 25;
+    const base = buildSpec(rookie);
+    const spec = buildSpec(vet);
+    expect(agentQuirks(rookie)).toEqual([]);
+    expect(agentQuirks(vet).map((q) => q.key)).toEqual(['steady', 'scar', 'cold', 'silver']);
+    expect(spec.spreadMul).toBe(base.spreadMul - 5);
+    expect(spec.maxHp).toBe(base.maxHp + 10);
+    expect(spec.fireMul).toBe(base.fireMul - 5);
+    expect(spec.drainMul).toBe(base.drainMul - 10);
+    expect(spec.speedMul).toBe(base.speedMul);
+  });
+
+  it('attributes persuasions and announces newly earned quirks in the debrief', () => {
+    const m = newMeta(0);
+    for (const a of m.agents) a.missions = 9;
+    const survivors = m.agents.map(() => true);
+    const info = applyResult(m, m.territories[0]!, true, 0, 0, survivors, { persuaded: 8 });
+    expect(m.agents.every((a) => a.persuasions === 2)).toBe(true);
+    expect(m.agents.every((a) => a.missions === 10)).toBe(true);
+    const commendations = info.lines.filter((l) => l.includes('Steady Hands'));
+    expect(commendations.length).toBe(m.agents.length);
+  });
+
+  it('does not commend dead agents', () => {
+    const m = newMeta(0);
+    m.agents[0]!.missions = 9;
+    const survivors = m.agents.map((_, i) => i !== 0);
+    const info = applyResult(m, m.territories[0]!, false, 0, 0, survivors, {});
+    expect(info.lines.some((l) => l.includes('Steady Hands'))).toBe(false);
+    expect(info.lines.some((l) => l.includes('written off'))).toBe(true);
   });
 });

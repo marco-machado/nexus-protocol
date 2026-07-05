@@ -429,6 +429,56 @@ export function augLevel(a: MetaAgent, key: AugKey): number {
   return a.augments[key] ?? 0;
 }
 
+export interface Quirk {
+  key: string;
+  name: string;
+  desc: string;
+  earned(a: MetaAgent): boolean;
+  apply(spec: AgentSpec): void;
+}
+
+export const QUIRKS: Quirk[] = [
+  {
+    key: 'steady',
+    name: 'Steady Hands',
+    desc: '+5% accuracy',
+    earned: (a) => a.missions >= 10,
+    apply: (s) => void (s.spreadMul -= 5),
+  },
+  {
+    key: 'scar',
+    name: 'Scar Tissue',
+    desc: '+10 HP',
+    earned: (a) => a.missions >= 20,
+    apply: (s) => void (s.maxHp += 10),
+  },
+  {
+    key: 'marathoner',
+    name: 'Marathoner',
+    desc: '+5% speed',
+    earned: (a) => a.missions >= 30,
+    apply: (s) => void (s.speedMul += 5),
+  },
+  {
+    key: 'cold',
+    name: 'Cold Blood',
+    desc: '+5% fire rate',
+    earned: (a) => a.kills >= 50,
+    apply: (s) => void (s.fireMul -= 5),
+  },
+  {
+    key: 'silver',
+    name: 'Silver Tongue',
+    desc: '-10% stim drain',
+    earned: (a) => a.persuasions >= 25,
+    apply: (s) => void (s.drainMul -= 10),
+  },
+];
+
+export function agentQuirks(a: MetaAgent): Quirk[] {
+  return QUIRKS.filter((q) => q.earned(a));
+}
+
 export function buildSpec(a: MetaAgent): AgentSpec {
   const spec = defaultSpec();
   spec.weapons = a.loadout.map((wid): WeaponSlot => ({ wid, ammo: WEAPONS[wid]!.ammoMax }));
@@ -451,6 +501,7 @@ export function buildSpec(a: MetaAgent): AgentSpec {
   spec.drainMul -= [0, 30, 50, 60][augLevel(a, 'brain')]!;
   spec.persuadeImmune = augLevel(a, 'brain') >= 3;
   spec.fireMul -= [0, 15, 30, 45][augLevel(a, 'arms')]!;
+  for (const q of agentQuirks(a)) q.apply(spec);
   return spec;
 }
 
@@ -466,6 +517,7 @@ export interface DebriefInfo {
 export interface ResultOptions {
   loot?: number;
   defense?: boolean;
+  persuaded?: number;
 }
 
 export function applyResult(
@@ -482,8 +534,10 @@ export function applyResult(
 
   m.agents.forEach((a, i) => {
     if (!a.alive) return;
+    const quirksBefore = new Set(agentQuirks(a).map((q) => q.key));
     a.missions++;
     a.kills += Math.floor(kills / Math.max(1, survivors.length));
+    a.persuasions += Math.floor((opts.persuaded ?? 0) / Math.max(1, survivors.length));
     if (survivors[i] === false) {
       a.alive = false;
       for (const slot of AUG_SLOTS) {
@@ -491,6 +545,12 @@ export function applyResult(
         for (let l = 0; l < lvl; l++) salvage += slot.levels[l]!.price >> 1;
       }
       lines.push(`Asset ${a.name} written off. Salvage recovered where applicable.`);
+    } else {
+      for (const q of agentQuirks(a)) {
+        if (!quirksBefore.has(q.key)) {
+          lines.push(`Service commendation: ${a.name} earns "${q.name}" (${q.desc}).`);
+        }
+      }
     }
   });
   m.credits += salvage;
