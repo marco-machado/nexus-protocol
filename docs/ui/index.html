@@ -1,0 +1,1224 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Nexus Protocol / UI Reference</title>
+<style>
+  :root {
+    /* ---- DESIGN.md tokens (dark) ---- */
+    --bg: #0A0D14;
+    --overlay: #06090E;
+    --surface: #0C111B;
+    --surface-raised: #14202F;
+    --line: #24354D;
+    --line-strong: #2C4058;
+    --text: #C7D2E4;
+    --text-strong: #E8EEF8;
+    --text-muted: #7D8AA0;
+    --text-faint: #45526B;
+    --accent: #00E5FF;
+    --accent-soft: #AFF6FF;
+    --accent-panel: #063C46;
+    --good: #38D47A;
+    --warn: #E8B23A;
+    --bad: #EF4444;
+    --bad-panel: #4D1C1A;
+    --bad-soft: #FFDAD6;
+    --persuaded: #22D3EE;
+    --gold: #FACC15;
+
+    --mono: Menlo, Consolas, ui-monospace, "SF Mono", monospace;
+
+    --sp-xxs: 2px; --sp-xs: 4px; --sp-sm: 8px; --sp-md: 12px;
+    --sp-lg: 16px; --sp-xl: 24px; --sp-xxl: 28px;
+  }
+
+  * { box-sizing: border-box; }
+  html { background: var(--bg); scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    background:
+      radial-gradient(1200px 600px at 78% -8%, rgba(0, 229, 255, 0.06), transparent 60%),
+      radial-gradient(900px 600px at 4% 108%, rgba(239, 68, 68, 0.045), transparent 55%),
+      var(--bg);
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 13px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: var(--accent); }
+  code { font-family: var(--mono); }
+  .mono { font-family: var(--mono); }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 0 28px 96px; }
+
+  /* ---------------- sticky nav ---------------- */
+  .doc-nav {
+    position: sticky; top: 0; z-index: 50;
+    display: flex; align-items: center; gap: 18px;
+    padding: 10px 28px;
+    background: color-mix(in srgb, var(--overlay) 88%, transparent);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--line);
+  }
+  .doc-nav .wordmark {
+    font-weight: 700; font-size: 12px; letter-spacing: 0.16em;
+    text-transform: uppercase; color: var(--accent);
+  }
+  .doc-nav .sp { flex: 1; }
+  .doc-nav a {
+    text-decoration: none; font-size: 11.5px; font-weight: 500;
+    letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-muted);
+    padding: 4px 1px; border-bottom: 2px solid transparent; white-space: nowrap;
+  }
+  .doc-nav a:hover, .doc-nav a.active { color: var(--text-strong); border-color: var(--accent); }
+  @media (max-width: 720px) { .doc-nav { gap: 12px; overflow-x: auto; } .doc-nav .sp { display: none; } }
+
+  /* ---------------- masthead ---------------- */
+  .masthead { border-bottom: 1px solid var(--line); padding: 44px 0 28px; margin-bottom: 8px; }
+  .kicker {
+    font-weight: 700; font-size: 12px; letter-spacing: 0.22em;
+    text-transform: uppercase; color: var(--accent);
+  }
+  .masthead h1 {
+    margin: 16px 0 0; font-size: 40px; font-weight: 700; line-height: 1.1;
+    letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-strong);
+    text-wrap: balance;
+  }
+  .masthead .lede { margin: 14px 0 0; max-width: 74ch; color: var(--text-muted); font-size: 13.5px; }
+  .masthead code { color: var(--accent); }
+  .meta-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 22px; }
+
+  /* ---------------- part headers ---------------- */
+  .part { margin-top: 64px; scroll-margin-top: 58px; }
+  .part-head { margin-bottom: 22px; }
+  .part-kicker { font-weight: 700; font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--accent); }
+  .part-head h2 {
+    margin: 8px 0 0; font-size: 18px; font-weight: 700; letter-spacing: 0.12em;
+    text-transform: uppercase; color: var(--text-strong);
+  }
+  .part-lede { margin: 10px 0 0; max-width: 76ch; color: var(--text-muted); font-size: 13px; }
+  .part-lede code, .part-lede b { color: var(--text-strong); }
+  .part-lede code { color: var(--accent); }
+
+  /* ---------------- shared chrome ---------------- */
+  .chip {
+    font-size: 11px; font-weight: 500; letter-spacing: 0.06em; color: var(--text-muted);
+    background: var(--surface-raised); border: 1px solid var(--line); padding: 5px 10px; white-space: nowrap;
+  }
+  .chip b { color: var(--text-strong); font-weight: 600; }
+  .chip.green { color: var(--good); border-color: color-mix(in srgb, var(--good) 35%, transparent); }
+  .chip.cyan { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 35%, transparent); }
+
+  .section-label {
+    font-size: 12px; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase;
+    color: var(--accent); margin: 0 0 10px; display: flex; align-items: center; gap: 10px;
+  }
+  .section-label::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+  .section-label .tag { color: var(--text-faint); letter-spacing: 0.1em; font-weight: 500; }
+
+  /* specimen shell (concept frames + component catalog) */
+  .specimen { border: 1px solid var(--line); background: var(--surface); }
+  .specimen .cap {
+    display: flex; align-items: center; gap: 8px; padding: 9px 14px; border-bottom: 1px solid var(--line);
+    font-size: 11px; font-weight: 500; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-faint);
+  }
+  .specimen .cap::before {
+    content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--good);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--good) 22%, transparent);
+  }
+  .specimen .stage { background: var(--overlay); padding: 22px; overflow-x: auto; }
+
+  /* dt/dd spec table */
+  .spec {
+    margin-top: 16px; display: grid; grid-template-columns: 132px 1fr; gap: 1px;
+    background: var(--line); border: 1px solid var(--line);
+  }
+  .spec dt {
+    background: var(--surface); padding: 11px 14px; font-size: 11px; font-weight: 700;
+    letter-spacing: 0.09em; text-transform: uppercase; color: var(--text-faint);
+  }
+  .spec dd { background: var(--surface); padding: 11px 15px; margin: 0; font-size: 12.5px; color: var(--text); }
+  .spec dd ul { margin: 0; padding-left: 18px; }
+  .spec dd li { margin: 3px 0; }
+  .spec dd li::marker { color: var(--accent); }
+  .spec .path { color: var(--accent); }
+  .spec .swatch { display: inline-block; width: 9px; height: 9px; vertical-align: baseline; margin-right: 3px; }
+  code, .spec code, .cmp-lede code, .wiring code, .part-lede code, .masthead code {
+    font-size: 12px; background: var(--surface-raised); border: 1px solid var(--line); padding: 1px 5px;
+  }
+  .spec dd code { color: var(--text-strong); white-space: nowrap; }
+
+  /* ============================================================
+     PART 2 — COMPONENT CATALOG
+     ============================================================ */
+  .toc { margin: 26px 0 8px; border: 1px solid var(--line); background: var(--surface); }
+  .toc ol { list-style: none; margin: 0; padding: 0; counter-reset: c; display: grid; grid-template-columns: repeat(2, 1fr); }
+  .toc li { counter-increment: c; border-top: 1px solid var(--line); }
+  .toc li:nth-child(-n+2) { border-top: 0; }
+  @media (max-width: 640px) { .toc ol { grid-template-columns: 1fr; } .toc li:nth-child(2) { border-top: 1px solid var(--line); } }
+  .toc a { display: flex; gap: 12px; align-items: baseline; text-decoration: none; color: var(--text); padding: 12px 16px; }
+  .toc a:hover { background: var(--accent-panel); }
+  .toc a::before { content: counter(c, decimal-leading-zero); font-size: 12px; font-weight: 700; color: var(--accent); }
+  .toc .t { font-weight: 600; font-size: 13px; }
+  .toc .d { color: var(--text-faint); font-size: 12px; margin-left: auto; }
+
+  .cmp { padding-top: 34px; margin-top: 34px; border-top: 1px solid var(--line); scroll-margin-top: 60px; }
+  .cmp:first-of-type { border-top: 0; }
+  .cmp-head { display: flex; align-items: baseline; gap: 14px; margin-bottom: 4px; }
+  .cmp-num { font-size: 13px; font-weight: 700; color: var(--accent); }
+  .cmp-head h3 { font-size: 20px; letter-spacing: -.01em; margin: 0; color: var(--text-strong); }
+  .cmp-selector { font-size: 12.5px; color: var(--text-muted); background: var(--surface-raised); border: 1px solid var(--line); padding: 2px 8px; }
+  .cmp-lede { color: var(--text-muted); margin: 8px 0 20px; max-width: 68ch; }
+  .cmp-lede code { color: var(--text-strong); }
+
+  /* in-game UI primitives — specimen skin (fixed scene colors, preserved) */
+  .g { --gink:#d3dae0; --gsub:#7f8b95; --gline:#20272f; --gpanel:#111721; --ggreen:#3ddc84; --gred:#ff5d52; --gamber:#f0c75e; --gcyan:#49c6d6;
+    font-family: ui-monospace, "SF Mono", Menlo, monospace; color: var(--gink); font-size: 13px; line-height: 1.5; }
+  .g .panel { background: var(--gpanel); border: 1px solid var(--gline); border-radius: 8px; padding: 14px 16px; }
+  .g .maphud { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 18px; background: var(--gpanel); border: 1px solid var(--gline); border-radius: 8px; padding: 13px 18px; }
+  .g .maphud h2 { font-size: 14px; letter-spacing: .16em; margin: 0 6px 0 0; color: #fff; }
+  .g .maphud span { font-size: 12.5px; color: var(--gsub); font-variant-numeric: tabular-nums; }
+  .g .maphud .credits { color: var(--gamber); font-weight: 600; }
+  .g .maphud .cyc { margin-left: auto; }
+  .g .regiontabs { display: flex; flex-wrap: wrap; gap: 6px; }
+  .g .regiontabs button { font: 500 11.5px ui-monospace, monospace; letter-spacing: .05em; color: var(--gsub);
+    background: #0e141d; border: 1px solid var(--gline); border-radius: 5px; padding: 6px 11px; cursor: pointer; }
+  .g .regiontabs button.primary { color: #06222a; background: var(--gcyan); border-color: var(--gcyan); font-weight: 600; }
+  .g .regiontabs button:disabled { color: #495663; cursor: not-allowed; opacity: .8; }
+  .g .fine { color: var(--gsub); font-size: 12px; font-style: italic; }
+  .g .stage { position: relative; display: grid; grid-template-columns: repeat(6, 1fr); grid-auto-rows: minmax(66px, auto);
+    gap: 10px; padding: 16px 16px 44px; border: 1px solid var(--gline); border-radius: 8px;
+    background: radial-gradient(circle at 30% 40%, #0e1730 0%, #0a0f1c 60%); }
+  .g .blk { grid-column: var(--gc); grid-row: var(--gr); background: #101a30; border: 1px solid var(--gline);
+    border-radius: 5px; padding: 8px 9px; min-width: 0; overflow: hidden; cursor: pointer; }
+  .g .blk .nm { font-size: 11px; letter-spacing: .06em; color: var(--gsub); }
+  .g .blk .cr { color: var(--gink); margin-top: 2px; font-size: 11.5px; }
+  .g .blk .own { color: var(--ggreen); } .g .blk .riv { color: var(--gred); }
+  .g .blk.own { border-color: var(--ggreen); box-shadow: inset 3px 0 0 var(--ggreen); }
+  .g .blk.riv { border-color: var(--gred); box-shadow: inset 3px 0 0 var(--gred); }
+  .g .blk.sieged { border-style: dashed; }
+  .g .blk.sel { outline: 2px solid var(--gcyan); outline-offset: 1px; }
+  .g .blk.filler { opacity: .55; cursor: default; }
+  .g .blk.gate { border-style: dotted; }
+  .g .blk.gate .nm { color: var(--gcyan); }
+  .g .ubar { height: 4px; background: #1c2942; margin-top: 7px; border-radius: 2px; overflow: hidden; }
+  .g .ubar i { display: block; height: 100%; background: var(--ggreen); }
+  .g .ubar.hot i { background: var(--gred); }
+  .g .sietag { color: var(--gred); font-size: 10px; letter-spacing: .08em; }
+  .g .hqtag { color: var(--gamber); font-size: 10px; letter-spacing: .08em; }
+  .g .fog { grid-column: var(--gc); grid-row: var(--gr); border: 1px dashed var(--gline); border-radius: 5px;
+    display: grid; place-items: center; text-align: center; color: #4a5b76; font-size: 11px; letter-spacing: .1em;
+    background: repeating-linear-gradient(45deg, #0c1322 0 8px, #0a0f1c 8px 16px); }
+  .g .pop { width: 260px; background: var(--gpanel); border: 1px solid var(--gcyan); border-radius: 6px;
+    padding: 12px 14px; font-size: 12px; box-shadow: 0 12px 32px rgba(0,0,0,.45); }
+  .g .pop h4 { margin: 0 0 3px; color: #fff; font-size: 12.5px; letter-spacing: .05em; }
+  .g .pop .own { color: var(--ggreen); font-size: 11px; letter-spacing: .08em; }
+  .g .pop .riv { color: var(--gred); font-size: 11px; letter-spacing: .08em; }
+  .g .pop .neutral { color: var(--gsub); font-size: 11px; letter-spacing: .08em; }
+  .g .pop dl { margin: 10px 0; display: grid; grid-template-columns: auto 1fr; gap: 3px 10px; font-size: 11.5px; }
+  .g .pop dt { color: var(--gsub); } .g .pop dd { margin: 0; text-align: right; color: var(--gink); }
+  .g .pop .taxrow { margin: 6px 0; }
+  .g .pop button { width: 100%; margin-top: 8px; }
+  .g .pop .fine { margin-top: 8px; font-style: normal; letter-spacing: .05em; }
+  .g .taxrow { display: flex; align-items: center; gap: 9px; }
+  .g .taxrow input[type=range] { flex: 1; accent-color: var(--gcyan); }
+  .g .unrest { color: var(--ggreen); font-weight: 600; } .g .unrest.hot { color: var(--gred); }
+  .g .siege { color: var(--gred); font-weight: 600; font-size: 11.5px; letter-spacing: .05em; margin-bottom: 6px; }
+  .g .pop button, .g .drawer button { font: 600 11.5px ui-monospace, monospace; letter-spacing: .06em; color: var(--gink);
+    background: #0e141d; border: 1px solid #3a4a5c; border-radius: 5px; padding: 7px 13px; cursor: pointer; }
+  .g .pop button.primary { color: #aff6ff; background: #063c46; border-color: var(--gcyan); }
+  .g .drawer { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; background: var(--gpanel);
+    border: 1px solid var(--gline); border-radius: 8px; padding: 10px 16px; color: var(--gsub); font-size: 11.5px; }
+  .g .drawer b { color: var(--gink); }
+  .g .drawer input[type=range] { flex: 1; min-width: 120px; accent-color: var(--gcyan); }
+  .g .drawer button { padding: 4px 10px; }
+  .g .rdgrid { flex-basis: 100%; display: grid; grid-template-columns: 1fr 1fr; gap: 4px 24px; font-size: 11px; }
+  .g .rdgrid > div { display: flex; align-items: center; gap: 6px; color: var(--gsub); font-variant-numeric: tabular-nums; }
+  .g .rdgrid progress { flex: 1; height: 6px; -webkit-appearance: none; appearance: none;
+    color: var(--gcyan); background: #1b2028; border-radius: 3px; border: 0; }
+  .g .rdgrid progress::-webkit-progress-bar { background: #1b2028; border-radius: 3px; }
+  .g .rdgrid progress::-webkit-progress-value { background: var(--gcyan); border-radius: 3px; }
+  .g .ticker { background: var(--gpanel); border: 1px solid var(--gline); border-radius: 6px; padding: 8px 14px;
+    color: var(--gsub); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .g .legend { display: flex; gap: 14px; font-size: 10.5px; color: var(--gsub); }
+  .g .legend i { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 5px; }
+  .g .legend .k-own { background: var(--ggreen); }
+  .g .legend .k-riv { background: var(--gred); }
+  .g .legend .k-neu { background: #24354d; }
+
+  .wiring { margin-top: 44px; border: 1px solid var(--line); border-left: 3px solid var(--accent);
+    background: var(--surface); padding: 20px 22px; }
+  .wiring h4 { margin: 0 0 8px; font-size: 15px; color: var(--text-strong); }
+  .wiring p { margin: 8px 0 0; color: var(--text-muted); max-width: 74ch; }
+  .cmp-foot { margin-top: 30px; padding-top: 22px; border-top: 1px solid var(--line); color: var(--text-faint); font-size: 12px; }
+
+  /* ============================================================
+     PART 3 — FIELD REFERENCE (controls)
+     ============================================================ */
+  .key-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(330px, 1fr)); gap: 14px; }
+  .card { border: 1px solid var(--line); background: var(--surface); border-top: 3px solid var(--accent); padding: 14px 16px 16px; min-width: 0; }
+  .card.wide { grid-column: 1 / -1; }
+  .card h3 { font-size: 11.5px; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; color: var(--accent);
+    margin: 0 0 12px; display: flex; align-items: center; gap: 8px; }
+  .card h3::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+  .rows { display: grid; grid-template-columns: minmax(96px, auto) 1fr; gap: 7px 14px; align-items: baseline; }
+  .keys { display: flex; gap: 4px; flex-wrap: wrap; justify-content: flex-start; }
+  kbd {
+    font-family: var(--mono); font-size: 11.5px; font-weight: 600; color: var(--accent-soft);
+    background: var(--surface-raised); border: 1px solid var(--line-strong); border-bottom-width: 2px;
+    border-radius: 3px; padding: 1px 7px; white-space: nowrap;
+  }
+  kbd.mouse { color: var(--good); border-color: color-mix(in srgb, var(--good) 32%, transparent); }
+  .act { font-size: 13.5px; color: var(--text); }
+  .act small { display: block; color: var(--text-muted); font-size: 12px; }
+  .plus { color: var(--text-muted); font-size: 11px; align-self: center; }
+  .note { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--line); font-size: 12px; color: var(--text-muted); }
+  .note b { color: var(--text); font-weight: 600; }
+  .move { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 6px 22px; margin: 0; padding: 0; }
+  .move li { list-style: none; font-size: 13px; padding-left: 14px; position: relative; color: var(--text); }
+  .move li::before { content: ">"; position: absolute; left: 0; color: var(--accent); font-size: 11px; top: 2px; }
+  .move b { font-weight: 650; color: var(--text-strong); }
+  .move .lvl { font-weight: 700; }
+  .g-alert { color: var(--good); } .w-alert { color: var(--warn); } .r-alert { color: var(--bad); }
+
+  /* ============================================================
+     PART 4 — UNIT ROSTER  (SVG figures + swatches = scene colors, preserved)
+     ============================================================ */
+  .priority { margin: 0 0 8px; background: var(--surface); border: 1px solid var(--line); border-top: 3px solid var(--accent); padding: 16px 18px; }
+  .priority .lbl { font-size: 10.5px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--text-faint); margin-bottom: 12px; }
+  .chain { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+  .chain .step { display: inline-flex; align-items: center; gap: 7px; font-size: 11.5px; color: var(--text);
+    background: var(--surface-raised); border: 1px solid var(--line); padding: 4px 11px 4px 8px; }
+  .chain .dot { width: 10px; height: 10px; border-radius: 50%; box-shadow: 0 0 6px currentColor; }
+  .chain .arrow { color: var(--text-faint); font-size: 12px; }
+  .priority .foot { margin: 12px 0 0; font-size: 12.5px; color: var(--text-muted); }
+  .priority .foot code { color: var(--accent); }
+
+  .roster-group { margin-top: 34px; }
+  .unit-grid { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(270px, 1fr)); }
+  .unit-grid.props { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
+  .unit-card {
+    --u: #7a8699; position: relative; background: var(--surface); border: 1px solid var(--line);
+    padding: 16px; display: grid; grid-template-columns: 92px 1fr; gap: 14px; overflow: hidden;
+  }
+  .unit-card::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: var(--u); box-shadow: 0 0 12px var(--u); }
+  .unit-card.prop { grid-template-columns: 70px 1fr; padding: 14px; }
+  .unit-card .stage {
+    display: grid; place-items: center;
+    background: radial-gradient(60px 60px at 50% 42%, color-mix(in srgb, var(--u) 22%, transparent), transparent 70%), var(--overlay);
+    border: 1px solid var(--line); aspect-ratio: 1 / 1.18;
+  }
+  .unit-card.prop .stage { aspect-ratio: 1 / 1; }
+  .unit-card .stage svg { width: 84%; height: 84%; overflow: visible; filter: drop-shadow(0 0 5px color-mix(in srgb, var(--u) 55%, transparent)); }
+  .unit-card .meta { min-width: 0; }
+  .unit-card .name { font-size: 14.5px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--text-strong); }
+  .unit-card.prop .name { font-size: 13px; }
+  .unit-card .role { margin: 2px 0 0; font-size: 12.5px; color: var(--text-muted); }
+  .uswatch { display: inline-flex; align-items: center; gap: 7px; margin-top: 10px; font-size: 11px; color: var(--text); }
+  .uswatch .sq { width: 13px; height: 13px; background: var(--u); box-shadow: 0 0 7px var(--u); flex: none; }
+  .uswatch .tok { color: var(--text-faint); }
+  .stats { margin-top: 12px; display: grid; gap: 7px; }
+  .stat { display: grid; grid-template-columns: 34px 1fr auto; align-items: center; gap: 8px; }
+  .stat .k { font-size: 10px; letter-spacing: 0.08em; color: var(--text-faint); }
+  .stat .track { height: 5px; background: var(--line); overflow: hidden; }
+  .stat .fill { height: 100%; background: var(--u); box-shadow: 0 0 6px var(--u); }
+  .stat .v { font-size: 11px; color: var(--text); font-variant-numeric: tabular-nums; }
+  .stat.line { grid-template-columns: 34px 1fr; }
+  .stat.line .v2 { font-size: 11px; color: var(--text); }
+  .src { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--line); font-size: 10px;
+    letter-spacing: 0.04em; color: var(--text-faint); display: flex; flex-wrap: wrap; gap: 6px 10px; }
+  .src b { color: var(--text-muted); font-weight: 500; }
+
+  .colophon { margin-top: 56px; padding-top: 20px; border-top: 1px solid var(--line);
+    font-size: 11px; color: var(--text-faint); display: flex; flex-wrap: wrap; gap: 6px 16px; }
+  .colophon code { color: var(--text-muted); }
+</style>
+</head>
+<body>
+
+<nav class="doc-nav" aria-label="Sections">
+  <span class="wordmark">Nexus Protocol / UI</span>
+  <span class="sp"></span>
+  <a href="#components">Component Catalog</a>
+  <a href="#field">Field Reference</a>
+  <a href="#roster">Unit Roster</a>
+</nav>
+
+<div class="wrap">
+
+  <header class="masthead">
+    <div class="kicker">Nexus Protocol / UI Reference</div>
+    <h1>UI Reference</h1>
+    <p class="lede">
+      One document for the game's presentation layer: the components the
+      <b>Global Operations</b> world-map screen is assembled from, the field keymap the player operates
+      it with, and the roster of every actor the city renders. Chrome follows
+      the tokens in <code>DESIGN.md</code>; in-game specimens keep their literal
+      <code>src/render/palette.ts</code> scene colors.
+    </p>
+    <div class="meta-row">
+      <span class="chip green">ALERT GREEN</span>
+      <span class="chip cyan">SIM 20 HZ</span>
+      <span class="chip">SCREEN <b>worldMap</b></span>
+      <span class="chip">SOURCE <b>src/app/screens.ts</b></span>
+      <span class="chip">FRAMEWORK <b>none</b></span>
+    </div>
+  </header>
+
+  <!-- ========================================================
+       PART 2 — COMPONENT CATALOG
+       ======================================================== -->
+  <section class="part" id="components">
+    <div class="part-head">
+      <div class="part-kicker">Part 1</div>
+      <h2>Global Operations — Component Catalog</h2>
+      <p class="part-lede">The chosen screen is a spatial <b>district map</b>: the current region's sectors
+        are laid out as blocks, and selecting one opens a detail popover with its controls. Each entry below
+        shows a live specimen in the in-game skin, then documents where it renders, what it tells the player,
+        its states, and the <code>MetaState</code> data behind it. All specimens use the same Home Arc save.</p>
+      <div class="meta-row">
+        <span class="chip">Source: <b>src/app/screens.ts:335</b></span>
+        <span class="chip">Layer: <b>app</b></span>
+        <span class="chip">Renders to: <b>#screen</b> overlay</span>
+        <span class="chip">Framework: <b>none</b> (innerHTML + delegated events)</span>
+      </div>
+    </div>
+
+    <nav class="toc" aria-label="Components">
+      <ol>
+        <li><a href="#c-vitals"><span class="t">Campaign vitals bar</span><span class="d">.maphud</span></a></li>
+        <li><a href="#c-tabs"><span class="t">Region tabs</span><span class="d">.regiontabs</span></a></li>
+        <li><a href="#c-charter"><span class="t">Charter note</span><span class="d">.fine</span></a></li>
+        <li><a href="#c-stage"><span class="t">District stage</span><span class="d">.stage</span></a></li>
+        <li><a href="#c-block"><span class="t">Territory block</span><span class="d">.blk</span></a></li>
+        <li><a href="#c-fog"><span class="t">Locked region &amp; gateway</span><span class="d">.fog</span></a></li>
+        <li><a href="#c-pop"><span class="t">Selection popover</span><span class="d">.pop</span></a></li>
+        <li><a href="#c-drawer"><span class="t">R&amp;D drawer</span><span class="d">.drawer</span></a></li>
+        <li><a href="#c-ticker"><span class="t">Event ticker</span><span class="d">.ticker</span></a></li>
+      </ol>
+    </nav>
+
+    <section class="cmp" id="c-vitals">
+      <div class="cmp-head"><span class="cmp-num">01</span><h3>Campaign vitals bar</h3><span class="cmp-selector">.maphud</span></div>
+      <p class="cmp-lede">The header strip. A single scan-line of the whole campaign economy, so the player can decide "can I afford this / when do I get paid" without leaving the map.</p>
+      <div class="specimen">
+        <div class="cap">rendered · top of screen, above the region tabs</div>
+        <div class="stage"><div class="g">
+          <div class="maphud">
+            <h2>GLOBAL OPERATIONS</h2>
+            <span class="credits">1400cr</span>
+            <span>+2424cr/hr</span>
+            <span>R&amp;D +28/hr</span>
+            <span>ACT 1</span>
+            <span class="cyc">CYCLE 0 · next in 27m</span>
+          </div>
+        </div></div>
+      </div>
+      <dl class="spec">
+        <dt>Used in</dt><dd>Top of the <b>worldMap</b> screen, above the region tabs. Built by <code>mapHud</code>. <span class="path">screens.ts:253</span></dd>
+        <dt>Communicates</dt><dd>Treasury, passive income rate, research rate, story act, and the countdown to the next economy payout, all at a glance.</dd>
+        <dt>Fields</dt><dd><ul>
+          <li><b>1400cr</b> — treasury, <code>m.credits</code></li>
+          <li><b>+2424cr/hr</b> — <code>incomePerCycle(m) * 2</code> (a cycle is 30&nbsp;min, so per-cycle is doubled to per-hour)</li>
+          <li><b>R&amp;D +28/hr</b> — <code>researchPerCycle(m) * 2</code></li>
+          <li><b>ACT 1</b> — <code>campaignAct(m)</code>, story progression 1&ndash;3</li>
+          <li><b>CYCLE 0 · next in 27m</b> — <code>m.cycle</code> plus <code>ceil((CYCLE_MS - m.econMs)/60000)</code>; pushed to the right edge via <code>.cyc</code></li>
+        </ul></dd>
+        <dt>Data</dt><dd><code>MetaState</code>. The economy runs in real time: <code>econMs</code> accrues while you sit on this screen, so the countdown ticks and income pays out live.</dd>
+        <dt>States</dt><dd>Static display. Credits render amber; everything else is muted. Wraps onto multiple lines on narrow viewports. No interaction.</dd>
+      </dl>
+    </section>
+
+    <section class="cmp" id="c-tabs">
+      <div class="cmp-head"><span class="cmp-num">02</span><h3>Region tabs</h3><span class="cmp-selector">.regiontabs</span></div>
+      <p class="cmp-lede">Switcher across the eight regions of the world (5 territories each). Doubles as a progress read: the <code>n/5</code> count shows how much of each region you hold.</p>
+      <div class="specimen">
+        <div class="cap">rendered · below the vitals bar</div>
+        <div class="stage"><div class="g">
+          <div class="regiontabs">
+            <button class="primary">HOME ARC 2/5</button>
+            <button disabled>GREY HARBOR [LOCKED]</button>
+            <button disabled>IRONFIELD SPRAWL [LOCKED]</button>
+            <button disabled>MERIDIAN FLATS [LOCKED]</button>
+            <button disabled>NEON BASIN [LOCKED]</button>
+            <button disabled>SPIRE DISTRICT [LOCKED]</button>
+          </div>
+        </div></div>
+      </div>
+      <dl class="spec">
+        <dt>Used in</dt><dd>Region navigation row of <b>worldMap</b>. <span class="path">screens.ts:340</span></dd>
+        <dt>Communicates</dt><dd>Which region's sectors fill the district stage below, plus ownership progress per region and which regions are still locked.</dd>
+        <dt>States</dt><dd><ul>
+          <li><b>active</b> — the selected region, class <code>primary</code> (cyan fill)</li>
+          <li><b>unlocked</b> — clickable, shows <code>NAME n/5</code> owned count</li>
+          <li><b>locked</b> — <code>disabled</code>, shows <code>NAME [LOCKED]</code></li>
+        </ul></dd>
+        <dt>Interaction</dt><dd>Click sets <code>this.selRegion</code>, clears the current selection (<code>this.selTerr = -1</code>), and re-renders the whole screen. Handled by delegation on <code>data-region</code>. The stage's unlocked-neighbour gateway (component 06) fires the same handler.</dd>
+        <dt>Data</dt><dd><code>REGIONS</code> list; owned count from <code>m.territories</code>; lock state from <code>regionUnlocked(m, i)</code> vs <code>m.regionsUnlocked</code>.</dd>
+      </dl>
+    </section>
+
+    <section class="cmp" id="c-charter">
+      <div class="cmp-head"><span class="cmp-num">03</span><h3>Charter note</h3><span class="cmp-selector">.fine</span></div>
+      <p class="cmp-lede">One line of fine print telling the player exactly what unlocks the next region. It is the screen's only forward-objective prompt.</p>
+      <div class="specimen">
+        <div class="cap">rendered · between tabs and district stage</div>
+        <div class="stage"><div class="g">
+          <div class="fine">Charter extension: manage 3 districts in Home Arc to open Grey Harbor.</div>
+        </div></div>
+      </div>
+      <dl class="spec">
+        <dt>Used in</dt><dd>Between the region tabs and the district stage. <span class="path">screens.ts:346</span></dd>
+        <dt>Communicates</dt><dd>The unlock condition for the next region: own <code>REGION_UNLOCK_OWNED</code> (3) districts in the current frontier region to open the following one.</dd>
+        <dt>States</dt><dd><ul>
+          <li><b>shown</b> — while <code>m.regionsUnlocked &lt; REGIONS.length</code></li>
+          <li><b>hidden</b> — once all eight regions are unlocked (empty string)</li>
+        </ul></dd>
+        <dt>Data</dt><dd>Names pulled from <code>REGIONS[m.regionsUnlocked - 1]</code> and <code>[m.regionsUnlocked]</code>.</dd>
+      </dl>
+    </section>
+
+    <section class="cmp" id="c-stage">
+      <div class="cmp-head"><span class="cmp-num">04</span><h3>District stage</h3><span class="cmp-selector">.stage</span></div>
+      <p class="cmp-lede">The map itself. The current region's five sectors are packed into a six-column grid so ownership and pressure read spatially, at a glance, before the player drills into any one. Locked neighbours fog out at the edge; decorative infrastructure blocks fill the gaps to sell the district as a place.</p>
+      <div class="specimen">
+        <div class="cap">rendered · Home Arc, nothing selected</div>
+        <div class="stage"><div class="g">
+          <div class="stage">
+            <div class="blk own" style="--gc:1/3;--gr:1/2"><div class="nm">01 HOME OFFICE <span class="own">NEXUS</span></div><div class="cr">540cr/cyc · tax 30%</div><div class="ubar"><i style="width:10%"></i></div></div>
+            <div class="blk riv" style="--gc:3/5;--gr:1/3"><div class="nm">02 LEDGER HEIGHTS <span class="riv">HELIOS</span></div><div class="cr">est 2020cr</div></div>
+            <div class="blk own" style="--gc:1/3;--gr:2/4"><div class="nm">03 ESCROW <span class="own">NEXUS</span></div><div class="cr">672cr/cyc · tax 30%</div><div class="ubar"><i style="width:0%"></i></div></div>
+            <div class="blk riv" style="--gc:3/4;--gr:3/5"><div class="nm">04 AUDIT ALLEY <span class="riv">HELIOS</span></div><div class="cr">est 2460cr</div></div>
+            <div class="blk riv" style="--gc:4/5;--gr:3/5"><div class="nm">05 DIVIDEND ROW <span class="riv">HELIOS</span></div><div class="cr">est 2680cr</div></div>
+            <div class="fog" style="--gc:5/7;--gr:1/3">GREY HARBOR<br>LOCKED · 3 DISTRICTS REQ.</div>
+            <div class="blk filler" style="--gc:5/7;--gr:3/5"><div class="nm">TRANSIT SPINE</div></div>
+            <div class="blk filler" style="--gc:1/3;--gr:4/5"><div class="nm">UTILITY GRID</div></div>
+            <div class="legend"><span><i class="k-own"></i>NEXUS</span><span><i class="k-riv"></i>RIVAL</span><span><i class="k-neu"></i>NEUTRAL</span></div>
+          </div>
+        </div></div>
+      </div>
+      <dl class="spec">
+        <dt>Used in</dt><dd>Body of <b>worldMap</b>, between the charter note and the R&amp;D drawer. Built by <code>stage</code>. <span class="path">screens.ts:296</span></dd>
+        <dt>Communicates</dt><dd>The whole current region at once: who holds what, which sectors are ripe targets, and how much frontier is still fogged. It replaces the old two-column sector-card grid.</dd>
+        <dt>Layout</dt><dd>Deterministic, not physical. Each region picks one of four hand-authored templates by <code>region % STAGE_LAYOUTS.length</code>; the region's territories fill the block slots in id order, so a sector always lands in the same place. Placement is emitted as inline <code>--gc</code>/<code>--gr</code> grid-line custom properties, which the responsive media query can ignore to reflow to two columns. <span class="path">screens.ts:68</span></dd>
+        <dt>Contents</dt><dd><ul>
+          <li>five <b>territory blocks</b> (component 05)</li>
+          <li>one <b>neighbour cell</b> &mdash; fog or gateway (component 06)</li>
+          <li>decorative <b>filler blocks</b> (<code>.blk.filler</code>) named from <code>FILLER_NAMES</code>, non-interactive, hidden on mobile</li>
+          <li>the <b>legend</b> (<code>.legend</code>), pinned bottom-left, keying the ownership colours; keys are classes so accessibility palettes recolour them, and every block also carries a text owner label</li>
+        </ul></dd>
+        <dt>Interaction</dt><dd>Clicking empty stage background clears the current selection. Block and gateway clicks are handled by the blocks themselves (components 05, 06).</dd>
+      </dl>
+    </section>
+
+    <section class="cmp" id="c-block">
+      <div class="cmp-head"><span class="cmp-num">05</span><h3>Territory block</h3><span class="cmp-selector">.blk</span></div>
+      <p class="cmp-lede">One sector on the map. It carries just enough to triage &mdash; name, owner, a one-line readout, and (for holdings) an unrest bar &mdash; and encodes state through a coloured edge stripe rather than a fill. Selecting it opens the popover (component 07).</p>
+      <div class="specimen">
+        <div class="cap">rendered · block variants, laid out flat for comparison</div>
+        <div class="stage" style="display:flex; gap:14px; flex-wrap:wrap; align-items:start;"><div class="g" style="display:flex; gap:14px; flex-wrap:wrap; align-items:start;">
+          <div class="blk own" style="width:180px"><div class="nm">01 HOME OFFICE <span class="own">NEXUS</span></div><div class="cr">540cr/cyc · tax 30%</div><div class="ubar"><i style="width:10%"></i></div></div>
+          <div class="blk own sel" style="width:180px"><div class="nm">03 ESCROW <span class="own">NEXUS</span> <span class="sietag">SIEGE</span></div><div class="cr">605cr/cyc · tax 45%</div><div class="ubar hot"><i style="width:72%"></i></div></div>
+          <div class="blk riv" style="width:180px"><div class="nm">02 LEDGER HEIGHTS <span class="riv">HELIOS</span></div><div class="cr">est 2020cr</div></div>
+          <div class="blk riv" style="width:180px"><div class="nm">39 ARCOLOGY CORE <span class="riv">HELIOS</span> <span class="hqtag">HQ</span></div><div class="cr">est 4200cr</div></div>
+          <div class="blk" style="width:180px"><div class="nm">TRANSIT SPINE</div><div class="cr">neutral</div></div>
+        </div></div>
+      </div>
+      <dl class="spec">
+        <dt>Used in</dt><dd>One per region territory on the district stage. Built by <code>terrBlock</code>. <span class="path">screens.ts:257</span></dd>
+        <dt>Communicates</dt><dd>Owner, the sector's short name, and a status line: for holdings, income per cycle and current tax; for targets, estimated base income.</dd>
+        <dt>Edge state</dt><dd><ul>
+          <li><b>owned</b> &mdash; <code>.own</code>, green border + inset left stripe (<span class="swatch" style="background:#3ddc84"></span>)</li>
+          <li><b>rival</b> &mdash; <code>.riv</code>, red border + inset left stripe (<span class="swatch" style="background:#ff5d52"></span>)</li>
+          <li><b>neutral</b> &mdash; plain border, no stripe</li>
+          <li><b>selected</b> &mdash; <code>.sel</code>, cyan outline (<span class="swatch" style="background:#49c6d6"></span>); survives re-render via <code>this.selTerr</code></li>
+          <li><b>under siege</b> &mdash; <code>.sieged</code>, dashed border</li>
+        </ul></dd>
+        <dt>Text tags</dt><dd>Never colour-alone: owner reads <b>NEXUS</b> / syndicate name; <code>t.hq</code> adds an amber <b>HQ</b> tag; <code>t.siege</code> adds a red <b>SIEGE</b> tag. The <code>.ubar</code> unrest micro-bar (owned only) fills to <code>unrest%</code> and turns red past 60.</dd>
+        <dt>Interaction</dt><dd>The whole block carries <code>data-sel="${t.id}"</code>. A click (matched via <code>closest('[data-sel]')</code>, since the block has children) sets <code>this.selTerr</code> and re-renders, opening the popover. Filler blocks omit <code>data-sel</code>.</dd>
+        <dt>Data</dt><dd><code>Territory</code>: <code>owned</code>, <code>rival</code>, <code>baseIncome</code>, <code>taxRate</code>, <code>unrest</code>, <code>hq</code>, <code>siege</code>; owner name from <code>m.syndicates[t.rival]</code>.</dd>
+      </dl>
+    </section>
+
+    <section class="cmp" id="c-fog">
+      <div class="cmp-head"><span class="cmp-num">06</span><h3>Locked region &amp; gateway</h3><span class="cmp-selector">.fog</span></div>
+      <p class="cmp-lede">The stage's neighbour cell. It shows the next region at the edge of the map: fogged and captioned with its unlock requirement while locked, or a clickable gateway into it once opened.</p>
+      <div class="specimen">
+        <div class="cap">rendered · neighbour cell, locked and unlocked variants</div>
+        <div class="stage" style="display:flex; gap:14px; flex-wrap:wrap; align-items:stretch;"><div class="g" style="display:flex; gap:14px; flex-wrap:wrap; align-items:stretch;">
+          <div class="fog" style="width:220px; min-height:96px">GREY HARBOR<br>LOCKED · 3 DISTRICTS REQ.</div>
+          <div class="blk gate" style="width:220px"><div class="nm">GREY HARBOR</div><div class="cr">3/5 · ENTER</div></div>
+        </div></div>
+      </div>
+      <dl class="spec">
+        <dt>Used in</dt><dd>Single neighbour slot on the district stage (region <code>selRegion + 1</code>). <span class="path">screens.ts:299</span></dd>
+        <dt>Communicates</dt><dd>That there is more world beyond the current region, and exactly what it costs to open it &mdash; reinforcing the charter note as spatial expansion pressure.</dd>
+        <dt>States</dt><dd><ul>
+          <li><b>fog</b> &mdash; <code>.fog</code>, dashed hatched cell naming the locked region and its <code>REGION_UNLOCK_OWNED</code> requirement</li>
+          <li><b>gateway</b> &mdash; <code>.blk.gate</code>, dotted border + cyan name, showing the region's owned count and <b>ENTER</b>, once <code>regionUnlocked(m, next)</code> is true</li>
+          <li><b>none</b> &mdash; the final region (7) has no neighbour, so the slot becomes another filler block</li>
+        </ul></dd>
+        <dt>Interaction</dt><dd>The gateway carries <code>data-region</code> and reuses the region-tab handler: click switches <code>this.selRegion</code> to the neighbour and clears the selection. The fog cell is inert.</dd>
+      </dl>
+    </section>
+
+    <section class="cmp" id="c-pop">
+      <div class="cmp-head"><span class="cmp-num">07</span><h3>Selection popover</h3><span class="cmp-selector">.pop</span></div>
+      <p class="cmp-lede">The detail panel for the selected block. It floats top-right over the stage and holds everything the block omits: the full readout, the sector's one live control, and its primary action. Its contents switch on the sector's state.</p>
+      <div class="specimen">
+        <div class="cap">rendered · popover variants (target · holding · under siege)</div>
+        <div class="stage" style="display:flex; gap:18px; flex-wrap:wrap; align-items:start;"><div class="g" style="display:flex; gap:18px; flex-wrap:wrap; align-items:start;">
+          <div class="pop">
+            <h4>SECTOR 02 "LEDGER HEIGHTS"</h4>
+            <div class="riv">HELIOS COMBINE</div>
+            <dl><dt>Est. income</dt><dd>2020cr base</dd><dt>Contract</dt><dd>ACQUISITION (PERSUADE)</dd></dl>
+            <button class="primary">OPEN CONTRACT</button>
+          </div>
+          <div class="pop">
+            <h4>SECTOR 01 "HOME OFFICE"</h4>
+            <div class="own">NEXUS</div>
+            <dl><dt>Income share</dt><dd>540cr/cycle</dd><dt>Unrest</dt><dd class="unrest">10/100</dd></dl>
+            <div class="taxrow">Tax <input type="range" min="10" max="50" step="5" value="30" aria-label="Home Office tax"/> <b>30%</b></div>
+            <div class="fine">HOLDING · NO ACTION REQUIRED</div>
+          </div>
+          <div class="pop">
+            <h4>SECTOR 03 "ESCROW"</h4>
+            <div class="own">NEXUS</div>
+            <div class="siege">SIEGE: HELIOS COMBINE strikes in 1h 12m</div>
+            <dl><dt>Income share</dt><dd>605cr/cycle</dd><dt>Unrest</dt><dd class="unrest hot">72/100</dd></dl>
+            <div class="taxrow">Tax <input type="range" min="10" max="50" step="5" value="45" aria-label="Escrow tax"/> <b>45%</b></div>
+            <button class="primary">REPEL TAKEOVER</button>
+          </div>
+        </div></div>
+      </div>
+      <dl class="spec">
+        <dt>Used in</dt><dd>Absolutely positioned inside the stage when <code>this.selTerr</code> points at a territory in the current region. Built by <code>popover</code>. <span class="path">screens.ts:274</span></dd>
+        <dt>Communicates</dt><dd>Full detail for one sector, and the single decision it offers &mdash; take it, tune it, or defend it.</dd>
+        <dt>Variants</dt><dd><ul>
+          <li><b>target</b> &mdash; rival or neutral owner label, est. income + contract type, primary <b>OPEN CONTRACT</b>; a gold <b>RIVAL HQ ARCOLOGY</b> line when <code>t.hq</code></li>
+          <li><b>holding</b> &mdash; income share + unrest, the <b>tax slider</b> (10&ndash;50, step 5), and either a <b>DEFENSE CONTRACT</b> button (unrest &ge; <code>DEFENSE_UNREST</code>) or a <b>HOLDING</b> fine-print line</li>
+          <li><b>under siege</b> &mdash; adds the red countdown banner and swaps in the primary <b>REPEL TAKEOVER</b> button</li>
+        </ul></dd>
+        <dt>Controls</dt><dd><ul>
+          <li><b>Tax slider</b> (<code>data-tax</code>) &mdash; writes <code>t.taxRate</code>, saves to <code>localStorage</code>, re-renders; the selection persists so the popover stays open</li>
+          <li><b>OPEN CONTRACT</b> (<code>data-contract</code>) &rarr; <code>onContract(t)</code>; <b>DEFENSE / REPEL</b> (<code>data-defend</code>) &rarr; <code>onContract(t, true)</code></li>
+        </ul></dd>
+        <dt>Countdown</dt><dd><code>ceil((t.siege.deadline - m.lastSeen) / 60000)</code> as <code>Xh Ym</code>; clamped at 0. If it lapses unhandled the sector flips to the rival and the popover re-renders in its target variant.</dd>
+        <dt>Responsive</dt><dd>On narrow viewports the popover drops out of absolute positioning and flows full-width beneath the blocks (a bottom-sheet), so it never clips offscreen.</dd>
+      </dl>
+    </section>
+
+    <section class="cmp" id="c-drawer">
+      <div class="cmp-head"><span class="cmp-num">08</span><h3>R&amp;D drawer</h3><span class="cmp-selector">.drawer</span></div>
+      <p class="cmp-lede">Where passive research points go, docked below the stage. Collapsed, it is a single split slider plus the nearest unlock on each track; expanded, it lists all seven thresholds.</p>
+      <div class="specimen">
+        <div class="cap">rendered · collapsed, then expanded</div>
+        <div class="stage" style="display:flex; flex-direction:column; gap:16px;"><div class="g">
+          <div class="drawer">
+            <span>R&amp;D</span><b>WEAPONS 60%</b>
+            <input type="range" min="0" max="100" step="10" value="60" aria-label="Research split"/>
+            <b>AUGMENTS 40%</b>
+            <span>NEXT: WPN T2 8/100 · AUG V1 8/80</span>
+            <button>ALL THRESHOLDS</button>
+          </div>
+        </div><div class="g">
+          <div class="drawer">
+            <span>R&amp;D</span><b>WEAPONS 60%</b>
+            <input type="range" min="0" max="100" step="10" value="60" aria-label="Research split"/>
+            <b>AUGMENTS 40%</b>
+            <span>NEXT: WPN T2 8/100 · AUG V1 8/80</span>
+            <button>LESS</button>
+            <div class="rdgrid">
+              <div>Weapons tier 2: <progress value="8" max="100"></progress> 8/100</div>
+              <div>Augmentation V1: <progress value="8" max="80"></progress> 8/80</div>
+              <div>Weapons tier 3: <progress value="8" max="200"></progress> 8/200</div>
+              <div>Augmentation V2: <progress value="8" max="200"></progress> 8/200</div>
+              <div>Weapons tier 4: <progress value="8" max="340"></progress> 8/340</div>
+              <div>Augmentation V3: <progress value="8" max="380"></progress> 8/380</div>
+              <div>Weapons tier 5: <progress value="8" max="520"></progress> 8/520</div>
+            </div>
+          </div>
+        </div></div>
+      </div>
+      <dl class="spec">
+        <dt>Used in</dt><dd>Docked below the stage on <b>worldMap</b>. Built by <code>rdDrawer</code>. <span class="path">screens.ts:319</span></dd>
+        <dt>Communicates</dt><dd>How research is split and, at a glance, the next unlock on each track. Both pools read <code>8/x</code> here because they hold 8 points each.</dd>
+        <dt>Controls</dt><dd><ul>
+          <li><b>Split slider</b> &mdash; 0&ndash;100 in steps of 10 (<code>data-split</code>), writes <code>m.researchSplit</code>; the <code>WEAPONS%</code> / <code>AUGMENTS%</code> labels update in place without a full re-render</li>
+          <li><b>ALL THRESHOLDS / LESS</b> (<code>data-act="rd"</code>) &mdash; toggles <code>this.rdOpen</code> to show or hide the seven-bar <code>.rdgrid</code>; the flag persists across re-renders</li>
+        </ul></dd>
+        <dt>Thresholds</dt><dd><ul>
+          <li>Weapons tiers 2&ndash;5: <code>WEAPON_TIER_PTS</code> = 100 / 200 / 340 / 520</li>
+          <li>Augment V1&ndash;V3: <code>AUG_LEVEL_PTS</code> = 80 / 200 / 380</li>
+        </ul></dd>
+        <dt>States</dt><dd>Each expanded bar shows <code>pts/need</code>; once <code>pts &ge; need</code> it reads <b>ONLINE</b> and the matching gear drops its "R&amp;D REQUIRED" lock in the equip shop. When a whole track is maxed, the "NEXT" hint reads <b>WPN MAXED</b> / <b>AUG MAXED</b>.</dd>
+      </dl>
+    </section>
+
+    <section class="cmp" id="c-ticker">
+      <div class="cmp-head"><span class="cmp-num">09</span><h3>Event ticker</h3><span class="cmp-selector">.ticker</span></div>
+      <p class="cmp-lede">The campaign's paper trail, compressed to a single line at the foot of the screen: the newest economy or world event, with the recent history on hover.</p>
+      <div class="specimen">
+        <div class="cap">rendered · foot of screen</div>
+        <div class="stage"><div class="g">
+          <div class="ticker" title="&gt; SECTOR 03 &quot;ESCROW&quot; transferred to Nexus management.&#10;&gt; Field data forwarded to R&amp;D: +15 research.&#10;&gt; Nexus divisional charter granted. One district under management.">&gt; SECTOR 03 "ESCROW" transferred to Nexus management.</div>
+        </div></div>
+      </div>
+      <dl class="spec">
+        <dt>Used in</dt><dd>Foot of the <b>worldMap</b> screen. <span class="path">screens.ts:357</span></dd>
+        <dt>Communicates</dt><dd>The most recent cycle payout, territory transfer, siege event, or charter milestone &mdash; so a returning player sees the latest change without a wall of log lines.</dd>
+        <dt>Data</dt><dd><code>m.log[0]</code> &mdash; newest entry only, prefixed with <code>&gt;</code>. The last four entries are joined into the element's <code>title</code>, surfaced on hover; full history stays in the debrief screen.</dd>
+        <dt>States</dt><dd>Read-only, single line, ellipsised on overflow. Falls back to <b>Awaiting first directive.</b> before anything is logged.</dd>
+      </dl>
+    </section>
+
+    <div class="wiring">
+      <h4>How it's all wired</h4>
+      <p>There are no per-component event listeners. The whole screen is one <code>innerHTML</code> template assembled from string-builder helpers (<code>mapHud</code>, <code>stage</code>, <code>terrBlock</code>, <code>popover</code>, <code>rdDrawer</code>) with exactly two delegated handlers on the <code>#screen</code> element. <code>onclick</code> dispatches, in priority order, on <code>data-contract</code> / <code>data-defend</code> (mission handoff), <code>data-act="rd"</code> (toggle the R&amp;D drawer), <code>data-region</code> (switch region, via <code>closest</code> so the stage gateway works too), then <code>data-sel</code> (select a block, matched with <code>closest('[data-sel]')</code> because blocks have children); a click on empty stage clears the selection. <code>oninput</code> dispatches on <code>data-tax</code> / <code>data-split</code>. Selection and drawer state live on the <code>Screens</code> instance (<code>selRegion</code>, <code>selTerr</code>, <code>rdOpen</code>) so they survive the whole-screen re-render that runs on every state change and on the 60-second economy tick. This <code>innerHTML</code>-plus-<code>dataset</code> pattern is the shared convention for every screen in <code>src/app/screens.ts</code> &mdash; follow it when adding components.</p>
+    </div>
+
+    <p class="cmp-foot">Specimens reproduce the in-game dark skin, since they represent a fixed in-game surface. Data and line references from <code>src/app/screens.ts</code> and <code>src/app/meta.ts</code>.</p>
+  </section>
+
+  <!-- ========================================================
+       PART 3 — FIELD REFERENCE (controls)
+       ======================================================== -->
+  <section class="part" id="field">
+    <div class="part-head">
+      <div class="part-kicker">Part 2</div>
+      <h2>Field Reference — Controls</h2>
+      <p class="part-lede">The operative keymap for a live mission: mouse, squad, stims, gear, crowd control,
+        and camera. For the colour of every actor these controls act on, see <a href="#roster">Unit Roster</a>.</p>
+    </div>
+
+    <div class="key-grid">
+      <section class="card">
+        <h3>Mouse</h3>
+        <div class="rows">
+          <span class="keys"><kbd class="mouse">LMB</kbd></span>
+          <span class="act">Select agent under cursor <small>Click empty ground to fall back to A1</small></span>
+          <span class="keys"><kbd class="mouse">LMB drag</kbd></span>
+          <span class="act">Box-select squad</span>
+          <span class="keys"><kbd>Shift</kbd><span class="plus">+</span><kbd class="mouse">LMB</kbd></span>
+          <span class="act">Add to current selection</span>
+          <span class="keys"><kbd class="mouse">RMB</kbd></span>
+          <span class="act">Move to ground / attack hostile under cursor</span>
+          <span class="keys"><kbd class="mouse">RMB</kbd></span>
+          <span class="act">On a vehicle: walk over and board it</span>
+          <span class="keys"><kbd>Ctrl</kbd><span class="plus">+</span><kbd class="mouse">RMB</kbd></span>
+          <span class="act">Attack the vehicle instead <small>Cmd works too. Fuel pumps chain-react</small></span>
+          <span class="keys"><kbd class="mouse">Wheel</kbd></span>
+          <span class="act">Zoom</span>
+        </div>
+      </section>
+
+      <section class="card">
+        <h3>Squad</h3>
+        <div class="rows">
+          <span class="keys"><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd><kbd>4</kbd></span>
+          <span class="act">Select agent <small>Shift adds to selection, double-tap centers the camera on them</small></span>
+          <span class="keys"><kbd>5</kbd></span>
+          <span class="act">Select every living agent</span>
+          <span class="keys"><kbd>Tab</kbd></span>
+          <span class="act">Cycle equipped weapon</span>
+          <span class="keys"><kbd>R</kbd></span>
+          <span class="act">Cycle rules of engagement <small>HOLD never auto-fires, DEF engages at half weapon range, FREE at full range</small></span>
+          <span class="keys"><kbd>F</kbd></span>
+          <span class="act">Persuade pulse <small>Needs an agent carrying the Persuadertron</small></span>
+          <span class="keys"><kbd>J</kbd></span>
+          <span class="act">Hijack a nearby vehicle</span>
+        </div>
+      </section>
+
+      <section class="card">
+        <h3>Stims</h3>
+        <div class="rows">
+          <span class="keys"><kbd>Z</kbd></span>
+          <span class="act">Combat <small>Take 15% less damage per level, weapon spread widens 30%</small></span>
+          <span class="keys"><kbd>X</kbd></span>
+          <span class="act">Focus <small>Spread tightens 25% per level, move speed drops 15%</small></span>
+          <span class="keys"><kbd>C</kbd></span>
+          <span class="act">Surge <small>Move 30% faster per level, burns HP while active</small></span>
+        </div>
+        <p class="note">Each tap cycles that stim through levels <b>0, 1, 2</b>. Any active stim drains the shared reserve (the <b>R</b> number on the HUD); when it empties, all stims cut out at once.</p>
+      </section>
+
+      <section class="card">
+        <h3>Gear</h3>
+        <div class="rows">
+          <span class="keys"><kbd>V</kbd></span>
+          <span class="act">Cloak</span>
+          <span class="keys"><kbd>T</kbd></span>
+          <span class="act">Plant demo charge</span>
+          <span class="keys"><kbd>Y</kbd></span>
+          <span class="act">Deploy medbay</span>
+          <span class="keys"><kbd>U</kbd></span>
+          <span class="act">Launch drone</span>
+          <span class="keys"><kbd>K</kbd></span>
+          <span class="act">EMP burst</span>
+        </div>
+        <p class="note">Gear keys only work for selected agents actually carrying that equipment. Charges breach storefronts, opening new routes.</p>
+      </section>
+
+      <section class="card">
+        <h3>Crowd Control</h3>
+        <div class="rows">
+          <span class="keys"><kbd>G</kbd></span>
+          <span class="act">Swarm: follow the squad</span>
+          <span class="keys"><kbd>H</kbd></span>
+          <span class="act">Swarm: hold position</span>
+          <span class="keys"><kbd>B</kbd></span>
+          <span class="act">Flashmob at the cursor</span>
+        </div>
+        <p class="note">Orders apply to every persuaded civilian. Influence (HUD, top right) counts your current following.</p>
+      </section>
+
+      <section class="card">
+        <h3>Camera and Sim</h3>
+        <div class="rows">
+          <span class="keys"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></span>
+          <span class="act">Pan <small>Arrow keys work too, relative to camera facing</small></span>
+          <span class="keys"><kbd>Q</kbd><kbd>E</kbd></span>
+          <span class="act">Rotate view in 45 degree steps <small>[ and ] are aliases</small></span>
+          <span class="keys"><kbd>Space</kbd></span>
+          <span class="act">Pause</span>
+          <span class="keys"><kbd>-</kbd><kbd>=</kbd></span>
+          <span class="act">Sim speed down / up <small>50% to 100%</small></span>
+        </div>
+        <p class="note"><b>Defense contracts:</b> <kbd>P</kbd> toggles placement, click drops a turret, shift-click a trap, <kbd>Enter</kbd> finishes.</p>
+      </section>
+
+      <section class="card wide">
+        <h3>Basic Movement</h3>
+        <ul class="move">
+          <li><b>Right-click moves the squad.</b> Agents pathfind around buildings on their own; orders outside the map clamp to its edge.</li>
+          <li><b>Vehicles beat walking.</b> Right-click one to board, <kbd>J</kbd> to hijack, then right-click a road destination. No road, no route.</li>
+          <li><b>Alert escalates</b> <span class="lvl g-alert">GREEN</span> to <span class="lvl w-alert">AMBER</span> (police) to <span class="lvl r-alert">RED</span> (tacticals). Gunfire and witnesses feed it.</li>
+          <li><b>Breaches are shortcuts.</b> Demo charges and explosions open storefront walls, and paths through them stay valid.</li>
+          <li><b>Watch the reserve.</b> Stims trade the shared R meter for an edge; Surge also eats HP, so switch it off after the sprint.</li>
+          <li><b>Lost an agent offscreen?</b> Double-tap their number key to snap the camera to them.</li>
+        </ul>
+      </section>
+    </div>
+  </section>
+
+  <!-- ========================================================
+       PART 4 — UNIT ROSTER
+       ======================================================== -->
+  <section class="part" id="roster">
+    <div class="part-head">
+      <div class="part-kicker">Part 3</div>
+      <h2>Unit Roster</h2>
+      <p class="part-lede">Every actor the city can put on screen, rendered in its exact in-game colour. The
+        crowd draws each NPC as one tinted humanoid (<code>render/crowd.ts</code>); your operatives get a
+        custom rig with visor and kit (<code>render/scene.ts</code>). All hexes below are the literal values
+        in <code>render/palette.ts</code> &mdash; <code>SCENE_COLORS</code>, STANDARD palette.</p>
+    </div>
+
+    <div class="priority">
+      <div class="lbl">How a figure picks its colour &mdash; npcColor(), first match wins</div>
+      <div class="chain" id="chain"></div>
+      <p class="foot">State beats kind: a <code>police</code> unit that gets persuaded turns cyan, not blue;
+        a downed enemy is grey, not red. Only after every state and role check fails does a body stay
+        civilian grey.</p>
+    </div>
+
+    <div class="roster-group">
+      <div class="section-label">Your squad <span class="tag">TEAM_PLAYER</span></div>
+      <div class="unit-grid" id="grp-squad"></div>
+    </div>
+    <div class="roster-group">
+      <div class="section-label">Bystanders <span class="tag">NPC_CIV</span></div>
+      <div class="unit-grid" id="grp-civ"></div>
+    </div>
+    <div class="roster-group">
+      <div class="section-label">Law enforcement <span class="tag">TEAM_POLICE</span></div>
+      <div class="unit-grid" id="grp-law"></div>
+    </div>
+    <div class="roster-group">
+      <div class="section-label">Hostiles <span class="tag">TEAM_SYNDICATE / site security</span></div>
+      <div class="unit-grid" id="grp-hostile"></div>
+    </div>
+    <div class="roster-group">
+      <div class="section-label">Status overlays <span class="tag">state &gt; kind</span></div>
+      <div class="unit-grid" id="grp-state"></div>
+    </div>
+    <div class="roster-group">
+      <div class="section-label">Vehicles <span class="tag">sim/vehicles.ts</span></div>
+      <div class="unit-grid props" id="grp-veh"></div>
+    </div>
+    <div class="roster-group">
+      <div class="section-label">Deployables <span class="tag">DEP_*</span></div>
+      <div class="unit-grid props" id="grp-dep"></div>
+    </div>
+    <div class="roster-group">
+      <div class="section-label">Objective markers <span class="tag">mission</span></div>
+      <div class="unit-grid props" id="grp-mark"></div>
+    </div>
+  </section>
+
+  <footer class="colophon">
+    <span><code>render/palette.ts</code> SCENE_COLORS</span>
+    <span><code>render/crowd.ts</code> npcColor()</span>
+    <span><code>sim/units.ts</code> npcHp / npcSpeed</span>
+    <span><code>sim/vehicles.ts</code> &middot; <code>sim/state.ts</code> DEP_*</span>
+  </footer>
+
+</div>
+
+<script>
+  // exact SCENE_COLORS (STANDARD palette) from src/render/palette.ts
+  const C = {
+    civ: "#7a8699", panic: "#d98e2b", persuaded: "#22d3ee", police: "#3b6fd4",
+    tactical: "#8b1e3f", guard: "#c026d3", enemy: "#ff1744", dead: "#2a2f38",
+    vip: "#facc15", agent: "#00e5ff", select: "#00ff88", exfil: "#00ff88",
+    asset: "#ff5533", target: "#ff3344",
+  };
+  const GEAR = "#1b212e";   // gearMat 0x1b212e
+  const VISOR = "#c4fbff";  // visorMat 0xc4fbff
+
+  function shade(hex, f) {
+    const n = parseInt(hex.slice(1), 16);
+    let r = n >> 16, g = (n >> 8) & 255, b = n & 255;
+    if (f <= 1) { r *= f; g *= f; b *= f; }
+    else { const t = f - 1; r += (255 - r) * t; g += (255 - g) * t; b += (255 - b) * t; }
+    return "#" + [r, g, b].map((v) => Math.round(v).toString(16).padStart(2, "0")).join("");
+  }
+
+  // stylized front-facing humanoid, echoing the baked crowd rig
+  function humanoid(color, opt = {}) {
+    const leg = shade(color, 0.5);
+    const arm = shade(color, 0.86);
+    const ring = opt.ring
+      ? `<ellipse cx="50" cy="121" rx="31" ry="8.5" fill="none" stroke="${C.select}" stroke-width="2.6" opacity="0.95"/>`
+      : "";
+    const pack = opt.gear ? `<rect x="37" y="49" width="26" height="30" rx="5" fill="${GEAR}"/>` : "";
+    const pads = opt.gear
+      ? `<rect x="27" y="52" width="12" height="9" rx="3" fill="${GEAR}"/><rect x="61" y="52" width="12" height="9" rx="3" fill="${GEAR}"/>`
+      : "";
+    const visor = opt.visor
+      ? `<rect x="42" y="33" width="16" height="6" rx="3" fill="${VISOR}"/>`
+      : "";
+    const rifle = opt.rifle
+      ? `<rect x="63" y="70" width="28" height="5" rx="2" fill="${GEAR}"/><rect x="70" y="74" width="5" height="9" rx="2" fill="${GEAR}"/>`
+      : "";
+    const gun = opt.gun
+      ? `<rect x="63" y="72" width="22" height="5.5" rx="2" fill="${GEAR}"/>`
+      : "";
+    const helmet = opt.helmet ? `<path d="M36 38 a14 14 0 0 1 28 0 Z" fill="${shade(color, 0.62)}"/>` : "";
+    return `<svg viewBox="0 0 100 130" aria-hidden="true">
+      <ellipse cx="50" cy="122" rx="25" ry="5.5" fill="#000" opacity="0.4"/>
+      ${ring}
+      ${pack}
+      <rect x="40" y="86" width="9" height="32" rx="4.5" fill="${leg}"/>
+      <rect x="51" y="86" width="9" height="32" rx="4.5" fill="${leg}"/>
+      <rect x="25" y="53" width="9" height="35" rx="4.5" fill="${arm}"/>
+      <rect x="66" y="53" width="9" height="35" rx="4.5" fill="${arm}"/>
+      <rect x="33" y="51" width="34" height="44" rx="9" fill="${color}"/>
+      ${pads}
+      <circle cx="50" cy="37" r="14" fill="${color}"/>
+      ${helmet}
+      ${visor}
+      ${rifle}${gun}
+    </svg>`;
+  }
+
+  // ---- prop renderers (vehicles / deployables / markers) ----
+  function car(color) {
+    const glass = "#141a24", tire = "#0b0d12";
+    return `<svg viewBox="0 0 100 100" aria-hidden="true">
+      <ellipse cx="50" cy="86" rx="34" ry="6" fill="#000" opacity="0.4"/>
+      <rect x="16" y="70" width="10" height="12" rx="3" fill="${tire}"/>
+      <rect x="74" y="70" width="10" height="12" rx="3" fill="${tire}"/>
+      <rect x="18" y="52" width="64" height="26" rx="9" fill="${color}"/>
+      <rect x="30" y="36" width="40" height="22" rx="8" fill="${shade(color, 0.86)}"/>
+      <rect x="34" y="39" width="32" height="14" rx="5" fill="${glass}"/>
+    </svg>`;
+  }
+  function tram(color) {
+    const glass = "#141a24", tire = "#0b0d12";
+    return `<svg viewBox="0 0 100 100" aria-hidden="true">
+      <ellipse cx="50" cy="88" rx="30" ry="5.5" fill="#000" opacity="0.4"/>
+      <rect x="22" y="80" width="14" height="8" rx="2" fill="${tire}"/>
+      <rect x="64" y="80" width="14" height="8" rx="2" fill="${tire}"/>
+      <rect x="26" y="20" width="48" height="62" rx="10" fill="${color}"/>
+      <rect x="31" y="27" width="38" height="46" rx="6" fill="${glass}"/>
+      <rect x="31" y="46" width="38" height="4" fill="${shade(color, 1.35)}"/>
+    </svg>`;
+  }
+  // in-world it is just a self-lit orange box (BoxGeometry 0.8 x 1.2 x 0.8), so draw the iso cube
+  function isoBox(color, hh) {
+    const top = shade(color, 1.26), left = color, right = shade(color, 0.72), edge = shade(color, 1.5);
+    const b = 58 + hh, l4 = 44 + hh, r4 = 44 + hh;
+    return `<svg viewBox="0 0 100 100" aria-hidden="true">
+      <ellipse cx="50" cy="${b + 3}" rx="26" ry="6" fill="#000" opacity="0.4"/>
+      <path d="M24 44 L24 ${l4} L50 ${b} L50 58 Z" fill="${left}"/>
+      <path d="M76 44 L76 ${r4} L50 ${b} L50 58 Z" fill="${right}"/>
+      <path d="M50 30 L76 44 L50 58 L24 44 Z" fill="${top}"/>
+      <path d="M50 30 L76 44 L50 58 L24 44 Z" fill="none" stroke="${edge}" stroke-width="1" opacity="0.5"/>
+    </svg>`;
+  }
+  const pump = (color) => isoBox(color, 32);
+  function turret(color) {
+    return `<svg viewBox="0 0 100 100" aria-hidden="true">
+      <ellipse cx="50" cy="86" rx="24" ry="5" fill="#000" opacity="0.4"/>
+      <rect x="36" y="58" width="28" height="26" rx="5" fill="${shade(color, 0.55)}"/>
+      <circle cx="50" cy="52" r="14" fill="${color}"/>
+      <rect x="58" y="47" width="28" height="7" rx="3" fill="${shade(color, 0.7)}"/>
+    </svg>`;
+  }
+  function trap(color) {
+    return `<svg viewBox="0 0 100 100" aria-hidden="true">
+      <ellipse cx="50" cy="70" rx="30" ry="10" fill="${shade(color, 0.4)}"/>
+      <ellipse cx="50" cy="66" rx="30" ry="10" fill="none" stroke="${color}" stroke-width="3"/>
+      <path d="M35 66 L50 58 L65 66 L50 74 Z" fill="${color}" opacity="0.85"/>
+    </svg>`;
+  }
+  function charge(color) {
+    return `<svg viewBox="0 0 100 100" aria-hidden="true">
+      <ellipse cx="50" cy="80" rx="22" ry="5" fill="#000" opacity="0.4"/>
+      <rect x="34" y="52" width="32" height="24" rx="5" fill="${color}"/>
+      <circle cx="50" cy="46" r="6" fill="${shade(color, 1.4)}"/>
+      <rect x="47" y="34" width="6" height="10" fill="${shade(color, 0.6)}"/>
+    </svg>`;
+  }
+  function medbay(color) {
+    return `<svg viewBox="0 0 100 100" aria-hidden="true">
+      <ellipse cx="50" cy="84" rx="22" ry="5" fill="#000" opacity="0.4"/>
+      <rect x="35" y="40" width="30" height="44" rx="6" fill="${shade(color, 0.5)}"/>
+      <rect x="45" y="50" width="10" height="26" rx="2" fill="${color}"/>
+      <rect x="37" y="58" width="26" height="10" rx="2" fill="${color}"/>
+    </svg>`;
+  }
+  function drone(color) {
+    return `<svg viewBox="0 0 100 100" aria-hidden="true">
+      <ellipse cx="50" cy="88" rx="16" ry="4" fill="#000" opacity="0.35"/>
+      <rect x="20" y="40" width="60" height="5" rx="2.5" fill="${shade(color, 0.7)}"/>
+      <circle cx="22" cy="42" r="7" fill="${color}" opacity="0.6"/>
+      <circle cx="78" cy="42" r="7" fill="${color}" opacity="0.6"/>
+      <rect x="40" y="40" width="20" height="14" rx="5" fill="${color}"/>
+      <circle cx="50" cy="47" r="3" fill="${shade(color, 1.5)}"/>
+    </svg>`;
+  }
+  function marker(color) {
+    return `<svg viewBox="0 0 100 100" aria-hidden="true">
+      <path d="M50 62 L34 34 L66 34 Z" fill="${color}"/>
+      <ellipse cx="50" cy="80" rx="18" ry="4.5" fill="${color}" opacity="0.25"/>
+      <ellipse cx="50" cy="80" rx="18" ry="4.5" fill="none" stroke="${color}" stroke-width="2"/>
+    </svg>`;
+  }
+  function beacon(color) {
+    return `<svg viewBox="0 0 100 100" aria-hidden="true">
+      <ellipse cx="50" cy="80" rx="30" ry="8" fill="${color}" opacity="0.18"/>
+      <ellipse cx="50" cy="80" rx="30" ry="8" fill="none" stroke="${color}" stroke-width="2.5"/>
+      <path d="M34 80 L50 20 L66 80 Z" fill="${color}" opacity="0.16"/>
+      <line x1="50" y1="80" x2="50" y2="18" stroke="${color}" stroke-width="2.5" opacity="0.7"/>
+    </svg>`;
+  }
+
+  // ---------- data ----------
+  const chain = [
+    ["dead", "Down"], ["enemy", "Cloaked"], ["persuaded", "Persuaded"],
+    ["vip", "VIP"], ["panic", "Panic"], ["police", "Kind"], ["civ", "Civilian"],
+  ];
+
+  const squad = [{
+    key: "agent", name: "Agent", role: "Your controllable operative.",
+    hp: 140, hpMax: 140, spd: "5.0", wpn: "loadout-based",
+    fig: () => humanoid(C.agent, { visor: true, gear: true, gun: true, ring: true }),
+    src: ["Agent", "createAgentRig()", "select ring 0x00ff88"],
+  }];
+
+  const civ = [{
+    key: "civ", name: "Civilian", role: "Neutral crowd; flees from gunfire.",
+    hp: 30, hpMax: 140, spd: "1.8", wpn: "unarmed",
+    fig: () => humanoid(C.civ),
+    src: ["NPC_CIV", "npcHp 30", "CIV_SPEED"],
+  }];
+
+  const law = [
+    {
+      key: "police", name: "Police", role: "First responders once the alarm trips.",
+      hp: 55, hpMax: 140, spd: "4.0", wpn: "pistol",
+      fig: () => humanoid(C.police, { rifle: true }),
+      src: ["NPC_POLICE", "npcHp 55", "POLICE_SPEED"],
+    },
+    {
+      key: "tactical", name: "Tactical", role: "Heavier escalation tier; armored.",
+      hp: 90, hpMax: 140, spd: "4.0", wpn: "rifle",
+      fig: () => humanoid(C.tactical, { rifle: true, helmet: true }),
+      src: ["NPC_TACTICAL", "npcHp 90", "POLICE_SPEED"],
+    },
+  ];
+
+  const hostile = [
+    {
+      key: "guard", name: "Guard", role: "Static site security around objectives.",
+      hp: 85, hpMax: 140, spd: "4.0", wpn: "rifle",
+      fig: () => humanoid(C.guard, { rifle: true }),
+      src: ["NPC_GUARD", "npcHp 85", "POLICE_SPEED"],
+    },
+    {
+      key: "enemy", name: "Enemy", role: "Rival-syndicate enforcer; hunts your squad.",
+      hp: 120, hpMax: 140, spd: "4.5", wpn: "rifle",
+      fig: () => humanoid(C.enemy, { rifle: true, helmet: true }),
+      src: ["NPC_ENEMY", "npcHp 120", "ENEMY_SPEED"],
+    },
+    {
+      key: "enemy", name: "Thrall", role: "Civilian conscripted by an enemy master.",
+      hp: 30, hpMax: 140, spd: "1.8", wpn: "unarmed", notoken: true,
+      colorOverride: hexMix(C.civ, C.enemy, 0.45),
+      fig: () => figMix(C.civ, C.enemy, 0.45),
+      src: ["enemyMaster >= 0", "civ lerp enemy 0.45"],
+    },
+    {
+      key: "enemy", name: "Cloaked raider", role: "Enemy running dark; drops to 30% brightness.",
+      hp: 120, hpMax: 140, spd: "4.5", wpn: "rifle", notoken: true,
+      colorOverride: shade(C.enemy, 0.3),
+      fig: () => humanoid(shade(C.enemy, 0.3), { rifle: true }),
+      src: ["cloakT > 0", "enemy x 0.3"],
+    },
+  ];
+
+  const state = [
+    {
+      key: "panic", name: "Panic", role: "Any NPC fleeing danger.",
+      hp: null, spd: "3.6", wpn: "runs",
+      fig: () => humanoid(C.panic, { arms: true }),
+      src: ["ST_PANIC", "PANIC_SPEED"],
+    },
+    {
+      key: "persuaded", name: "Persuaded", role: "Converted to your side by a persuadertron.",
+      hp: null, spd: "3.4", wpn: "follows you",
+      fig: () => humanoid(C.persuaded),
+      src: ["ST_PERSUADED", "follows agent"],
+    },
+    {
+      key: "vip", name: "VIP", role: "Named person a mission wants alive.",
+      hp: null, spd: "1.8", wpn: "escort / persuade",
+      fig: () => humanoid(C.vip),
+      src: ["n.vip", "persuade / escort target"],
+    },
+    {
+      key: "dead", name: "Down", role: "Killed or incapacitated; also agent stun tint.",
+      hp: null, spd: "0", wpn: "—",
+      fig: () => humanoid(C.dead),
+      src: ["ST_DEAD", "SCENE_COLORS.dead"],
+    },
+  ];
+
+  const veh = [
+    { key: "custom", u: "#7d8fb3", name: "Car", role: "Hijackable traffic. Runs pedestrians over; explodes.",
+      hp: 90, spd: "6.0", wpn: "boom 55 / r3", fig: (c) => car(c), src: ["VEH_CAR", "CAR_HP 90"] },
+    { key: "custom", u: "#2e6f6a", name: "Tram", role: "Rail-locked mass transit. Heavy blast.",
+      hp: 300, spd: "4.0", wpn: "boom 70 / r3", fig: (c) => tram(c), src: ["VEH_TRAM", "TRAM_HP 300"] },
+    { key: "custom", u: "#c96a2a", name: "Fuel pump", role: "Static orange box. Shoot it for a big chain explosion.",
+      hp: 70, spd: "—", wpn: "boom 90 / r4", fig: (c) => pump(c), src: ["VEH_FUEL", "0x8a4a12 + emissive 0xff7a1c"] },
+    { key: "custom", u: "#14161a", name: "Wreck", role: "Burnt-out husk left after a vehicle dies.",
+      hp: null, spd: "—", wpn: "cover", fig: (c) => car(c), src: ["V_WRECK", "scale.y 0.45"] },
+  ];
+
+  const dep = [
+    { key: "custom", u: C.agent, name: "Turret", role: "Auto-fires on hostiles in range.", fig: (c) => turret(c), src: ["DEP_TURRET", "borrows agent cyan"] },
+    { key: "custom", u: C.asset, name: "Trap", role: "Floor plate; triggers on contact.", fig: (c) => trap(c), src: ["DEP_TRAP", "borrows asset"] },
+    { key: "custom", u: C.target, name: "Charge", role: "Breaching / demolition explosive.", fig: (c) => charge(c), src: ["DEP_CHARGE", "borrows target"] },
+    { key: "custom", u: C.exfil, name: "Medbay", role: "Heals agents standing near it.", fig: (c) => medbay(c), src: ["DEP_MEDBAY", "borrows exfil green"] },
+    { key: "custom", u: C.vip, name: "Drone", role: "Hovers and bobs; recon / attack.", fig: (c) => drone(c), src: ["DEP_DRONE", "borrows vip gold"] },
+  ];
+
+  const mark = [
+    { key: "custom", u: C.asset, name: "Asset", role: "Destructible objective (raid / sabotage).", fig: (c) => marker(c), src: ["mission.assets", "SCENE_COLORS.asset"] },
+    { key: "custom", u: C.target, name: "Target", role: "Hostile the mission wants dead.", fig: (c) => marker(c), src: ["missionTarget", "SCENE_COLORS.target"] },
+    { key: "custom", u: C.vip, name: "VIP", role: "Person to persuade or escort out.", fig: (c) => marker(c), src: ["n.vip", "SCENE_COLORS.vip"] },
+    { key: "custom", u: C.exfil, name: "Extraction", role: "Exfil beacon; lights up when clear.", fig: (c) => beacon(c), src: ["mission.exfil", "SCENE_COLORS.exfil"] },
+  ];
+
+  // civ->enemy lerp for the thrall
+  function hexMix(a, b, t) {
+    const mix = (x, y) => Math.round(x + (y - x) * t);
+    const na = parseInt(a.slice(1), 16), nb = parseInt(b.slice(1), 16);
+    return "#" + [
+      mix(na >> 16, nb >> 16), mix((na >> 8) & 255, (nb >> 8) & 255), mix(na & 255, nb & 255),
+    ].map((v) => v.toString(16).padStart(2, "0")).join("");
+  }
+  function figMix(a, b, t) { return humanoid(hexMix(a, b, t), { rifle: true }); }
+
+  // ---------- render ----------
+  function statBar(k, v, max) {
+    const pct = Math.max(4, Math.round((v / max) * 100));
+    return `<div class="stat"><span class="k">${k}</span>
+      <span class="track"><span class="fill" style="width:${pct}%"></span></span>
+      <span class="v">${v}</span></div>`;
+  }
+  function statLine(k, v) {
+    return `<div class="stat line"><span class="k">${k}</span><span class="v2">${v}</span></div>`;
+  }
+
+  function unitCard(d) {
+    const color = d.colorOverride || C[d.key] || d.u;
+    let stats = "";
+    if (d.hp != null) stats += statBar("HP", d.hp, d.hpMax || 140);
+    else if (d.hp === null && d.spd !== undefined && !("u" in d)) stats += statLine("HP", "—");
+    if (d.spd !== undefined) stats += statLine("SPD", d.spd + " u/s");
+    if (d.wpn !== undefined) stats += statLine("WPN", d.wpn);
+    const tok = d.u || d.notoken ? "" : `<span class="tok">SCENE_COLORS.${d.key}</span>`;
+    return `<div class="unit-card" style="--u:${color}">
+      <div class="stage">${d.fig(color)}</div>
+      <div class="meta">
+        <div class="name">${d.name}</div>
+        <p class="role">${d.role}</p>
+        <div class="uswatch"><span class="sq"></span>${color.toUpperCase()} ${tok}</div>
+        <div class="stats">${stats}</div>
+        <div class="src">${d.src.map((s) => `<span>${s}</span>`).join("")}</div>
+      </div>
+    </div>`;
+  }
+
+  function propCard(d) {
+    return `<div class="unit-card prop" style="--u:${d.u}">
+      <div class="stage">${d.fig(d.u)}</div>
+      <div class="meta">
+        <div class="name">${d.name}</div>
+        <p class="role">${d.role}</p>
+        <div class="uswatch"><span class="sq"></span>${d.u.toUpperCase()}</div>
+        ${d.hp != null ? `<div class="stats">${statBar("HP", d.hp, 300)}${d.spd ? statLine("SPD", d.spd + " u/s") : ""}${d.wpn ? statLine("DMG", d.wpn) : ""}</div>` : ""}
+        <div class="src">${d.src.map((s) => `<span>${s}</span>`).join("")}</div>
+      </div>
+    </div>`;
+  }
+
+  document.getElementById("chain").innerHTML = chain
+    .map(([k, label], i) =>
+      `${i ? '<span class="arrow">&rsaquo;</span>' : ""}` +
+      `<span class="step"><span class="dot" style="color:${C[k]}"></span>${label}</span>`)
+    .join("");
+
+  const put = (id, arr, fn) => (document.getElementById(id).innerHTML = arr.map(fn).join(""));
+  put("grp-squad", squad, unitCard);
+  put("grp-civ", civ, unitCard);
+  put("grp-law", law, unitCard);
+  put("grp-hostile", hostile, unitCard);
+  put("grp-state", state, unitCard);
+  put("grp-veh", veh, propCard);
+  put("grp-dep", dep, propCard);
+  put("grp-mark", mark, propCard);
+
+  // active-section highlight in the sticky nav
+  const navLinks = [...document.querySelectorAll(".doc-nav a")];
+  const byId = Object.fromEntries(navLinks.map((a) => [a.getAttribute("href").slice(1), a]));
+  const obs = new IntersectionObserver((entries) => {
+    entries.forEach((e) => {
+      if (e.isIntersecting) {
+        navLinks.forEach((a) => a.classList.remove("active"));
+        byId[e.target.id]?.classList.add("active");
+      }
+    });
+  }, { rootMargin: "-45% 0px -50% 0px" });
+  document.querySelectorAll(".part").forEach((p) => obs.observe(p));
+</script>
+</body>
+</html>
