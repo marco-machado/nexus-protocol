@@ -37,6 +37,7 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { fromFx } from '../sim/fixed';
 import { BLOCK, MAP_W, STREET } from '../sim/map';
+import { PROJ_SUBSTEPS } from '../sim/weapons';
 import {
   DEP_CHARGE,
   DEP_MEDBAY,
@@ -70,6 +71,29 @@ const SHADOW_MAP = 2048;
 const SMOKE_CAP = 96;
 export const CAR_CAP = 16;
 const RUBBLE_CAP = 160;
+const FLASH_CAP = 96;
+
+// transient combat flash (muzzle or impact), aged out render-side
+interface Flash {
+  x: number;
+  y: number;
+  z: number;
+  age: number;
+  dur: number;
+  size: number;
+  r: number;
+  g: number;
+  b: number;
+}
+
+interface ProjSnap {
+  x: number;
+  z: number;
+  dx: number;
+  dz: number;
+  ttl: number;
+  aoe: number;
+}
 
 export interface AgentRig {
   joints: Joints;
@@ -110,6 +134,10 @@ export interface GameScene {
   breachCursor: number;
   rubbleCount: number;
   lastSyncMs: number;
+  flashMesh: InstancedMesh;
+  flashes: Flash[];
+  prevProj: ProjSnap[];
+  prevProjTick: number;
   // facing derived from actual displacement: the sim's dirX/dirZ is steering
   // intent (carLeg pre-stores the next turn), not the direction of travel
   vehHeadings: Float32Array;
@@ -173,11 +201,13 @@ export function vehicleRenderDiagnostics(gs: GameScene): Record<string, number> 
 
 // index = tod (day, dusk, night); night keeps the original hardcoded look.
 // amb/groundAmb feed a hemisphere light (sky above, bounce below); intensities
-// are retuned up ~1.1-1.2x to recover midtones under Neutral tone mapping
+// are retuned up ~1.1-1.2x to recover midtones under Neutral tone mapping.
+// bldg/floor are the base tints the per-building jitter multiplies, so facades
+// read as sunlit concrete at day instead of the night navy at every hour
 const LIGHTING = [
-  { amb: 0xbfd0e0, groundAmb: 0x5a5348, ambI: 1.2, dir: 0xfff2d8, dirI: 1.8, pos: [50, 90, 30], bg: 0x8fa6bd, fog: 0.0035, neon: 0.35, ground: 0x2a3140, shadowI: 0.85 },
-  { amb: 0xc9a68a, groundAmb: 0x33241d, ambI: 0.95, dir: 0xff9a5a, dirI: 1.2, pos: [60, 40, 25], bg: 0x1a1016, fog: 0.0055, neon: 1, ground: 0x14121a, shadowI: 0.6 },
-  { amb: 0x8fa8d8, groundAmb: 0x131a26, ambI: 1.0, dir: 0xa9c2f0, dirI: 1.3, pos: [40, 70, 25], bg: 0x05070d, fog: 0.007, neon: 1, ground: 0x0c1017, shadowI: 0.45 },
+  { amb: 0xbfd0e0, groundAmb: 0x5a5348, ambI: 1.2, dir: 0xfff2d8, dirI: 1.8, pos: [50, 90, 30], bg: 0x8fa6bd, fog: 0.0035, neon: 0.35, ground: 0x2a3140, shadowI: 0.85, bldg: 0x66707f, floor: 0x525c69 },
+  { amb: 0xc9a68a, groundAmb: 0x33241d, ambI: 0.95, dir: 0xff9a5a, dirI: 1.2, pos: [60, 40, 25], bg: 0x1a1016, fog: 0.0055, neon: 1, ground: 0x14121a, shadowI: 0.6, bldg: 0x3d3a4c, floor: 0x322e3d },
+  { amb: 0x8fa8d8, groundAmb: 0x131a26, ambI: 1.0, dir: 0xa9c2f0, dirI: 1.3, pos: [40, 70, 25], bg: 0x05070d, fog: 0.007, neon: 1, ground: 0x111722, shadowI: 0.45, bldg: 0x222f45, floor: 0x1d2939 },
 ] as const;
 
 const dummy = new Object3D();
@@ -927,7 +957,132 @@ function createStorefrontSigns(
   signMesh.instanceMatrix.needsUpdate = true;
   if (signMesh.instanceColor) signMesh.instanceColor.needsUpdate = true;
   scene.add(signMesh);
+  createSignSpill(scene, items, neonI);
   return { signMesh, cellToSign };
+}
+
+// the sim ends at the map edge, but the city shouldn't: a ground apron plus
+// two seeded rings of non-interactive skyline towers carry the horizon into
+// the fog so the playfield never reads as a floating slab
+function createOutskirts(
+  state: SimState,
+  scene: Scene,
+  light: (typeof LIGHTING)[number],
+): void {
+  const apron = new Mesh(
+    new PlaneGeometry(MAP_W * 14, MAP_W * 14),
+    new MeshLambertMaterial({ color: new Color(light.ground).multiplyScalar(0.82) }),
+  );
+  apron.rotation.x = -Math.PI / 2;
+  apron.position.set(MAP_W / 2, -0.08, MAP_W / 2);
+  scene.add(apron);
+
+  const next = seededNext({ rng: ((state.mapSeed | 0) ^ 0x0575) || 1 });
+  const near: { m: Matrix4; c: Color }[] = [];
+  const far: { m: Matrix4; c: Color }[] = [];
+  const accents: { m: Matrix4; c: Color }[] = [];
+  const nearBase = new Color(light.bldg).multiplyScalar(0.9);
+  const farBase = new Color(light.bldg).lerp(new Color(light.bg), 0.35);
+  const accent = new Color();
+  const c = MAP_W / 2;
+  // 14 towers per side edge band + a denser far ring; polar placement keeps
+  // corners covered without a third loop
+  for (let ring = 0; ring < 2; ring++) {
+    const count = ring === 0 ? 64 : 88;
+    const rMin = ring === 0 ? c + 12 : c + 58;
+    const rSpan = ring === 0 ? 40 : 130;
+    for (let i = 0; i < count; i++) {
+      const ang = (i / count) * Math.PI * 2 + next(100) / 160;
+      const r = rMin + next(rSpan * 10) / 10;
+      const x = c + Math.cos(ang) * r;
+      const z = c + Math.sin(ang) * r;
+      const w = ring === 0 ? 4 + next(7) : 8 + next(14);
+      const h = ring === 0 ? 10 + next(24) : 22 + next(46);
+      dummy.position.set(x, h / 2 - 0.1, z);
+      dummy.rotation.set(0, (next(8) * Math.PI) / 8, 0);
+      dummy.scale.set(w, h, 4 + next(ring === 0 ? 7 : 14));
+      dummy.updateMatrix();
+      const tint = new Color(ring === 0 ? nearBase : farBase).multiplyScalar(
+        0.82 + next(30) / 100,
+      );
+      (ring === 0 ? near : far).push({ m: dummy.matrix.clone(), c: tint });
+      // lit crowns and stray window slabs sell inhabited towers at night
+      if (ring === 0 ? next(10) < 6 : next(10) < 4) {
+        dummy.position.set(x, h * (0.55 + next(35) / 100), z);
+        dummy.scale.set(w * 1.02, 0.22 + next(20) / 100, 0.35);
+        dummy.rotation.set(0, (next(8) * Math.PI) / 8, 0);
+        dummy.updateMatrix();
+        accent.set(NEON_COLORS[next(NEON_COLORS.length)]!);
+        accents.push({
+          m: dummy.matrix.clone(),
+          c: new Color(accent).multiplyScalar((0.35 + next(40) / 100) * light.neon),
+        });
+      }
+    }
+  }
+  dummy.rotation.set(0, 0, 0);
+  dummy.scale.set(1, 1, 1);
+  for (const [items, mat] of [
+    [near, new MeshLambertMaterial({ color: 0xffffff })],
+    [far, new MeshLambertMaterial({ color: 0xffffff })],
+  ] as const) {
+    const mesh = new InstancedMesh(new BoxGeometry(1, 1, 1), mat, items.length);
+    items.forEach((it, i) => {
+      mesh.setMatrixAt(i, it.m);
+      mesh.setColorAt(i, it.c);
+    });
+    mesh.instanceMatrix.needsUpdate = true;
+    if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+    scene.add(mesh);
+  }
+  const accentMesh = new InstancedMesh(
+    new BoxGeometry(1, 1, 1),
+    new MeshBasicMaterial(),
+    Math.max(1, accents.length),
+  );
+  accents.forEach((it, i) => {
+    accentMesh.setMatrixAt(i, it.m);
+    accentMesh.setColorAt(i, it.c);
+  });
+  accentMesh.count = accents.length;
+  accentMesh.instanceMatrix.needsUpdate = true;
+  if (accentMesh.instanceColor) accentMesh.instanceColor.needsUpdate = true;
+  scene.add(accentMesh);
+}
+
+// pooled neon spill: an additive disc under each storefront sign so night
+// streets pick up colored bounce instead of reading as unlit asphalt; skipped
+// in daylight where additive discs read as paint stains
+function createSignSpill(
+  scene: Scene,
+  items: { m: Matrix4; c: Color }[],
+  neonI: number,
+): void {
+  if (neonI < 1) return;
+  const spill = new InstancedMesh(
+    new CircleGeometry(1.2, 16).rotateX(-Math.PI / 2),
+    new MeshBasicMaterial({
+      blending: AdditiveBlending,
+      transparent: true,
+      opacity: 0.26,
+      depthWrite: false,
+    }),
+    Math.max(1, items.length),
+  );
+  const pos = new Vector3();
+  const tint = new Color();
+  items.forEach((it, i) => {
+    pos.setFromMatrixPosition(it.m);
+    dummy.position.set(pos.x, 0.02, pos.z);
+    dummy.updateMatrix();
+    spill.setMatrixAt(i, dummy.matrix);
+    tint.copy(it.c).multiplyScalar(0.32);
+    spill.setColorAt(i, tint);
+  });
+  spill.count = items.length;
+  spill.instanceMatrix.needsUpdate = true;
+  if (spill.instanceColor) spill.instanceColor.needsUpdate = true;
+  scene.add(spill);
 }
 
 function buildRubbleGeometry(): BufferGeometry {
@@ -1019,7 +1174,7 @@ export function createGameScene(state: SimState, shadows = true): GameScene {
   );
   let gi = 0;
   for (const b of state.map.buildings) {
-    const floorTint = jitter(0x1d2939);
+    const floorTint = jitter(light.floor);
     for (let z = b.z; z < b.z + b.d; z++) {
       for (let x = b.x; x < b.x + b.w; x++) {
         dummy.position.set(x + 0.5, 1.5, z + 0.5);
@@ -1047,7 +1202,7 @@ export function createGameScene(state: SimState, shadows = true): GameScene {
     dummy.scale.set(b.w, b.h - 3, b.d);
     dummy.updateMatrix();
     buildings.setMatrixAt(i, dummy.matrix);
-    buildings.setColorAt(i, jitter(0x222f45));
+    buildings.setColorAt(i, jitter(light.bldg));
     dummy.scale.set(1, 1, 1);
   });
   buildings.instanceMatrix.needsUpdate = true;
@@ -1066,6 +1221,7 @@ export function createGameScene(state: SimState, shadows = true): GameScene {
     strips.instanceColor.needsUpdate = true;
   }
   scene.add(strips);
+  if (!state.map.visualTest) createOutskirts(state, scene, light);
 
   const rubbleMesh = new InstancedMesh(
     buildRubbleGeometry(),
@@ -1190,6 +1346,22 @@ export function createGameScene(state: SimState, shadows = true): GameScene {
     scene.add(mesh);
     return mesh;
   });
+
+  const flashMesh = new InstancedMesh(
+    new IcosahedronGeometry(0.5, 1),
+    new MeshBasicMaterial({
+      blending: AdditiveBlending,
+      transparent: true,
+      depthWrite: false,
+    }),
+    FLASH_CAP,
+  );
+  flashMesh.instanceMatrix.setUsage(DynamicDrawUsage);
+  // same trap as the car meshes: the geometry bounding sphere sits at the
+  // world origin, so frustum culling would drop every distant flash
+  flashMesh.frustumCulled = false;
+  flashMesh.count = 0;
+  scene.add(flashMesh);
 
   const smokeMesh = new InstancedMesh(
     new IcosahedronGeometry(0.9, 1),
@@ -1364,6 +1536,10 @@ export function createGameScene(state: SimState, shadows = true): GameScene {
     breachCursor: 0,
     rubbleCount: 0,
     lastSyncMs: performance.now(),
+    flashMesh,
+    flashes: [],
+    prevProj: [],
+    prevProjTick: state.tick,
     vehHeadings: new Float32Array(state.vehicles.length),
     vehLastX: new Float64Array(state.vehicles.length),
     vehLastZ: new Float64Array(state.vehicles.length),
@@ -1634,6 +1810,85 @@ export function syncScene(
   }
   gs.projMesh.count = pcount;
   gs.projMesh.instanceMatrix.needsUpdate = true;
+
+  // muzzle/impact flashes are derived render-side by diffing the projectile
+  // list across syncs: updateProjectiles keeps survivor order stable and new
+  // shots append, so once the cursor passes all matched survivors every
+  // leftover prev entry died this window (impact) and every unmatched current
+  // entry was just fired (muzzle)
+  const dtTicks = state.tick - gs.prevProjTick;
+  if (dtTicks > 0) {
+    const addFlash = (f: Flash) => {
+      if (gs.flashes.length < FLASH_CAP) gs.flashes.push(f);
+    };
+    const impact = (q: ProjSnap) =>
+      addFlash({
+        x: fromFx(q.x) + fromFx(q.dx) * PROJ_SUBSTEPS * 0.5,
+        y: 1.1,
+        z: fromFx(q.z) + fromFx(q.dz) * PROJ_SUBSTEPS * 0.5,
+        age: 0,
+        dur: q.aoe > 0 ? 0.3 : 0.16,
+        size: q.aoe > 0 ? 1.9 : 0.55,
+        r: 1.6,
+        g: q.aoe > 0 ? 0.75 : 0.9,
+        b: 0.35,
+      });
+    let j = 0;
+    for (const p of state.projectiles) {
+      let matched = false;
+      while (j < gs.prevProj.length) {
+        const q = gs.prevProj[j]!;
+        j++;
+        if (q.ttl - dtTicks === p.ttl && q.dx === p.dx && q.dz === p.dz) {
+          matched = true;
+          break;
+        }
+        impact(q);
+      }
+      if (!matched)
+        addFlash({
+          x: fromFx(p.x) - fromFx(p.dx) * PROJ_SUBSTEPS,
+          y: 1.15,
+          z: fromFx(p.z) - fromFx(p.dz) * PROJ_SUBSTEPS,
+          age: 0,
+          dur: 0.09,
+          size: 0.34,
+          r: 1.7,
+          g: 1.25,
+          b: 0.55,
+        });
+    }
+    for (; j < gs.prevProj.length; j++) impact(gs.prevProj[j]!);
+    gs.prevProj = state.projectiles.map((p) => ({
+      x: p.x,
+      z: p.z,
+      dx: p.dx,
+      dz: p.dz,
+      ttl: p.ttl,
+      aoe: p.aoe,
+    }));
+    gs.prevProjTick = state.tick;
+  }
+  let fi = 0;
+  for (let k = 0; k < gs.flashes.length; k++) {
+    const f = gs.flashes[k]!;
+    f.age += dtSec;
+    if (f.age >= f.dur) continue;
+    gs.flashes[fi] = f;
+    const life = f.age / f.dur;
+    dummy.position.set(f.x, f.y, f.z);
+    dummy.scale.setScalar(f.size * (0.6 + life * 1.7));
+    dummy.updateMatrix();
+    gs.flashMesh.setMatrixAt(fi, dummy.matrix);
+    npcTint.setRGB(f.r, f.g, f.b).multiplyScalar(1 - life);
+    gs.flashMesh.setColorAt(fi, npcTint);
+    fi++;
+  }
+  gs.flashes.length = fi;
+  dummy.scale.set(1, 1, 1);
+  gs.flashMesh.count = fi;
+  gs.flashMesh.instanceMatrix.needsUpdate = true;
+  if (gs.flashMesh.instanceColor) gs.flashMesh.instanceColor.needsUpdate = true;
 
   const depColor = new Color();
   const depCounts = [0, 0, 0, 0, 0];

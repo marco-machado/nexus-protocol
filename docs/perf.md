@@ -17,6 +17,7 @@ Acceptance criterion (GDD section 10, roadmap M1): 60 fps with ~150 active NPCs 
 | MacBook, VAT crowd, headless Chrome | WebGPU | 411 | 120.0 | 108.7 | 0.16 | pass (display-capped) |
 | MacBook, VAT crowd, headless Chrome | WebGL fallback | 411 | 120.0 | 108.7 | 0.17 | pass (display-capped) |
 | MacBook, VAT crowd, rain, alarm RED | WebGPU | 175 | 120.0 | 107.5 | 0.17 | pass (display-capped) |
+| MacBook, skyline ring + sign spill + combat flashes | WebGPU | 170 | 160.0 | 147.1 | 0.13 | pass (display-capped) |
 | Mid-range Windows laptop (iGPU) | both | | | | | pending manual run |
 
 Measured 2026-07-04 during alarm level RED with active combat. fps is capped by the display refresh rate (ProMotion 160 Hz); the 1% low staying above 140 and the sim costing well under the 50 ms tick budget indicate large headroom.
@@ -31,3 +32,4 @@ The VAT crowd rows were measured 2026-07-05 after the Phase D skeletal-crowd pas
 
 - The crowd renders through the VAT pipeline in `src/render/crowd.ts` (near tier: GPU-sampled skeletal animation; far tier: static-pose instances), both capped at `NPC_CAP = 400`.
 - The effects rows were measured after the Phase A visual pass (TSL bloom pipeline, rain LineSegments, neon strips, fog) with both toggles on. If a weaker machine misses 60 fps, both effects can be disabled in SETTINGS.
+- The skyline-ring row was measured after the premium graphics pass added the out-of-bounds skyline (two instanced tower rings + lit crowns), additive neon sign-spill discs (night/dusk only), and the render-side muzzle/impact flash pool. Draw calls stayed ~15/frame and per-frame triangles ~158k; the added geometry is three instanced meshes plus one pooled flash mesh, so it does not scale with NPC count.
