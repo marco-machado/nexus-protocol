@@ -172,7 +172,7 @@ Use monospace for the live game UI. The current implementation uses `Menlo` and 
 
 - **Display:** Large menu wordmarks such as `NEXUS PROTOCOL`; all caps, wide tracking, high contrast.
 - **Title:** Screen titles such as `GLOBAL OPERATIONS`, `SQUAD PROVISIONING`, and `OPERATOR SETTINGS`; compact, all caps, tracked.
-- **Section Label:** Small all-caps headings for `R&D ALLOCATION`, `ARMORY`, `AUGMENTATION`, and settings groups.
+- **Section Label:** Small all-caps headings for `R&D`, `ARMORY`, `AUGMENTATION`, and settings groups.
 - **Body:** Dense numeric operations copy, card content, HUD values, labels, and control rows.
 - **Log:** Terminal-like event streams prefixed with `>`; slightly smaller and bluer than body copy.
 - **Micro:** Fine print, legal satire, disabled details, key hints, and footer help.
@@ -185,7 +185,7 @@ The live UI is a full-screen canvas with HUD overlays plus modal operational scr
 
 - Use `12px` for the default card/panel internal rhythm and `16px` for column gaps.
 - Screen panels should cap around `860px` wide with `92%` width and `92vh` max-height, matching the current modal screens.
-- World-map content uses a two-column territory grid; equipment screens use two equal columns.
+- World-map content uses a single district stage (the interactive territory block layout) below the region tabs; equipment screens use two equal columns.
 - HUD elements anchor to corners: mission status top-left, agent cards bottom-left, minimap bottom-right, performance overlay top-right, comms ticker centered above agent cards.
 - Important state is shown through border position as much as fill: top cyan border for panels, left green border for owned territory, red border for siege, cyan border for selected agents/cards.
 

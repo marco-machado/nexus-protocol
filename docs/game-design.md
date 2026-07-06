@@ -18,7 +18,7 @@ Tone: rain-soaked neon dystopia. Brutalist megastructures, holographic advertisi
 ---
 ## 3. Core Gameplay Loop
 ```
-World Map → Select Territory → Brief & Equip Squad → Real-Time Mission
+Global Operations → Select Territory → Brief & Equip Squad → Real-Time Mission
 → Debrief (loot, cash, intel) → Research & Augment → Tax Territories → Repeat
 ```
 A full loop iteration targets 10–15 minutes, suited to browser sessions.
@@ -29,7 +29,7 @@ A full loop iteration targets 10–15 minutes, suited to browser sessions.
 - Agents can be controlled as a group or individually; box-select and control-group hotkeys (RTS conventions).
 - **Click-to-move, click-to-target.** Agents auto-engage hostiles within their aggression setting.
 - No direct character control — the player is the handler, never the agent. This preserves the original's detached, voyeuristic feel.
-### 4.2 The Adrenaline System (modernized IPA bars)
+### 4.2 The Stim System (modernized IPA bars)
 Each agent has three real-time chemical sliders, replacing the original's Intelligence/Perception/Adrenaline drug model:
 | Slider | Boosts | Cost |
 |---|---|---|
@@ -77,17 +77,18 @@ Each mission map is a living district (~2–4 city blocks):
 | Type | Objective | Twist |
 |---|---|---|
 | Assassination | Eliminate marked target(s) | Targets flee, call reinforcements, or have body doubles |
-| Persuasion | Extract a VIP alive via Persuadertron | Combat optional; alarm makes the VIP run |
-| Raid | Destroy or steal an asset | Timed demolition, escort the stolen prototype |
-| Purge | Eliminate all enemy agents in district | Enemy squads use the same systems the player does |
+| Acquisition (Persuade) | Extract a VIP alive via Persuadertron | Combat optional; alarm makes the VIP run |
+| Asset Raid | Destroy or steal an asset | Timed demolition, escort the stolen prototype |
+| Squad Purge | Eliminate all enemy agents in district | Enemy squads use the same systems the player does |
 | Defense | Hold a Nexus asset against waves | Pre-mission turret/trap placement budget |
-| Heist (new) | Multi-stage infiltration | Disable power, persuade staff, crack vault, exfiltrate |
+| Vault Heist | Multi-stage infiltration | Disable power, persuade staff, crack vault, exfiltrate |
+| HQ Assault | Purge the arcology garrison and destroy the HQ core | Endgame siege on a rival syndicate's seat of power |
 Every mission supports multiple approaches: loud assault, Persuadertron swarm, stealth-and-cloak, or vehicle-borne hit-and-run.
 ---
 ## 6. Progression & Meta Game
-### 6.1 World Map
-A stylized globe divided into **40 territories** across 8 regions (faithful to the original's scope). Each territory:
-- Is owned by Nexus or one of three rival AI syndicates with distinct doctrines (brute force / stealth tech / persuasion swarms).
+### 6.1 Global Operations (World Map)
+A stylized globe divided into **40 territories** across 8 regions (faithful to the original's scope): Home Arc, Grey Harbor, Ironfield Sprawl, Meridian Flats, Neon Basin, Spire District, Cordon Belt, and Arcology Core. Each territory:
+- Is owned by Nexus or one of three rival AI syndicates with distinct doctrines: **Helios Combine** (brute force), **Mirage Dynamics** (stealth tech), and **Chorus Collective** (persuasion swarms).
 - Generates **daily income in real time** (browser-friendly idle hook: income accrues while logged out, capped at 24h).
 - Has a **Tax Rate slider**: higher taxes mean more income but rising Unrest. Unrest above threshold spawns a Rebellion mission; ignore it and the territory flips to neutral.
 ### 6.2 Research
@@ -155,7 +156,7 @@ Full remapping; gamepad support via browser Gamepad API. Touch layout for tablet
 ---
 ## 12. Scope Summary (MVP vs Full)
 **MVP (vertical slice):** 1 region (5 territories), tiers 1–2 gear, Persuadertron, assassination + persuasion + raid missions, single-player only.
-**Full release:** 40 territories, all 6 mission types, full augment/research trees, co-op, async PvP, New Game+.
+**Full release:** 40 territories, all 7 mission types (incl. HQ assault), full augment/research trees, co-op, async PvP, New Game+.
 ---
 ## 13. Risks & Mitigations
 | Risk | Mitigation |
