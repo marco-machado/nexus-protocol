@@ -1,6 +1,8 @@
 import {
   BoxGeometry,
+  type BufferGeometry,
   Color,
+  CylinderGeometry,
   DataTexture,
   DynamicDrawUsage,
   FloatType,
@@ -46,15 +48,15 @@ import { SCENE_COLORS } from './palette';
 
 export const NPC_CAP = 400;
 
-const FRAMES = 16;
-const CLIP_IDLE = 0;
-const CLIP_WALK = 1;
-const CLIP_RUN = 2;
-const CLIP_PERSUADED = 3;
+export const FRAMES = 16;
+export const CLIP_IDLE = 0;
+export const CLIP_WALK = 1;
+export const CLIP_RUN = 2;
+export const CLIP_PERSUADED = 3;
 
 // stride = animation frames per world unit travelled (locomotion clips sync feet
 // to actual displacement, so every NPC speed reuses the same clip); 0 = fps-driven
-const CLIPS = [
+export const CLIPS = [
   { base: 0, fps: 6, stride: 0 },
   { base: 16, fps: 0, stride: 18 },
   { base: 32, fps: 0, stride: 11.5 },
@@ -62,60 +64,106 @@ const CLIPS = [
 ] as const;
 const TEX_H = FRAMES * CLIPS.length;
 
-interface Joints {
+export interface Joints {
   root: Object3D;
   torso: Mesh;
   head: Mesh;
   armL: Mesh;
   armR: Mesh;
+  forearmL: Mesh;
+  forearmR: Mesh;
   thighL: Mesh;
   thighR: Mesh;
   shinL: Mesh;
   shinR: Mesh;
 }
 
-function buildRig(): { segs: Mesh[]; joints: Joints } {
+const box = (w: number, h: number, d: number, y: number, z = 0): BufferGeometry =>
+  new BoxGeometry(w, h, d).translate(0, y, z);
+
+export function buildRig(): { segs: Mesh[]; joints: Joints } {
   const root = new Object3D();
   const segs: Mesh[] = [];
-  const seg = (
-    parent: Object3D,
-    px: number,
-    py: number,
-    w: number,
-    h: number,
-    d: number,
-    oy: number,
-  ): Mesh => {
-    const geo = new BoxGeometry(w, h, d);
-    geo.translate(0, oy, 0);
-    const m = new Mesh(geo);
+  // pivots sit at the joints; the merged part geometry hangs off them so
+  // rotations articulate limbs (the VAT bake iterates each seg's vertices,
+  // so multi-box segments bake exactly like single boxes)
+  const seg = (parent: Object3D, px: number, py: number, geos: BufferGeometry[]): Mesh => {
+    const m = new Mesh(geos.length === 1 ? geos[0]! : mergeGeometries(geos));
     m.position.set(px, py, 0);
     parent.add(m);
     segs.push(m);
     return m;
   };
-  // pivots sit at the joints; boxes hang off them so rotations articulate limbs
-  const pelvis = seg(root, 0, 0.82, 0.36, 0.16, 0.2, 0.08);
-  const torso = seg(pelvis, 0, 0.16, 0.4, 0.42, 0.22, 0.21);
-  const head = seg(torso, 0, 0.44, 0.2, 0.2, 0.2, 0.09);
-  const armL = seg(torso, 0.25, 0.36, 0.1, 0.46, 0.12, -0.23);
-  const armR = seg(torso, -0.25, 0.36, 0.1, 0.46, 0.12, -0.23);
-  const thighL = seg(root, 0.11, 0.82, 0.14, 0.42, 0.16, -0.21);
-  const thighR = seg(root, -0.11, 0.82, 0.14, 0.42, 0.16, -0.21);
-  const shinL = seg(thighL, 0, -0.42, 0.12, 0.4, 0.14, -0.2);
-  const shinR = seg(thighR, 0, -0.42, 0.12, 0.4, 0.14, -0.2);
-  return { segs, joints: { root, torso, head, armL, armR, thighL, thighR, shinL, shinR } };
+  const pelvis = seg(root, 0, 0.82, [
+    box(0.36, 0.14, 0.2, 0.09),
+    box(0.38, 0.05, 0.22, 0.015),
+  ]);
+  const torso = seg(pelvis, 0, 0.16, [
+    box(0.34, 0.16, 0.2, 0.08),
+    box(0.42, 0.26, 0.24, 0.29),
+    box(0.24, 0.06, 0.2, 0.45),
+  ]);
+  const head = seg(torso, 0, 0.44, [
+    new CylinderGeometry(0.05, 0.06, 0.09, 8).translate(0, 0.02, 0),
+    box(0.2, 0.18, 0.2, 0.15),
+    box(0.22, 0.06, 0.21, 0.22, 0.01),
+  ]);
+  const arm = (side: number): Mesh =>
+    seg(torso, side * 0.25, 0.36, [
+      box(0.14, 0.08, 0.14, 0.02),
+      box(0.1, 0.24, 0.12, -0.12),
+    ]);
+  const armL = arm(1);
+  const armR = arm(-1);
+  const forearm = (parent: Mesh): Mesh =>
+    seg(parent, 0, -0.24, [
+      box(0.09, 0.24, 0.1, -0.12),
+      box(0.1, 0.09, 0.1, -0.27, 0.01),
+    ]);
+  const forearmL = forearm(armL);
+  const forearmR = forearm(armR);
+  const thigh = (side: number): Mesh =>
+    seg(root, side * 0.11, 0.82, [
+      box(0.14, 0.42, 0.16, -0.21),
+      box(0.13, 0.07, 0.08, -0.4, 0.05),
+    ]);
+  const thighL = thigh(1);
+  const thighR = thigh(-1);
+  const shin = (parent: Mesh): Mesh =>
+    seg(parent, 0, -0.42, [
+      box(0.12, 0.4, 0.14, -0.2),
+      box(0.13, 0.08, 0.22, -0.36, 0.04),
+    ]);
+  const shinL = shin(thighL);
+  const shinR = shin(thighR);
+  return {
+    segs,
+    joints: { root, torso, head, armL, armR, forearmL, forearmR, thighL, thighR, shinL, shinR },
+  };
 }
 
-function pose(j: Joints, clip: number, t: number): void {
+export function pose(j: Joints, clip: number, t: number): void {
   const ph = t * Math.PI * 2;
-  for (const m of [j.torso, j.head, j.armL, j.armR, j.thighL, j.thighR, j.shinL, j.shinR])
-    m.rotation.set(0, 0, 0);
+  const parts = [
+    j.torso,
+    j.head,
+    j.armL,
+    j.armR,
+    j.forearmL,
+    j.forearmR,
+    j.thighL,
+    j.thighR,
+    j.shinL,
+    j.shinR,
+  ];
+  for (const m of parts) m.rotation.set(0, 0, 0);
   j.root.position.y = 0;
   if (clip === CLIP_IDLE) {
     j.torso.rotation.x = 0.02 + Math.sin(ph) * 0.02;
     j.armL.rotation.z = 0.06 + Math.sin(ph) * 0.02;
     j.armR.rotation.z = -0.06 - Math.sin(ph) * 0.02;
+    j.forearmL.rotation.x = -0.25;
+    j.forearmR.rotation.x = -0.25;
     j.head.rotation.x = Math.sin(ph + 1) * 0.03;
     return;
   }
@@ -128,12 +176,17 @@ function pose(j: Joints, clip: number, t: number): void {
   j.shinR.rotation.x = Math.max(0, Math.sin(ph + Math.PI + 2.4)) * (run ? 1.1 : 0.7);
   j.root.position.y = Math.abs(Math.sin(ph)) * (run ? 0.06 : 0.04);
   if (clip === CLIP_PERSUADED) {
-    j.armL.rotation.x = -1.35 + Math.sin(ph) * 0.08;
-    j.armR.rotation.x = -1.35 - Math.sin(ph) * 0.08;
+    j.armL.rotation.x = -0.95 + Math.sin(ph) * 0.06;
+    j.armR.rotation.x = -0.95 - Math.sin(ph) * 0.06;
+    j.forearmL.rotation.x = -1.2;
+    j.forearmR.rotation.x = -1.2;
     j.head.rotation.x = 0.12;
   } else {
     j.armL.rotation.x = -swing * 0.8;
     j.armR.rotation.x = swing * 0.8;
+    // elbows stay bent and pump on the forward half of each swing
+    j.forearmL.rotation.x = -0.4 - Math.max(0, swing) * 0.5;
+    j.forearmR.rotation.x = -0.4 - Math.max(0, -swing) * 0.5;
     if (run) j.torso.rotation.x = 0.3;
   }
 }
@@ -268,10 +321,15 @@ export function createCrowd(scene: Scene): Crowd {
   // instanceMatrix says nothing about where instances are: cull manually never
   nearMesh.frustumCulled = false;
   nearMesh.count = 0;
+  // the node material's depth variant reuses positionNode, so VAT-posed
+  // instances cast correctly; if a backend regresses, flip this off first
+  nearMesh.castShadow = true;
+  nearMesh.receiveShadow = true;
   const farMesh = new InstancedMesh(geometry, new MeshLambertMaterial(), NPC_CAP);
   farMesh.instanceMatrix.setUsage(DynamicDrawUsage);
   farMesh.frustumCulled = false;
   farMesh.count = 0;
+  farMesh.receiveShadow = true;
   // instanceColor must exist before the node material first compiles
   for (let i = 0; i < NPC_CAP; i++) {
     nearMesh.setColorAt(i, SCENE_COLORS.civ);
