@@ -1,5 +1,6 @@
 import {
   AdditiveBlending,
+  Box3,
   BoxGeometry,
   BufferAttribute,
   type BufferGeometry,
@@ -21,15 +22,18 @@ import {
   MeshBasicMaterial,
   MeshLambertMaterial,
   MeshPhongMaterial,
+  MeshStandardMaterial,
   Object3D,
   PlaneGeometry,
   RingGeometry,
   Scene,
   Shape,
   SRGBColorSpace,
+  TorusGeometry,
   Vector2,
   Vector3,
 } from 'three';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { fromFx } from '../sim/fixed';
 import { BLOCK, MAP_W, STREET } from '../sim/map';
@@ -91,6 +95,9 @@ export interface GameScene {
   smokeMesh: InstancedMesh;
   carMesh: InstancedMesh;
   carLightsMesh: InstancedMesh;
+  carVariantMeshes: InstancedMesh[];
+  carVariantLights: InstancedMesh[];
+  carModelRoots: Object3D[];
   tramMesh: InstancedMesh;
   tramLightsMesh: InstancedMesh;
   fuelMeshes: Map<number, Mesh>;
@@ -117,6 +124,51 @@ export interface GameScene {
   exfil: Mesh;
   beacon: Mesh;
   beaconRing: Mesh;
+}
+
+function geometryTriangles(geo: BufferGeometry): number {
+  return geo.index ? geo.index.count / 3 : geo.attributes.position!.count / 3;
+}
+
+export function vehicleRenderDiagnostics(gs: GameScene): Record<string, number> {
+  const carTriangles = gs.carVariantMeshes.reduce((sum, m) => sum + geometryTriangles(m.geometry), 0);
+  const carInstances = gs.carVariantMeshes.reduce((sum, m) => sum + m.count, 0);
+  const firstFuel = gs.fuelMeshes.values().next().value as Mesh | undefined;
+  const generatedCarInstances = gs.carModelRoots.filter((r) => r.visible && r.userData.generatedCarReady).length;
+  const generatedCarFit = gs.carModelRoots.find((r) => r.userData.generatedCarFit)?.userData.generatedCarFit as
+    | {
+        scale?: number;
+        yaw?: number;
+        lightVariant?: number;
+        textured?: number;
+        sourceLength?: number;
+        sourceWidth?: number;
+        sourceHeight?: number;
+      }
+    | undefined;
+  return {
+    carVariants: gs.carVariantMeshes.length,
+    carInstances,
+    carVariantTriangles: Math.round(carTriangles),
+    generatedCarInstances,
+    generatedCarReady: generatedCarInstances > 0 ? 1 : 0,
+    generatedCarScale: generatedCarFit?.scale ? Math.round(generatedCarFit.scale * 1000) / 1000 : 0,
+    generatedCarYawDeg: generatedCarFit?.yaw ? Math.round((generatedCarFit.yaw * 180) / Math.PI) : 0,
+    generatedCarLightVariant: generatedCarFit?.lightVariant ?? -1,
+    generatedCarTextured: generatedCarFit?.textured ?? 0,
+    generatedCarSourceLength: generatedCarFit?.sourceLength
+      ? Math.round(generatedCarFit.sourceLength * 1000) / 1000
+      : 0,
+    generatedCarSourceWidth: generatedCarFit?.sourceWidth ? Math.round(generatedCarFit.sourceWidth * 1000) / 1000 : 0,
+    generatedCarSourceHeight: generatedCarFit?.sourceHeight
+      ? Math.round(generatedCarFit.sourceHeight * 1000) / 1000
+      : 0,
+    carLightDraws: gs.carVariantLights.length,
+    tramInstances: gs.tramMesh.count,
+    tramTriangles: Math.round(geometryTriangles(gs.tramMesh.geometry)),
+    fuelPumps: gs.fuelMeshes.size,
+    fuelPumpTriangles: Math.round(firstFuel ? geometryTriangles(firstFuel.geometry) : 0),
+  };
 }
 
 // index = tod (day, dusk, night); night keeps the original hardcoded look.
@@ -157,27 +209,121 @@ function tinted(geo: BufferGeometry, hex: number): BufferGeometry {
 // person-heights long, not one; hitboxes and traffic logic are unaffected
 const CAR_SCALE = 1.45;
 const TRAM_SCALE = 1.5;
+const GENERATED_CAR_URL = '/models/cyberpunk-security-car.glb';
+const GENERATED_CAR_LENGTH = 2.9;
+const GENERATED_CAR_YAW = -Math.PI / 2;
+const GENERATED_CAR_LIGHT_VARIANT = 0;
 
-function buildCarGeometry(): BufferGeometry {
+function carVariant(id: number): number {
+  return ((id * 1103515245 + 12345) >>> 29) % 3;
+}
+
+function buildGeneratedCarTexture(): CanvasTexture {
+  const canvas = document.createElement('canvas');
+  canvas.width = 512;
+  canvas.height = 512;
+  const ctx = canvas.getContext('2d')!;
+  const body = ctx.createLinearGradient(0, 0, 512, 512);
+  body.addColorStop(0, '#9badc4');
+  body.addColorStop(0.45, '#627894');
+  body.addColorStop(1, '#263849');
+  ctx.fillStyle = body;
+  ctx.fillRect(0, 0, 512, 512);
+
+  ctx.fillStyle = 'rgba(11,16,24,0.38)';
+  for (let y = 38; y < 512; y += 64) ctx.fillRect(28, y, 456, 2);
+  for (let x = 44; x < 512; x += 72) ctx.fillRect(x, 28, 2, 456);
+
+  ctx.strokeStyle = 'rgba(210,225,245,0.32)';
+  ctx.lineWidth = 3;
+  for (const y of [116, 248, 382]) {
+    ctx.strokeRect(78, y, 356, 44);
+  }
+
+  ctx.fillStyle = 'rgba(5,10,18,0.45)';
+  ctx.fillRect(72, 224, 368, 18);
+  ctx.fillRect(88, 270, 330, 10);
+  ctx.fillRect(112, 316, 280, 8);
+
+  ctx.fillStyle = 'rgba(0,229,255,0.78)';
+  ctx.fillRect(216, 64, 80, 14);
+  ctx.fillRect(232, 88, 48, 8);
+  ctx.fillRect(220, 420, 72, 10);
+
+  ctx.fillStyle = 'rgba(255,159,28,0.78)';
+  for (let x = 84; x < 190; x += 24) ctx.fillRect(x, 38, 10, 24);
+  for (let x = 328; x < 434; x += 24) ctx.fillRect(x, 450, 10, 24);
+
+  ctx.fillStyle = 'rgba(255,255,255,0.08)';
+  for (let i = 0; i < 900; i++) {
+    const x = (i * 73) % 512;
+    const y = (i * 151) % 512;
+    ctx.fillRect(x, y, 1, 1);
+  }
+
+  const tex = new CanvasTexture(canvas);
+  tex.colorSpace = SRGBColorSpace;
+  tex.anisotropy = 8;
+  return tex;
+}
+
+function createGeneratedCarMaterial(): MeshStandardMaterial {
+  return new MeshStandardMaterial({
+    color: 0xc6d7ee,
+    map: buildGeneratedCarTexture(),
+    metalness: 0.55,
+    roughness: 0.42,
+    emissive: 0x06121f,
+    emissiveIntensity: 0.14,
+  });
+}
+
+function addGeneratedCarUvs(geo: BufferGeometry): void {
+  const pos = geo.attributes.position;
+  if (!pos || geo.attributes.uv) return;
+  geo.computeBoundingBox();
+  const box = geo.boundingBox;
+  if (!box) return;
+  const sx = Math.max(0.001, box.max.x - box.min.x);
+  const sz = Math.max(0.001, box.max.z - box.min.z);
+  const uv = new Float32Array(pos.count * 2);
+  for (let i = 0; i < pos.count; i++) {
+    uv[i * 2] = (pos.getX(i) - box.min.x) / sx;
+    uv[i * 2 + 1] = (pos.getZ(i) - box.min.z) / sz;
+  }
+  geo.setAttribute('uv', new BufferAttribute(uv, 2));
+}
+
+function buildCarGeometry(variant = 0): BufferGeometry {
   // ExtrudeGeometry is non-indexed, so every part is de-indexed before merging
   const nx = (geo: BufferGeometry): BufferGeometry => (geo.index ? geo.toNonIndexed() : geo);
   const wheel = (x: number, z: number): BufferGeometry[] => [
     tinted(nx(new CylinderGeometry(0.15, 0.15, 0.12, 12).rotateZ(Math.PI / 2).translate(x, 0.15, z)), TIRE),
     tinted(nx(new CylinderGeometry(0.07, 0.07, 0.02, 8).rotateZ(Math.PI / 2).translate(x * 1.18, 0.15, z)), 0x6a7280),
     tinted(nx(new BoxGeometry(0.1, 0.2, 0.42).translate(x * 1.1, 0.3, z)), 0x1a1e26),
+    tinted(nx(new TorusGeometry(0.16, 0.018, 6, 14).rotateY(Math.PI / 2).translate(x * 1.04, 0.15, z)), 0x8792a3),
   ];
+  const armored = variant === 1;
+  const courier = variant === 2;
+  const length = armored ? 1.95 : courier ? 1.62 : 1.74;
+  const width = armored ? 0.92 : courier ? 0.72 : 0.84;
+  const roofH = armored ? 0.76 : courier ? 0.62 : 0.58;
+  const mirrorX = width * 0.64;
+  const sideX = width * 0.58;
+  const frontZ = length * 0.54;
+  const rearZ = -length * 0.54;
   // beveled side-profile body (front = +z after the rotate) reads rounded
   // where a plain box reads slab-sided
   const profile = new Shape();
-  profile.moveTo(0.84, 0.18);
-  profile.lineTo(0.84, 0.38);
-  profile.lineTo(0.55, 0.46);
-  profile.lineTo(-0.6, 0.5);
-  profile.lineTo(-0.84, 0.46);
-  profile.lineTo(-0.84, 0.18);
+  profile.moveTo(width, 0.18);
+  profile.lineTo(width, armored ? 0.46 : 0.38);
+  profile.lineTo(width * 0.66, courier ? 0.42 : 0.48);
+  profile.lineTo(-width * 0.72, armored ? 0.58 : 0.5);
+  profile.lineTo(-width, armored ? 0.5 : 0.46);
+  profile.lineTo(-width, 0.18);
   profile.closePath();
   const body = new ExtrudeGeometry(profile, {
-    depth: 0.68,
+    depth: length * 0.42,
     bevelEnabled: true,
     bevelThickness: 0.03,
     bevelSize: 0.03,
@@ -185,28 +331,117 @@ function buildCarGeometry(): BufferGeometry {
   })
     .rotateY(-Math.PI / 2)
     .translate(0.34, 0, 0);
-  return mergeGeometries([
+  const parts = [
     tinted(body, 0xffffff),
-    tinted(nx(new BoxGeometry(0.66, 0.2, 0.8).translate(0, 0.58, -0.12)), GLASS),
-    tinted(nx(new BoxGeometry(0.58, 0.08, 0.68).translate(0, 0.71, -0.12)), 0xffffff),
-    tinted(nx(new BoxGeometry(0.78, 0.08, 1.5).translate(0, 0.16, 0)), 0x1a1e26),
-    tinted(nx(new BoxGeometry(0.8, 0.1, 0.1).translate(0, 0.24, 0.88)), 0x2a2f38),
-    tinted(nx(new BoxGeometry(0.8, 0.1, 0.1).translate(0, 0.24, -0.88)), 0x2a2f38),
-    tinted(nx(new BoxGeometry(0.05, 0.05, 0.08).translate(0.44, 0.52, 0.25)), GLASS),
-    tinted(nx(new BoxGeometry(0.05, 0.05, 0.08).translate(-0.44, 0.52, 0.25)), GLASS),
-    ...wheel(0.38, 0.52),
-    ...wheel(-0.38, 0.52),
-    ...wheel(0.38, -0.52),
-    ...wheel(-0.38, -0.52),
-  ]).scale(CAR_SCALE, CAR_SCALE, CAR_SCALE);
+    tinted(nx(new BoxGeometry(width * 0.78, 0.2, courier ? 0.68 : 0.8).translate(0, roofH, armored ? -0.22 : -0.12)), GLASS),
+    tinted(nx(new BoxGeometry(width * 0.7, 0.08, courier ? 0.58 : 0.68).translate(0, roofH + 0.13, armored ? -0.22 : -0.12)), 0xffffff),
+    tinted(nx(new BoxGeometry(width * 0.96, 0.08, length * 0.86).translate(0, 0.16, 0)), 0x1a1e26),
+    tinted(nx(new BoxGeometry(width * 0.9, 0.1, 0.1).translate(0, 0.24, length * 0.52)), 0x2a2f38),
+    tinted(nx(new BoxGeometry(width * 0.9, 0.1, 0.1).translate(0, 0.24, -length * 0.52)), 0x2a2f38),
+    tinted(nx(new BoxGeometry(width * 0.08, 0.05, 0.08).translate(width * 0.54, 0.52, 0.25)), GLASS),
+    tinted(nx(new BoxGeometry(width * 0.08, 0.05, 0.08).translate(-width * 0.54, 0.52, 0.25)), GLASS),
+    tinted(nx(new BoxGeometry(width * 0.08, 0.03, length * 0.7).translate(width * 0.52, 0.49, -0.04)), 0xdfe4ec),
+    tinted(nx(new BoxGeometry(width * 0.08, 0.03, length * 0.7).translate(-width * 0.52, 0.49, -0.04)), 0xdfe4ec),
+    tinted(nx(new BoxGeometry(width * 0.62, 0.025, 0.05).translate(0, 0.53, length * 0.22)), 0x0b0d12),
+    tinted(nx(new BoxGeometry(width * 0.62, 0.025, 0.05).translate(0, 0.53, -length * 0.26)), 0x0b0d12),
+    tinted(nx(new BoxGeometry(width * 0.52, 0.03, 0.34).translate(0, 0.55, frontZ - 0.18)), 0x172030),
+    tinted(nx(new BoxGeometry(width * 0.32, 0.035, 0.28).translate(0, 0.57, rearZ + 0.2)), 0x0f1724),
+    tinted(nx(new BoxGeometry(0.035, 0.1, length * 0.42).translate(sideX, 0.36, 0)), 0x0a0d14),
+    tinted(nx(new BoxGeometry(0.035, 0.1, length * 0.42).translate(-sideX, 0.36, 0)), 0x0a0d14),
+    tinted(nx(new BoxGeometry(0.08, 0.035, 0.12).translate(mirrorX, 0.64, frontZ - 0.42)), 0x0b0d12),
+    tinted(nx(new BoxGeometry(0.08, 0.035, 0.12).translate(-mirrorX, 0.64, frontZ - 0.42)), 0x0b0d12),
+    tinted(nx(new BoxGeometry(width * 0.82, 0.07, 0.08).translate(0, 0.26, frontZ + 0.03)), 0x0b0d12),
+    tinted(nx(new BoxGeometry(width * 0.82, 0.07, 0.08).translate(0, 0.27, rearZ - 0.03)), 0x0b0d12),
+    tinted(nx(new CylinderGeometry(0.025, 0.025, width * 0.98, 8).rotateZ(Math.PI / 2).translate(0, 0.21, length * 0.31)), 0x1f2937),
+    tinted(nx(new CylinderGeometry(0.025, 0.025, width * 0.98, 8).rotateZ(Math.PI / 2).translate(0, 0.21, -length * 0.31)), 0x1f2937),
+    tinted(nx(new BoxGeometry(0.12, 0.02, 0.04).translate(width * 0.22, 0.58, frontZ - 0.28)), 0xff9f1c),
+    tinted(nx(new BoxGeometry(0.12, 0.02, 0.04).translate(-width * 0.22, 0.58, frontZ - 0.28)), 0xff9f1c),
+    tinted(nx(new BoxGeometry(0.06, 0.02, 0.18).translate(width * 0.5, 0.52, frontZ - 0.2)), 0xff5533),
+    tinted(nx(new BoxGeometry(0.06, 0.02, 0.18).translate(-width * 0.5, 0.52, frontZ - 0.2)), 0xff5533),
+    tinted(nx(new CylinderGeometry(0.018, 0.018, 0.34, 6).translate(0.18, roofH + 0.36, rearZ + 0.28)), 0x0b0d12),
+    tinted(nx(new ConeGeometry(0.04, 0.1, 6).translate(0.18, roofH + 0.58, rearZ + 0.28)), 0x00e5ff),
+    ...wheel(width * 0.45, length * 0.3),
+    ...wheel(-width * 0.45, length * 0.3),
+    ...wheel(width * 0.45, -length * 0.3),
+    ...wheel(-width * 0.45, -length * 0.3),
+  ];
+  if (armored) {
+    parts.push(
+      tinted(nx(new BoxGeometry(0.62, 0.12, 0.24).translate(0, 0.86, -0.78)), 0x1b2532),
+      tinted(nx(new BoxGeometry(0.12, 0.08, 0.46).translate(0.54, 0.52, 0.42)), 0x111720),
+      tinted(nx(new BoxGeometry(0.12, 0.08, 0.46).translate(-0.54, 0.52, 0.42)), 0x111720),
+      tinted(nx(new BoxGeometry(0.82, 0.04, 0.08).translate(0, 0.72, 0.5)), 0xffb23a),
+      tinted(nx(new BoxGeometry(0.82, 0.04, 0.08).translate(0, 0.72, -0.55)), 0xffb23a),
+      tinted(nx(new BoxGeometry(0.18, 0.16, 0.2).translate(0.58, 0.32, 0.72)), 0x202a38),
+      tinted(nx(new BoxGeometry(0.18, 0.16, 0.2).translate(-0.58, 0.32, 0.72)), 0x202a38),
+      tinted(nx(new BoxGeometry(0.18, 0.16, 0.2).translate(0.58, 0.32, -0.72)), 0x202a38),
+      tinted(nx(new BoxGeometry(0.18, 0.16, 0.2).translate(-0.58, 0.32, -0.72)), 0x202a38),
+      tinted(nx(new BoxGeometry(0.16, 0.035, 0.56).translate(0, 0.95, -0.78)), 0x0b0d12),
+      tinted(nx(new BoxGeometry(0.7, 0.03, 0.08).translate(0, 0.93, -0.94)), 0xff5533),
+    );
+  } else if (courier) {
+    parts.push(
+      tinted(nx(new BoxGeometry(0.08, 0.18, 0.48).translate(0.42, 0.5, -0.55)), 0x10141c),
+      tinted(nx(new BoxGeometry(0.08, 0.18, 0.48).translate(-0.42, 0.5, -0.55)), 0x10141c),
+      tinted(nx(new BoxGeometry(0.18, 0.05, 0.55).translate(0, 0.82, -0.28)), 0x00e5ff),
+      tinted(nx(new BoxGeometry(0.46, 0.025, 0.09).translate(0, 0.5, 0.42)), 0xff5533),
+      tinted(nx(new BoxGeometry(0.1, 0.05, 0.7).translate(0.48, 0.32, -0.15)), 0x00e5ff),
+      tinted(nx(new BoxGeometry(0.1, 0.05, 0.7).translate(-0.48, 0.32, -0.15)), 0x00e5ff),
+      tinted(nx(new BoxGeometry(0.32, 0.025, 0.16).translate(0, 0.57, frontZ - 0.14)), 0xfacc15),
+      tinted(nx(new BoxGeometry(0.5, 0.03, 0.05).translate(0, 0.74, rearZ + 0.2)), 0xff2fd6),
+    );
+  } else {
+    parts.push(
+      tinted(nx(new BoxGeometry(0.52, 0.035, 0.55).translate(0, 0.82, -0.16)), 0x10141c),
+      tinted(nx(new BoxGeometry(0.2, 0.05, 0.3).translate(0, 0.5, 0.62)), 0xdfe4ec),
+      tinted(nx(new BoxGeometry(0.08, 0.12, 0.55).translate(0.5, 0.38, -0.2)), 0x0b0d12),
+      tinted(nx(new BoxGeometry(0.08, 0.12, 0.55).translate(-0.5, 0.38, -0.2)), 0x0b0d12),
+      tinted(nx(new BoxGeometry(0.12, 0.035, 0.52).translate(0.46, 0.33, 0.12)), 0x00e5ff),
+      tinted(nx(new BoxGeometry(0.12, 0.035, 0.52).translate(-0.46, 0.33, 0.12)), 0x00e5ff),
+      tinted(nx(new BoxGeometry(0.46, 0.025, 0.06).translate(0, 0.72, 0.2)), 0xff9f1c),
+      tinted(nx(new BoxGeometry(0.28, 0.025, 0.06).translate(0, 0.72, -0.52)), 0xff5533),
+    );
+  }
+  return mergeGeometries(parts).scale(CAR_SCALE, CAR_SCALE, CAR_SCALE);
 }
 
-function buildCarLightsGeometry(): BufferGeometry {
+function buildCarLightsGeometry(variant = 0): BufferGeometry {
+  const armored = variant === 1;
+  const courier = variant === 2;
+  const width = armored ? 0.92 : courier ? 0.72 : 0.84;
+  const length = armored ? 1.95 : courier ? 1.62 : 1.74;
+  const parts = [
+    tinted(new BoxGeometry(0.12, 0.05, 0.04).translate(width * 0.28, 0.38, length * 0.52), 0xfff2cc),
+    tinted(new BoxGeometry(0.12, 0.05, 0.04).translate(-width * 0.28, 0.38, length * 0.52), 0xfff2cc),
+    tinted(new BoxGeometry(0.24, 0.035, 0.025).translate(width * 0.28, 0.38, length * 0.58), 0xfff2cc),
+    tinted(new BoxGeometry(0.24, 0.035, 0.025).translate(-width * 0.28, 0.38, length * 0.58), 0xfff2cc),
+    tinted(new BoxGeometry(0.12, 0.04, 0.04).translate(width * 0.3, 0.44, -length * 0.52), 0xff2222),
+    tinted(new BoxGeometry(0.12, 0.04, 0.04).translate(-width * 0.3, 0.44, -length * 0.52), 0xff2222),
+    tinted(new BoxGeometry(0.32, 0.03, 0.025).translate(width * 0.28, 0.44, -length * 0.58), 0xff2222),
+    tinted(new BoxGeometry(0.32, 0.03, 0.025).translate(-width * 0.28, 0.44, -length * 0.58), 0xff2222),
+    tinted(new BoxGeometry(0.08, 0.035, 0.025).translate(width * 0.48, 0.5, length * 0.2), 0xff9f1c),
+    tinted(new BoxGeometry(0.08, 0.035, 0.025).translate(-width * 0.48, 0.5, length * 0.2), 0xff9f1c),
+  ];
+  if (armored) {
+    parts.push(tinted(new BoxGeometry(0.54, 0.035, 0.04).translate(0, 0.92, 0.42), 0xff9f1c));
+  } else if (courier) {
+    parts.push(tinted(new BoxGeometry(0.2, 0.04, 0.5).translate(0, 0.88, -0.3), 0x00e5ff));
+  } else {
+    parts.push(tinted(new BoxGeometry(0.5, 0.03, 0.03).translate(0, 0.8, -0.12), 0x00e5ff));
+  }
+  return mergeGeometries(parts).scale(CAR_SCALE, CAR_SCALE, CAR_SCALE);
+}
+
+function buildFuelPumpGeometry(): BufferGeometry {
   return mergeGeometries([
-    tinted(new BoxGeometry(0.12, 0.05, 0.04).translate(0.24, 0.38, 0.87), 0xfff2cc),
-    tinted(new BoxGeometry(0.12, 0.05, 0.04).translate(-0.24, 0.38, 0.87), 0xfff2cc),
-    tinted(new BoxGeometry(0.12, 0.04, 0.04).translate(0.26, 0.44, -0.87), 0xff2222),
-    tinted(new BoxGeometry(0.12, 0.04, 0.04).translate(-0.26, 0.44, -0.87), 0xff2222),
+    tinted(new BoxGeometry(0.78, 0.18, 0.78).translate(0, 0.09, 0), 0x14161a),
+    tinted(new BoxGeometry(0.62, 1.12, 0.52).translate(0, 0.72, 0), 0x8a4a12),
+    tinted(new BoxGeometry(0.5, 0.28, 0.08).translate(0, 1.02, 0.31), 0xfff2cc),
+    tinted(new BoxGeometry(0.48, 0.08, 0.1).translate(0, 0.78, 0.32), 0x10141c),
+    tinted(new BoxGeometry(0.48, 0.08, 0.1).translate(0, 0.58, 0.32), 0xff5533),
+    tinted(new CylinderGeometry(0.05, 0.05, 0.45, 10).rotateZ(Math.PI / 2).translate(0.42, 0.62, 0.02), 0x0b0d12),
+    tinted(new BoxGeometry(0.12, 0.34, 0.08).translate(0.5, 0.55, 0.24), 0x0b0d12),
+    tinted(new BoxGeometry(0.74, 0.04, 0.08).translate(0, 1.22, 0.31), 0xff9f1c),
   ]).scale(CAR_SCALE, CAR_SCALE, CAR_SCALE);
 }
 
@@ -240,6 +475,59 @@ function buildTramLightsGeometry(): BufferGeometry {
     tinted(new BoxGeometry(0.4, 0.12, 0.02).translate(0, 0.88, 1.39), 0x9ff3ff),
     tinted(new BoxGeometry(0.4, 0.12, 0.02).translate(0, 0.88, -1.39), 0x9ff3ff),
   ]).scale(TRAM_SCALE, TRAM_SCALE, TRAM_SCALE);
+}
+
+function loadGeneratedCarModel(scene: Scene, roots: Object3D[]): void {
+  const loader = new GLTFLoader();
+  loader.load(
+    GENERATED_CAR_URL,
+    (gltf) => {
+      const source = gltf.scene;
+      const generatedCarMaterial = createGeneratedCarMaterial();
+      const bounds = new Box3().setFromObject(source);
+      const size = new Vector3();
+      const center = new Vector3();
+      bounds.getSize(size);
+      bounds.getCenter(center);
+      source.position.set(-center.x, -bounds.min.y, -center.z);
+      const normalizer = new Object3D();
+      const scale = GENERATED_CAR_LENGTH / Math.max(0.001, size.x);
+      normalizer.rotation.y = GENERATED_CAR_YAW;
+      normalizer.scale.setScalar(scale);
+      normalizer.add(source);
+      normalizer.userData.generatedCarFit = {
+        scale,
+        yaw: GENERATED_CAR_YAW,
+        lightVariant: GENERATED_CAR_LIGHT_VARIANT,
+        textured: 1,
+        sourceLength: size.x,
+        sourceWidth: size.z,
+        sourceHeight: size.y,
+      };
+      normalizer.traverse((obj) => {
+        const mesh = obj as Mesh;
+        if (mesh.isMesh) {
+          addGeneratedCarUvs(mesh.geometry);
+          mesh.material = generatedCarMaterial;
+          mesh.geometry.computeVertexNormals();
+          mesh.castShadow = true;
+          mesh.receiveShadow = true;
+        }
+      });
+      for (const root of roots) {
+        const clone = normalizer.clone(true);
+        clone.visible = true;
+        root.add(clone);
+        root.userData.generatedCarReady = true;
+        root.userData.generatedCarFit = normalizer.userData.generatedCarFit;
+      }
+    },
+    undefined,
+    () => {
+      for (const root of roots) root.userData.generatedCarFailed = true;
+    },
+  );
+  for (const root of roots) scene.add(root);
 }
 
 function createAgentRig(scene: Scene): AgentRig {
@@ -361,6 +649,52 @@ function buildGroundTexture(state: SimState): CanvasTexture {
   canvas.height = px;
   const ctx = canvas.getContext('2d')!;
   const s = px / MAP_W;
+  if (state.map.visualTest) {
+    const roadMin = 34;
+    const roadMax = 62;
+    const roadOuter = roadMax + 2;
+    ctx.fillStyle = '#343a44';
+    ctx.fillRect(0, 0, px, px);
+    ctx.fillStyle = '#202631';
+    ctx.fillRect(roadMin * s, roadMin * s, (roadOuter - roadMin) * s, (roadOuter - roadMin) * s);
+    ctx.fillStyle = '#555f70';
+    ctx.fillRect(roadMin * s, roadMin * s, (roadOuter - roadMin) * s, 2 * s);
+    ctx.fillRect(roadMin * s, roadMax * s, (roadOuter - roadMin) * s, 2 * s);
+    ctx.fillRect(roadMin * s, roadMin * s, 2 * s, (roadOuter - roadMin) * s);
+    ctx.fillRect(roadMax * s, roadMin * s, 2 * s, (roadOuter - roadMin) * s);
+    ctx.strokeStyle = '#d8e4f5';
+    ctx.lineWidth = Math.max(1, s * 0.16);
+    ctx.setLineDash([s * 1.2, s * 1.2]);
+    ctx.beginPath();
+    ctx.moveTo((roadMin + 1) * s, (roadMin + 1) * s);
+    ctx.lineTo((roadMax + 1) * s, (roadMin + 1) * s);
+    ctx.lineTo((roadMax + 1) * s, (roadMax + 1) * s);
+    ctx.lineTo((roadMin + 1) * s, (roadMax + 1) * s);
+    ctx.closePath();
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.strokeStyle = '#8da2bd';
+    ctx.lineWidth = Math.max(1, s * 0.08);
+    for (const k of [roadMin, roadMin + 2, roadMax, roadOuter]) {
+      ctx.beginPath();
+      ctx.moveTo(roadMin * s, k * s);
+      ctx.lineTo(roadOuter * s, k * s);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(k * s, roadMin * s);
+      ctx.lineTo(k * s, roadOuter * s);
+      ctx.stroke();
+    }
+    ctx.fillStyle = '#475161';
+    ctx.fillRect(42 * s, 42 * s, 13 * s, 13 * s);
+    ctx.strokeStyle = '#00e5ff';
+    ctx.lineWidth = Math.max(1, s * 0.14);
+    ctx.strokeRect(42 * s, 42 * s, 13 * s, 13 * s);
+    const tex = new CanvasTexture(canvas);
+    tex.colorSpace = SRGBColorSpace;
+    tex.anisotropy = 8;
+    return tex;
+  }
   const next = seededNext({ rng: (state.mapSeed | 0) || 1 });
   // painted in luminance; the material color supplies the per-TOD tint
   ctx.fillStyle = '#b4b4b4';
@@ -751,33 +1085,47 @@ export function createGameScene(state: SimState, shadows = true): GameScene {
   scorchMesh.count = 0;
   scene.add(scorchMesh);
 
-  const carMesh = new InstancedMesh(
-    buildCarGeometry(),
-    new MeshLambertMaterial({ vertexColors: true }),
-    CAR_CAP,
-  );
-  carMesh.instanceMatrix.setUsage(DynamicDrawUsage);
-  // the geometry bounding sphere sits at the world origin, so culling would
-  // drop every moving car once the origin leaves the frustum
-  carMesh.frustumCulled = false;
-  carMesh.count = 0;
-  scene.add(carMesh);
+  const carVariantMeshes = [0, 1, 2].map((variant) => {
+    const mesh = new InstancedMesh(
+      buildCarGeometry(variant),
+      new MeshPhongMaterial({ vertexColors: true, shininess: 34, specular: 0x20252f }),
+      CAR_CAP,
+    );
+    mesh.instanceMatrix.setUsage(DynamicDrawUsage);
+    // the geometry bounding sphere sits at the world origin, so culling would
+    // drop every moving car once the origin leaves the frustum
+    mesh.frustumCulled = false;
+    mesh.count = 0;
+    scene.add(mesh);
+    return mesh;
+  });
+  const carMesh = carVariantMeshes[0]!;
 
   // head/taillights ride the same instance matrices as the body but glow
   // unlit; per-instance color dims them at day and kills them on wrecks
-  const carLightsMesh = new InstancedMesh(
-    buildCarLightsGeometry(),
-    new MeshBasicMaterial({ vertexColors: true }),
-    CAR_CAP,
-  );
-  carLightsMesh.instanceMatrix.setUsage(DynamicDrawUsage);
-  carLightsMesh.frustumCulled = false;
-  carLightsMesh.count = 0;
-  scene.add(carLightsMesh);
+  const carVariantLights = [0, 1, 2].map((variant) => {
+    const mesh = new InstancedMesh(
+      buildCarLightsGeometry(variant),
+      new MeshBasicMaterial({ vertexColors: true, blending: AdditiveBlending, transparent: true }),
+      CAR_CAP,
+    );
+    mesh.instanceMatrix.setUsage(DynamicDrawUsage);
+    mesh.frustumCulled = false;
+    mesh.count = 0;
+    scene.add(mesh);
+    return mesh;
+  });
+  const carLightsMesh = carVariantLights[0]!;
+  const carModelRoots = Array.from({ length: CAR_CAP }, () => {
+    const root = new Object3D();
+    root.visible = false;
+    return root;
+  });
+  loadGeneratedCarModel(scene, carModelRoots);
 
   const tramMesh = new InstancedMesh(
     buildTramGeometry(),
-    new MeshLambertMaterial({ vertexColors: true }),
+    new MeshPhongMaterial({ vertexColors: true, shininess: 28, specular: 0x1b2d2e }),
     2,
   );
   tramMesh.instanceMatrix.setUsage(DynamicDrawUsage);
@@ -799,10 +1147,16 @@ export function createGameScene(state: SimState, shadows = true): GameScene {
   state.vehicles.forEach((v, i) => {
     if (v.kind !== VEH_FUEL) return;
     const pump = new Mesh(
-      new BoxGeometry(0.8, 1.2, 0.8),
-      new MeshLambertMaterial({ color: 0x8a4a12, emissive: 0xff7a1c, emissiveIntensity: 0.5 }),
+      buildFuelPumpGeometry(),
+      new MeshPhongMaterial({
+        vertexColors: true,
+        emissive: 0xff7a1c,
+        emissiveIntensity: 0.35,
+        shininess: 32,
+        specular: 0x332010,
+      }),
     );
-    pump.position.set((v.cell % MAP_W) + 0.5, 0.6, ((v.cell / MAP_W) | 0) + 0.5);
+    pump.position.set((v.cell % MAP_W) + 0.5, 0, ((v.cell / MAP_W) | 0) + 0.5);
     scene.add(pump);
     fuelMeshes.set(i, pump);
   });
@@ -883,7 +1237,7 @@ export function createGameScene(state: SimState, shadows = true): GameScene {
   );
   exfil.rotation.x = -Math.PI / 2;
   exfil.position.set(fromFx(state.mission.exfilX), 0.03, fromFx(state.mission.exfilZ));
-  scene.add(exfil);
+  if (!state.map.visualTest) scene.add(exfil);
 
   const beacon = new Mesh(
     new CylinderGeometry(0.5, 0.9, 14, 12, 1, true),
@@ -896,7 +1250,7 @@ export function createGameScene(state: SimState, shadows = true): GameScene {
     }),
   );
   beacon.position.set(fromFx(state.mission.exfilX), 7, fromFx(state.mission.exfilZ));
-  scene.add(beacon);
+  if (!state.map.visualTest) scene.add(beacon);
   const core = new Mesh(
     new CylinderGeometry(0.15, 0.15, 14, 8),
     new MeshBasicMaterial({
@@ -921,7 +1275,7 @@ export function createGameScene(state: SimState, shadows = true): GameScene {
   );
   beaconRing.rotation.x = -Math.PI / 2;
   beaconRing.position.set(fromFx(state.mission.exfilX), 0.06, fromFx(state.mission.exfilZ));
-  scene.add(beaconRing);
+  if (!state.map.visualTest) scene.add(beaconRing);
 
   const assetMeshes: Mesh[] = [];
   const assetMarkers: Mesh[] = [];
@@ -995,6 +1349,9 @@ export function createGameScene(state: SimState, shadows = true): GameScene {
     smokeMesh,
     carMesh,
     carLightsMesh,
+    carVariantMeshes,
+    carVariantLights,
+    carModelRoots,
     tramMesh,
     tramLightsMesh,
     fuelMeshes,
@@ -1023,6 +1380,7 @@ export function createGameScene(state: SimState, shadows = true): GameScene {
 }
 
 export function objectiveDone(state: SimState): boolean {
+  if (state.map.visualTest) return false;
   const m = state.mission;
   if (m.type === 2) return m.assets.every((a) => !a.alive);
   if (m.type === 0) return state.npcs.every((n) => !n.missionTarget || n.state === ST_DEAD);
@@ -1107,23 +1465,28 @@ export function syncScene(
     vZ[i] = pz + (fromFx(v.z) - pz) * alpha;
   });
 
-  let ci = 0;
   let ti = 0;
+  let modelCarI = 0;
+  const generatedCarReady = gs.carModelRoots.some((r) => r.userData.generatedCarReady);
+  for (const mesh of gs.carVariantMeshes) mesh.count = 0;
+  for (const mesh of gs.carVariantLights) mesh.count = 0;
   state.vehicles.forEach((v, i) => {
     if (v.kind === VEH_FUEL) {
       const pump = gs.fuelMeshes.get(i);
       if (pump && v.state === V_WRECK && pump.scale.y !== 0.3) {
         pump.scale.y = 0.3;
         pump.position.y = 0.2;
-        const mat = pump.material as MeshLambertMaterial;
+        const mat = pump.material as MeshPhongMaterial;
         mat.color.set(0x181818);
         mat.emissiveIntensity = 0;
       }
       return;
     }
-    const mesh = v.kind === VEH_CAR ? gs.carMesh : gs.tramMesh;
-    const lights = v.kind === VEH_CAR ? gs.carLightsMesh : gs.tramLightsMesh;
-    const idx = v.kind === VEH_CAR ? ci++ : ti++;
+    const cv =
+      v.kind === VEH_CAR ? (generatedCarReady ? GENERATED_CAR_LIGHT_VARIANT : carVariant(v.id)) : 0;
+    const mesh = v.kind === VEH_CAR ? gs.carVariantMeshes[cv]! : gs.tramMesh;
+    const lights = v.kind === VEH_CAR ? gs.carVariantLights[cv]! : gs.tramLightsMesh;
+    const idx = v.kind === VEH_CAR ? gs.carVariantMeshes[cv]!.count++ : ti++;
     if (idx >= (v.kind === VEH_CAR ? CAR_CAP : 2)) return;
     const wreck = v.state === V_WRECK;
     if (gs.vehSeen[i] === 0) {
@@ -1147,6 +1510,15 @@ export function syncScene(
     dummy.rotation.set(0, gs.vehHeadings[i]!, 0);
     dummy.scale.set(1, wreck ? 0.45 : 1, 1);
     dummy.updateMatrix();
+    if (v.kind === VEH_CAR) {
+      const modelRoot = gs.carModelRoots[modelCarI++];
+      if (modelRoot) {
+        modelRoot.visible = generatedCarReady;
+        modelRoot.position.copy(dummy.position);
+        modelRoot.rotation.copy(dummy.rotation);
+        modelRoot.scale.copy(dummy.scale);
+      }
+    }
     mesh.setMatrixAt(idx, dummy.matrix);
     lights.setMatrixAt(idx, dummy.matrix);
     npcTint.set(wreck ? 0x0a0a0a : 0xffffff).multiplyScalar(wreck ? 1 : 1.6 * lightRow.neon);
@@ -1156,12 +1528,19 @@ export function syncScene(
     if (!wreck && v.driver >= 0) npcTint.lerp(SCENE_COLORS.agent, 0.35);
     mesh.setColorAt(idx, npcTint);
   });
+  for (let i = modelCarI; i < gs.carModelRoots.length; i++) gs.carModelRoots[i]!.visible = false;
   dummy.scale.set(1, 1, 1);
-  gs.carMesh.count = Math.min(ci, CAR_CAP);
   gs.tramMesh.count = Math.min(ti, 2);
+  gs.carVariantMeshes.forEach((mesh, i) => {
+    mesh.count = Math.min(mesh.count, CAR_CAP);
+    gs.carVariantLights[i]!.count = mesh.count;
+  });
+  gs.carMesh.count = gs.carVariantMeshes[0]!.count;
   gs.carLightsMesh.count = gs.carMesh.count;
   gs.tramLightsMesh.count = gs.tramMesh.count;
-  for (const m of [gs.carMesh, gs.tramMesh, gs.carLightsMesh, gs.tramLightsMesh]) {
+  for (const m of gs.carVariantMeshes) m.visible = !generatedCarReady;
+  for (const m of gs.carVariantLights) m.visible = true;
+  for (const m of [...gs.carVariantMeshes, gs.tramMesh, ...gs.carVariantLights, gs.tramLightsMesh]) {
     m.instanceMatrix.needsUpdate = true;
     if (m.instanceColor) m.instanceColor.needsUpdate = true;
   }

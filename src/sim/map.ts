@@ -22,6 +22,7 @@ export interface MapData {
   edgeCells: number[];
   streetBlocked: Uint8Array;
   wallHp: Int16Array;
+  visualTest?: boolean;
 }
 
 export const WALL_HP = 140;

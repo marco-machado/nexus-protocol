@@ -1,4 +1,4 @@
-import { cellIdx, MAP_H, MAP_W, type MapParams } from './map';
+import { cellIdx, MAP_H, MAP_W, type MapData, type MapParams } from './map';
 import { nearestWalkable } from './path';
 import {
   baseState,
@@ -46,6 +46,7 @@ export interface MissionParams {
   elite?: boolean;
   tod?: number;
   weather?: number;
+  visualTest?: boolean;
 }
 
 function enemyWid(idx: number, doctrine: number, tier: number, elite: boolean): number {
@@ -139,6 +140,81 @@ function spawnVehicles(s: SimState): void {
   }
 }
 
+function createVisualTestMap(): MapData {
+  const obstacle = new Uint8Array(MAP_W * MAP_H);
+  const streetBlocked = new Uint8Array(MAP_W * MAP_H);
+  streetBlocked.fill(1);
+  const wallHp = new Int16Array(MAP_W * MAP_H);
+  const walkable: number[] = [];
+  const edgeCells: number[] = [];
+  const roadMin = 34;
+  const roadMax = 62;
+  for (let z = 0; z < MAP_H; z++) {
+    for (let x = 0; x < MAP_W; x++) {
+      const cell = cellIdx(x, z);
+      walkable.push(cell);
+      if (x === 0 || z === 0 || x === MAP_W - 1 || z === MAP_H - 1) edgeCells.push(cell);
+      const onHorizontal = x >= roadMin && x <= roadMax && (z === roadMin || z === roadMin + 1 || z === roadMax || z === roadMax + 1);
+      const onVertical = z >= roadMin && z <= roadMax && (x === roadMin || x === roadMin + 1 || x === roadMax || x === roadMax + 1);
+      if (onHorizontal || onVertical) streetBlocked[cell] = 0;
+    }
+  }
+  return {
+    w: MAP_W,
+    h: MAP_H,
+    obstacle,
+    buildings: [],
+    walkable,
+    edgeCells,
+    streetBlocked,
+    wallHp,
+    visualTest: true,
+  };
+}
+
+function setupVisualTestMission(s: SimState, specs: AgentSpec[]): SimState {
+  s.map = createVisualTestMap();
+  s.env.tod = 2;
+  s.env.rain = 0;
+  s.mission.exfilX = 48 << 16;
+  s.mission.exfilZ = 48 << 16;
+  s.mission.exfilR = 1 << 16;
+
+  const squad = specs.length > 0 ? specs : [defaultSpec()];
+  const agentCells = [
+    cellIdx(46, 48),
+    cellIdx(48, 48),
+    cellIdx(50, 48),
+    cellIdx(52, 48),
+  ];
+  for (let i = 0; i < squad.length; i++) {
+    const cell = agentCells[i] ?? cellIdx(48 + i, 50);
+    const cx = cell % MAP_W;
+    const cz = (cell / MAP_W) | 0;
+    s.agents.push(createAgent(i, (cx << 16) + (1 << 15), (cz << 16) + (1 << 15), squad[i]!));
+  }
+
+  const cars = [
+    { cell: cellIdx(38, 34), dirX: 1, dirZ: 0 },
+    { cell: cellIdx(48, 34), dirX: 1, dirZ: 0 },
+    { cell: cellIdx(58, 34), dirX: 1, dirZ: 0 },
+    { cell: cellIdx(62, 42), dirX: 0, dirZ: 1 },
+    { cell: cellIdx(62, 54), dirX: 0, dirZ: 1 },
+    { cell: cellIdx(58, 62), dirX: -1, dirZ: 0 },
+    { cell: cellIdx(48, 62), dirX: -1, dirZ: 0 },
+    { cell: cellIdx(38, 62), dirX: -1, dirZ: 0 },
+    { cell: cellIdx(34, 54), dirX: 0, dirZ: -1 },
+    { cell: cellIdx(34, 42), dirX: 0, dirZ: -1 },
+  ];
+  for (const c of cars) {
+    const v = createVehicle(s.vehicles.length, VEH_CAR, c.cell);
+    v.dirX = c.dirX;
+    v.dirZ = c.dirZ;
+    s.vehicles.push(v);
+  }
+  return s;
+}
+
 function spawnEnemySquads(
   s: SimState,
   ax: number,
@@ -187,6 +263,7 @@ export function createMission(
   s.mission.doctrine = doctrine;
   s.env.tod = params.tod ?? 0;
   s.env.rain = params.weather ?? 0;
+  if (params.visualTest) return setupVisualTestMission(s, specs);
 
   const spawnCell = nearestWalkable(s.map, cellIdx(MAP_W >> 1, MAP_H - 3));
   const sx = spawnCell % MAP_W;

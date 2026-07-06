@@ -117,7 +117,7 @@ export function createMinimap(state: SimState): Minimap {
       const halfW = halfH * aspect;
       ctx.save();
       ctx.translate(rig.cx * SCALE, rig.cz * SCALE);
-      ctx.rotate(-(rig.yawStep * Math.PI) / 4);
+      ctx.rotate(-rig.yaw);
       ctx.strokeStyle = 'rgba(185,196,214,0.5)';
       ctx.lineWidth = 1;
       ctx.strokeRect(-halfW, -halfH, halfW * 2, halfH * 2);

@@ -22,6 +22,26 @@ async function main(): Promise<void> {
   const renderer = await createRenderer(canvas, settings.shadows);
 
   const params = new URLSearchParams(location.search);
+  if (params.has('visualtest')) {
+    const specs = Array.from({ length: 4 }, () => {
+      const spec = defaultSpec();
+      spec.maxHp = 100000;
+      spec.weapons = [{ wid: 0, ammo: 100000 }];
+      return spec;
+    });
+    void runMission(
+      renderer,
+      0xcafe,
+      0,
+      specs,
+      hud,
+      'VISUAL TEST: cars and agents',
+      { visualTest: true, tod: 2, weather: 0 },
+      { civCount: 0 },
+    );
+    return;
+  }
+
   if (params.has('perf')) {
     const parsed = Number(params.get('npcs') ?? '170');
     const civCount = Number.isFinite(parsed) ? parsed : 170;

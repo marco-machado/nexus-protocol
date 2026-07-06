@@ -1,11 +1,11 @@
 import { Plane, Raycaster, Vector2, Vector3 } from 'three';
 import type { WebGPURenderer } from 'three/webgpu';
-import { createRig, updateRig } from '../render/camera';
+import { createRig, rigYawDelta, targetRigYaw, updateRig } from '../render/camera';
 import { NPC_CAP } from '../render/crowd';
 import { SCENE_COLORS } from '../render/palette';
 import { createPost } from '../render/post';
 import { createRain } from '../render/rain';
-import { createGameScene, objectiveDone, syncScene, updateSun } from '../render/scene';
+import { createGameScene, objectiveDone, syncScene, updateSun, vehicleRenderDiagnostics } from '../render/scene';
 import { fromFx, toFx } from '../sim/fixed';
 import {
   CommandQueue,
@@ -72,7 +72,62 @@ export function runMission(
   return new Promise((resolve) => {
     const state = createMission(seed, missionType, specs, { ...simParams, civCount: opts.civCount ?? simParams.civCount });
     const gs = createGameScene(state, settings.shadows);
+    (window as unknown as { __THREE_GAME_DIAGNOSTICS__?: unknown }).__THREE_GAME_DIAGNOSTICS__ = {
+      renderer: renderer.info,
+      get vehicles() {
+        return vehicleRenderDiagnostics(gs);
+      },
+      get mission() {
+        return {
+          tick: state.tick,
+          vehicles: state.vehicles.length,
+          wrecks: state.vehicles.filter((v) => v.state === V_WRECK).length,
+          agentsDriving: state.agents.filter((a) => a.driving >= 0).length,
+        };
+      },
+      get camera() {
+        return {
+          yaw: rig.yaw,
+          targetYaw: targetRigYaw(rig),
+          yawDelta: rigYawDelta(rig),
+          yawStep: rig.yawStep,
+          rotating: Math.abs(rigYawDelta(rig)) > 0.001,
+          trace: cameraMotionTrace,
+        };
+      },
+    };
+    const diagnosticsEl = document.createElement('script');
+    diagnosticsEl.id = 'three-game-diagnostics';
+    diagnosticsEl.type = 'application/json';
+    document.body.appendChild(diagnosticsEl);
+    const updateDiagnostics = () => {
+      diagnosticsEl.textContent = JSON.stringify({
+        renderer: renderer.info.render,
+        memory: renderer.info.memory,
+        vehicles: vehicleRenderDiagnostics(gs),
+        mission: {
+          tick: state.tick,
+          vehicles: state.vehicles.length,
+          wrecks: state.vehicles.filter((v) => v.state === V_WRECK).length,
+          agentsDriving: state.agents.filter((a) => a.driving >= 0).length,
+        },
+        camera: {
+          yaw: rig.yaw,
+          targetYaw: targetRigYaw(rig),
+          yawDelta: rigYawDelta(rig),
+          yawStep: rig.yawStep,
+          rotating: Math.abs(rigYawDelta(rig)) > 0.001,
+          trace: cameraMotionTrace,
+        },
+      });
+    };
     const rig = createRig(window.innerWidth / window.innerHeight, fromFx(state.agents[0]!.x), fromFx(state.agents[0]!.z));
+    if (state.map.visualTest) {
+      rig.cx = 48;
+      rig.cz = 48;
+      rig.viewHeight = 58;
+    }
+    const cameraMotionTrace: number[] = [];
     const queue = new CommandQueue();
     const recorder = new Recorder();
     const selected: boolean[] = state.agents.map((_, i) => i === 0);
@@ -302,8 +357,12 @@ export function runMission(
         settings.simSpeed = Math.round(settings.simSpeed * 100) / 100;
         saveSettings();
       } else if (k === '[' || k === 'q') {
+        cameraMotionTrace.length = 0;
+        cameraMotionTrace.push(Number(rig.yaw.toFixed(4)));
         rig.yawStep = (rig.yawStep + 7) % 8;
       } else if (k === ']' || k === 'e') {
+        cameraMotionTrace.length = 0;
+        cameraMotionTrace.push(Number(rig.yaw.toFixed(4)));
         rig.yawStep = (rig.yawStep + 1) % 8;
       }
     };
@@ -358,6 +417,7 @@ export function runMission(
       window.removeEventListener('resize', onResize);
       renderer.setAnimationLoop(null);
       hud.innerHTML = '';
+      diagnosticsEl.remove();
       perf?.dispose();
       minimap.dispose();
       comms.dispose();
@@ -535,7 +595,7 @@ export function runMission(
       }
 
       const panSpeed = 0.03 * dt * (rig.viewHeight / 26);
-      const yaw = (rig.yawStep * Math.PI) / 4;
+      const yaw = rig.yaw;
       const fx = -Math.sin(yaw);
       const fz = -Math.cos(yaw);
       if (panKeys.has('ArrowUp')) {
@@ -554,11 +614,16 @@ export function runMission(
         rig.cx -= fz * panSpeed;
         rig.cz += fx * panSpeed;
       }
-      updateRig(rig, window.innerWidth / window.innerHeight);
+      updateRig(rig, window.innerWidth / window.innerHeight, dt);
+      if (cameraMotionTrace.length > 0 && cameraMotionTrace.length < 36) {
+        const yawSample = Number(rig.yaw.toFixed(4));
+        if (cameraMotionTrace[cameraMotionTrace.length - 1] !== yawSample) cameraMotionTrace.push(yawSample);
+      }
       updateSun(gs, rig);
 
       const alpha = Math.min(1, acc / TICK_MS);
       syncScene(gs, state, prevAX, prevAZ, prevVX, prevVZ, alpha, selected);
+      updateDiagnostics();
       gs.crowd.update(state, prevNX, prevNZ, alpha, dt, rig);
       rain?.update(dt, rig.cx, rig.cz);
       if (post) post.render();
