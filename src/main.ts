@@ -19,7 +19,7 @@ async function main(): Promise<void> {
   const canvas = document.getElementById('app') as HTMLCanvasElement;
   const hud = document.getElementById('hud') as HTMLElement;
   const screenEl = document.getElementById('screen') as HTMLElement;
-  const renderer = await createRenderer(canvas);
+  const renderer = await createRenderer(canvas, settings.shadows);
 
   const params = new URLSearchParams(location.search);
   if (params.has('perf')) {

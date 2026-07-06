@@ -8,6 +8,7 @@ export interface Settings {
   sfxVol: number;
   postFx: boolean;
   rain: boolean;
+  shadows: boolean;
 }
 
 const KEY = 'nexus-protocol-settings-v1';
@@ -21,6 +22,7 @@ function defaults(): Settings {
     sfxVol: 0.8,
     postFx: true,
     rain: true,
+    shadows: true,
   };
 }
 
