@@ -1,0 +1,114 @@
+{
+  "theme": {
+    "extend": {
+      "colors": {
+        "primary": "#0a0d14",
+        "secondary": "#7d8aa0",
+        "tertiary": "#00e5ff",
+        "neutral": "#0c111b",
+        "background": "#0a0d14",
+        "overlay": "#06090e",
+        "surface": "#0c111b",
+        "surface-raised": "#14202f",
+        "line": "#24354d",
+        "line-strong": "#2c4058",
+        "text": "#c7d2e4",
+        "text-strong": "#e8eef8",
+        "text-muted": "#7d8aa0",
+        "text-faint": "#45526b",
+        "accent": "#00e5ff",
+        "accent-soft": "#aff6ff",
+        "accent-panel": "#063c46",
+        "good": "#38d47a",
+        "warn": "#e8b23a",
+        "bad": "#ef4444",
+        "bad-panel": "#4d1c1a",
+        "bad-soft": "#ffdad6",
+        "persuaded": "#22d3ee",
+        "gold": "#facc15",
+        "selection": "#00ff88",
+        "police": "#3b6fd4",
+        "tactical": "#8b1e3f",
+        "guard": "#c026d3",
+        "civilian": "#7a8699",
+        "dead": "#2a2f38"
+      },
+      "fontFamily": {
+        "display": [
+          "Menlo, Consolas, monospace"
+        ],
+        "title": [
+          "Menlo, Consolas, monospace"
+        ],
+        "section-label": [
+          "Menlo, Consolas, monospace"
+        ],
+        "body": [
+          "Menlo, Consolas, monospace"
+        ],
+        "log": [
+          "Menlo, Consolas, monospace"
+        ],
+        "micro": [
+          "Menlo, Consolas, monospace"
+        ]
+      },
+      "fontSize": {
+        "display": [
+          "40px",
+          {
+            "letterSpacing": "6px",
+            "fontWeight": "700"
+          }
+        ],
+        "title": [
+          "18px",
+          {
+            "letterSpacing": "2px",
+            "fontWeight": "700"
+          }
+        ],
+        "section-label": [
+          "12px",
+          {
+            "letterSpacing": "2px",
+            "fontWeight": "700"
+          }
+        ],
+        "body": [
+          "12px",
+          {
+            "fontWeight": "400"
+          }
+        ],
+        "log": [
+          "11px",
+          {
+            "fontWeight": "400"
+          }
+        ],
+        "micro": [
+          "10px",
+          {
+            "fontWeight": "400"
+          }
+        ]
+      },
+      "borderRadius": {
+        "none": "0px",
+        "xs": "2px",
+        "sm": "4px",
+        "md": "8px"
+      },
+      "spacing": {
+        "xxs": "2px",
+        "xs": "4px",
+        "sm": "8px",
+        "md": "12px",
+        "lg": "16px",
+        "xl": "24px",
+        "xxl": "28px"
+      }
+    }
+  }
+}

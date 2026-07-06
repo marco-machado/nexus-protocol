@@ -149,7 +149,7 @@ Performance baselines are tracked in [docs/perf.md](./docs/perf.md). The `?perf`
 
 | Document | Description |
 | --- | --- |
-| [docs/design.md](./docs/design.md) | Game design document and long-form vision |
+| [docs/game-design.md](./docs/game-design.md) | Game design document and long-form vision |
 | [docs/roadmap.md](./docs/roadmap.md) | Implementation status across MVP and release phases |
 | [docs/perf.md](./docs/perf.md) | Perf harness, measurements, and pathfinding density probe |
 | [docs/ui/index.html](./docs/ui/index.html) | Standalone local UI Explorer for screens, components, and reference sheets |

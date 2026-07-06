@@ -2,7 +2,7 @@
 
 Status legend: [DONE] implemented and verified in code, [PARTIAL] implemented with gaps noted, [TODO] not started.
 
-Snapshot as of 2026-07-05, updated at the close of the Phase D implementation passes. Verified against the working tree, a passing `npm test` (determinism replays for all seven mission types plus pinned golden hash, world-generation, economy, map/vehicle/environment unit tests, and the flashmob density probe), and browser runs of the perf harness on both backends. Sources: `docs/design.md` (GDD), the MVP build plan, and the M0 slice plan. Performance measurements live in `docs/perf.md`.
+Snapshot as of 2026-07-05, updated at the close of the Phase D implementation passes. Verified against the working tree, a passing `npm test` (determinism replays for all seven mission types plus pinned golden hash, world-generation, economy, map/vehicle/environment unit tests, and the flashmob density probe), and browser runs of the perf harness on both backends. Sources: `docs/game-design.md` (GDD), the MVP build plan, and the M0 slice plan. Performance measurements live in `docs/perf.md`.
 
 ## 1. Where the project stands
 
