@@ -29,6 +29,7 @@ import {
 } from './meta';
 import { WEAPONS } from '../sim/weapons';
 import { applyPalette, PALETTES, type PaletteName } from '../render/palette';
+import { OWNER_NEUTRAL, OWNER_NEXUS, type GlobeSnapshot, type WorldGlobe } from '../render/globe';
 import { audio } from './audio';
 import { saveSettings, settings } from './settings';
 
@@ -58,83 +59,6 @@ const CONTRACT_NAMES = [
 const RECRUIT_COST = 800;
 const SLOT_CAP = 8;
 
-type StageCell = { c: number; cs: number; r: number; rs: number };
-interface StageLayout {
-  blocks: [StageCell, StageCell, StageCell, StageCell, StageCell];
-  neighbor: StageCell;
-  fillers: StageCell[];
-}
-
-const STAGE_LAYOUTS: StageLayout[] = [
-  {
-    blocks: [
-      { c: 1, cs: 2, r: 1, rs: 1 },
-      { c: 3, cs: 2, r: 1, rs: 2 },
-      { c: 1, cs: 2, r: 2, rs: 2 },
-      { c: 3, cs: 1, r: 3, rs: 2 },
-      { c: 4, cs: 1, r: 3, rs: 2 },
-    ],
-    neighbor: { c: 5, cs: 2, r: 1, rs: 2 },
-    fillers: [
-      { c: 5, cs: 2, r: 3, rs: 2 },
-      { c: 1, cs: 2, r: 4, rs: 1 },
-    ],
-  },
-  {
-    blocks: [
-      { c: 1, cs: 2, r: 1, rs: 2 },
-      { c: 3, cs: 2, r: 1, rs: 1 },
-      { c: 5, cs: 2, r: 1, rs: 2 },
-      { c: 3, cs: 2, r: 2, rs: 2 },
-      { c: 1, cs: 2, r: 3, rs: 1 },
-    ],
-    neighbor: { c: 1, cs: 3, r: 4, rs: 1 },
-    fillers: [
-      { c: 5, cs: 2, r: 3, rs: 2 },
-      { c: 4, cs: 1, r: 4, rs: 1 },
-    ],
-  },
-  {
-    blocks: [
-      { c: 1, cs: 3, r: 1, rs: 1 },
-      { c: 4, cs: 2, r: 1, rs: 2 },
-      { c: 1, cs: 2, r: 2, rs: 2 },
-      { c: 3, cs: 1, r: 2, rs: 2 },
-      { c: 4, cs: 3, r: 3, rs: 1 },
-    ],
-    neighbor: { c: 6, cs: 1, r: 1, rs: 2 },
-    fillers: [
-      { c: 1, cs: 3, r: 4, rs: 1 },
-      { c: 4, cs: 3, r: 4, rs: 1 },
-    ],
-  },
-  {
-    blocks: [
-      { c: 1, cs: 2, r: 1, rs: 2 },
-      { c: 3, cs: 1, r: 1, rs: 2 },
-      { c: 4, cs: 3, r: 1, rs: 1 },
-      { c: 4, cs: 2, r: 2, rs: 2 },
-      { c: 1, cs: 3, r: 3, rs: 1 },
-    ],
-    neighbor: { c: 6, cs: 1, r: 2, rs: 3 },
-    fillers: [
-      { c: 1, cs: 2, r: 4, rs: 1 },
-      { c: 3, cs: 1, r: 4, rs: 1 },
-      { c: 4, cs: 2, r: 4, rs: 1 },
-    ],
-  },
-];
-
-const FILLER_NAMES = ['TRANSIT SPINE', 'UTILITY GRID', 'FREIGHT INTERCHANGE', 'DATA TRUNK', 'CANAL LOCKS', 'POWER SUBSTATION'];
-
-function cellStyle(cell: StageCell): string {
-  return `--gc:${cell.c}/${cell.c + cell.cs};--gr:${cell.r}/${cell.r + cell.rs}`;
-}
-
-function fillerBlock(name: string, cell: StageCell): string {
-  return `<div class="blk filler" style="${cellStyle(cell)}"><div class="nm">${name}</div></div>`;
-}
-
 function shortName(t: Territory): string {
   return t.name.replace('SECTOR ', '').replace(/"/g, '');
 }
@@ -161,6 +85,10 @@ export class Screens {
   private selRegion = -1;
   private selTerr = -1;
   private rdOpen = false;
+  private globe: WorldGlobe | null = null;
+  private globeWired = false;
+  private mapMeta: MetaState | null = null;
+  private mapOnContract: ((t: Territory, defense?: boolean) => void) | null = null;
 
   constructor(el: HTMLElement) {
     this.el = el;
@@ -169,8 +97,13 @@ export class Screens {
     });
   }
 
+  setGlobe(globe: WorldGlobe): void {
+    this.globe = globe;
+  }
+
   show(): void {
     this.el.style.display = 'flex';
+    this.el.classList.remove('mapmode');
   }
 
   hide(): void {
@@ -252,27 +185,49 @@ export class Screens {
   }
 
   private mapHud(m: MetaState): string {
-    return `<div class="maphud"><h2>GLOBAL OPERATIONS</h2><span class="credits">${m.credits}cr</span><span>+${incomePerCycle(m) * 2}cr/hr</span><span>R&amp;D +${researchPerCycle(m) * 2}/hr</span><span>ACT ${campaignAct(m)}</span><span class="cyc">CYCLE ${m.cycle} · next in ${Math.max(1, Math.ceil((CYCLE_MS - m.econMs) / 60000))}m</span></div>`;
+    const nextMin = Math.max(1, Math.ceil((CYCLE_MS - m.econMs) / 60000));
+    return `<div class="maphud">
+      <div class="maphud-brand"><i class="glyph"></i><h2>GLOBAL OPERATIONS</h2></div>
+      <div class="stat"><label>BALANCE</label><b class="credits">${m.credits}<small>cr</small></b></div>
+      <div class="stat"><label>INCOME</label><b class="good">+${incomePerCycle(m) * 2}<small>cr/hr</small></b></div>
+      <div class="stat"><label>R&amp;D</label><b class="accentv">+${researchPerCycle(m) * 2}<small>/hr</small></b></div>
+      <div class="stat"><label>CAMPAIGN</label><b>ACT ${campaignAct(m)}</b></div>
+      <div class="stat"><label>CYCLE ${m.cycle}</label><b class="muted">next ${nextMin}m</b></div>
+    </div>`;
   }
 
-  private terrBlock(m: MetaState, t: Territory, cell: StageCell): string {
-    const ownerTag = t.owned
-      ? ' <span class="own">NEXUS</span>'
+  private terrList(m: MetaState): string {
+    const region = REGIONS[this.selRegion]!;
+    const terrs = m.territories.filter((t) => t.region === this.selRegion);
+    const owned = terrs.filter((t) => t.owned).length;
+    const rows = terrs.map((t) => this.terrRow(m, t)).join('');
+    return `<div class="terrlist">
+      <div class="terrlist-h"><span>${region.name}</span><span class="terrlist-cnt">${owned}/5 SECURED</span></div>
+      <div class="terrlist-body">${rows}</div>
+    </div>`;
+  }
+
+  private terrRow(m: MetaState, t: Territory): string {
+    const owner = t.owned ? 'own' : t.rival >= 0 ? 'riv' : 'neu';
+    const tag = t.owned
+      ? '<span class="own">NEXUS</span>'
       : t.rival >= 0
-        ? ` <span class="riv">${m.syndicates[t.rival]!.name.split(' ')[0]}</span>`
-        : '';
-    const tags = `${ownerTag}${t.hq ? ' <span class="hqtag">HQ</span>' : ''}${t.siege ? ' <span class="sietag">SIEGE</span>' : ''}`;
-    const line = t.owned
-      ? `${Math.round((t.baseIncome * t.taxRate) / 100)}cr/cyc · tax ${t.taxRate}%`
-      : `est ${t.baseIncome}cr`;
+        ? `<span class="riv">${m.syndicates[t.rival]!.name.split(' ')[0]}</span>`
+        : '<span class="neu">NEUTRAL</span>';
+    const extra = `${t.hq ? '<span class="hqtag">HQ</span>' : ''}${t.siege ? '<span class="sietag">SIEGE</span>' : ''}`;
+    const line = t.owned ? `${Math.round((t.baseIncome * t.taxRate) / 100)}cr/cyc` : `est ${t.baseIncome}cr`;
     const ubar = t.owned
-      ? `<div class="ubar${t.unrest > 60 ? ' hot' : ''}"><i style="width:${Math.min(100, t.unrest)}%"></i></div>`
+      ? `<i class="ub${t.unrest > 60 ? ' hot' : ''}" style="width:${Math.min(100, t.unrest)}%"></i>`
       : '';
-    const cls = `blk${t.owned ? ' own' : t.rival >= 0 ? ' riv' : ''}${t.siege ? ' sieged' : ''}${t.id === this.selTerr ? ' sel' : ''}`;
-    return `<div class="${cls}" data-sel="${t.id}" style="${cellStyle(cell)}"><div class="nm">${shortName(t)}${tags}</div><div class="cr">${line}</div>${ubar}</div>`;
+    return `<button class="trow ${owner}${t.id === this.selTerr ? ' sel' : ''}" data-sel="${t.id}">
+      <span class="trow-top"><span class="trow-nm">${shortName(t)}</span>${tag}${extra}</span>
+      <span class="trow-sub">${line}</span>
+      <span class="trow-ub">${ubar}</span>
+    </button>`;
   }
 
   private popover(m: MetaState, t: Territory): string {
+    const head = `<div class="pop-h"><h4>${t.name}</h4><button class="pop-x" data-deselect="1" aria-label="Deselect">&times;</button></div>`;
     if (t.owned) {
       const siegeMin = t.siege ? Math.ceil(Math.max(0, t.siege.deadline - m.lastSeen) / 60000) : 0;
       const siegeBanner = t.siege
@@ -283,38 +238,54 @@ export class Screens {
         : t.unrest >= DEFENSE_UNREST
           ? `<button data-defend="${t.id}">DEFENSE CONTRACT</button>`
           : '<div class="fine">HOLDING · NO ACTION REQUIRED</div>';
-      return `<div class="pop"><h4>${t.name}</h4><div class="own">NEXUS</div>${siegeBanner}
+      return `<div class="pop">${head}<div class="own">NEXUS CONTROLLED</div>${siegeBanner}
         <dl><dt>Income share</dt><dd>${Math.round((t.baseIncome * t.taxRate) / 100)}cr/cycle</dd><dt>Unrest</dt><dd class="unrest ${t.unrest > 60 ? 'hot' : ''}">${t.unrest}/100</dd></dl>
         <div class="taxrow">Tax <input type="range" min="10" max="50" step="5" value="${t.taxRate}" data-tax="${t.id}"/> <b>${t.taxRate}%</b></div>
         ${action}</div>`;
     }
     const owner = t.rival >= 0 ? `<div class="riv">${m.syndicates[t.rival]!.name}</div>` : '<div class="neutral">NEUTRAL</div>';
-    return `<div class="pop"><h4>${t.name}</h4>${owner}${t.hq ? '<div class="hqtag">RIVAL HQ ARCOLOGY</div>' : ''}
+    return `<div class="pop">${head}${owner}${t.hq ? '<div class="hqtag">RIVAL HQ ARCOLOGY</div>' : ''}
       <dl><dt>Est. income</dt><dd>${t.baseIncome}cr base</dd><dt>Contract</dt><dd>${CONTRACT_NAMES[t.missionType]}</dd></dl>
       <button class="primary" data-contract="${t.id}">OPEN CONTRACT</button></div>`;
   }
 
-  private stage(m: MetaState): string {
-    const layout = STAGE_LAYOUTS[this.selRegion % STAGE_LAYOUTS.length]!;
-    const terrs = m.territories.filter((t) => t.region === this.selRegion);
-    const blocks = terrs.map((t, i) => this.terrBlock(m, t, layout.blocks[i]!)).join('');
-    const nextI = this.selRegion + 1;
-    let neighbor: string;
-    if (nextI >= REGIONS.length) {
-      neighbor = fillerBlock(FILLER_NAMES[(this.selRegion * 3 + 5) % FILLER_NAMES.length]!, layout.neighbor);
-    } else if (regionUnlocked(m, nextI)) {
-      const owned = m.territories.filter((t) => t.region === nextI && t.owned).length;
-      neighbor = `<div class="blk gate" data-region="${nextI}" style="${cellStyle(layout.neighbor)}"><div class="nm">${REGIONS[nextI]!.name}</div><div class="cr">${owned}/5 · ENTER</div></div>`;
-    } else {
-      neighbor = `<div class="fog" style="${cellStyle(layout.neighbor)}">${REGIONS[nextI]!.name}<br>LOCKED · ${REGION_UNLOCK_OWNED} DISTRICTS REQ.</div>`;
+  private globeSnapshot(m: MetaState): GlobeSnapshot {
+    return {
+      territories: m.territories.map((t) => ({
+        id: t.id,
+        region: t.region,
+        owner: t.owned ? OWNER_NEXUS : t.rival >= 0 ? t.rival : OWNER_NEUTRAL,
+        hq: t.hq === true,
+        siege: t.siege !== undefined,
+        siegeRival: t.siege ? t.siege.rival : -1,
+        unrest: t.unrest,
+        locked: t.region >= m.regionsUnlocked,
+      })),
+      focusRegion: this.selRegion,
+      selected: this.selTerr,
+    };
+  }
+
+  private onGlobePick(id: number): void {
+    const m = this.mapMeta;
+    const onContract = this.mapOnContract;
+    if (!m || !onContract) return;
+    if (id < 0) {
+      if (this.selTerr === -1) return;
+      this.selTerr = -1;
+      this.worldMap(m, onContract);
+      return;
     }
-    const fillers = layout.fillers
-      .map((cell, i) => fillerBlock(FILLER_NAMES[(this.selRegion * 3 + i) % FILLER_NAMES.length]!, cell))
-      .join('');
-    const sel = m.territories[this.selTerr];
-    const pop = sel && sel.region === this.selRegion ? this.popover(m, sel) : '';
-    const legend = `<div class="legend"><span><i class="k-own"></i>NEXUS</span><span><i class="k-riv"></i>RIVAL</span><span><i class="k-neu"></i>NEUTRAL</span></div>`;
-    return `<div class="stage">${blocks}${neighbor}${fillers}${pop}${legend}</div>`;
+    const t = m.territories[id];
+    if (!t || t.region >= m.regionsUnlocked) return;
+    this.selRegion = t.region;
+    this.selTerr = id;
+    this.worldMap(m, onContract);
+  }
+
+  private legend(): string {
+    const key = (color: string, label: string) => `<span><i class="sw" style="color:${color};background:${color}"></i>${label}</span>`;
+    return `<div class="legend">${key('#33e08a', 'NEXUS')}${key('#ff9d3a', 'HELIOS')}${key('#c95bff', 'MIRAGE')}${key('#ff3b5c', 'CHORUS')}${key('#5b6b86', 'NEUTRAL')}</div>`;
   }
 
   private rdDrawer(m: MetaState): string {
@@ -335,28 +306,44 @@ export class Screens {
 
   worldMap(m: MetaState, onContract: (t: Territory, defense?: boolean) => void): void {
     this.show();
+    this.el.classList.add('mapmode');
     if (this.selRegion < 0 || this.selRegion >= m.regionsUnlocked) this.selRegion = m.regionsUnlocked - 1;
     const st = m.territories[this.selTerr];
     if (!st || st.region !== this.selRegion) this.selTerr = -1;
+    this.mapMeta = m;
+    this.mapOnContract = onContract;
+    if (this.globe && !this.globeWired) {
+      this.globeWired = true;
+      this.globe.onPick((id) => this.onGlobePick(id));
+    }
     const tabs = REGIONS.map((r, i) => {
       const locked = !regionUnlocked(m, i);
       const ownedCount = m.territories.filter((t) => t.region === i && t.owned).length;
-      return `<button data-region="${i}" ${locked ? 'disabled' : ''} class="${i === this.selRegion ? 'primary' : ''}">${locked ? `${r.name} [LOCKED]` : `${r.name} ${ownedCount}/5`}</button>`;
+      return `<button class="rtab${i === this.selRegion ? ' primary' : ''}" data-region="${i}" ${locked ? 'disabled' : ''}>${r.name}<b>${locked ? 'LOCKED' : `${ownedCount}/5`}</b></button>`;
     }).join('');
     const nextLocked = m.regionsUnlocked < REGIONS.length;
     const charterNote = nextLocked
-      ? `<div class="fine">Charter extension: manage ${REGION_UNLOCK_OWNED} districts in ${REGIONS[m.regionsUnlocked - 1]!.name} to open ${REGIONS[m.regionsUnlocked]!.name}.</div>`
+      ? `<div class="charter">CHARTER: secure ${REGION_UNLOCK_OWNED} districts in ${REGIONS[m.regionsUnlocked - 1]!.name} to open ${REGIONS[m.regionsUnlocked]!.name}</div>`
       : '';
+    const sel = m.territories[this.selTerr];
+    const detail = sel && sel.region === this.selRegion ? this.popover(m, sel) : '';
     const tickerTitle = m.log.slice(0, 4).join('\n').replace(/"/g, '&quot;');
     this.el.innerHTML = `
-      <div class="panel map">
+      <div class="mapframe">
+        <div class="mapscrim top"></div>
+        <div class="mapscrim bottom"></div>
         ${this.mapHud(m)}
         <div class="regiontabs">${tabs}</div>
-        ${charterNote}
-        ${this.stage(m)}
+        <div class="mapbody">
+          ${this.terrList(m)}
+          <div class="mapcenter">${charterNote}<div class="maphint">DRAG TO ROTATE · SELECT A BEACON</div></div>
+          <div class="detailwrap">${detail}</div>
+          ${this.legend()}
+        </div>
         ${this.rdDrawer(m)}
         <div class="ticker" title="${tickerTitle}">&gt; ${m.log[0] ?? 'Awaiting first directive.'}</div>
       </div>`;
+    this.globe?.setData(this.globeSnapshot(m));
     this.el.onclick = (e) => {
       const el = e.target as HTMLElement;
       const d = el.dataset;
@@ -366,6 +353,11 @@ export class Screens {
       }
       if (d.defend !== undefined) {
         onContract(m.territories[Number(d.defend)]!, true);
+        return;
+      }
+      if (d.deselect !== undefined) {
+        this.selTerr = -1;
+        this.worldMap(m, onContract);
         return;
       }
       if (d.act === 'rd') {
@@ -380,14 +372,9 @@ export class Screens {
         this.worldMap(m, onContract);
         return;
       }
-      const blk = el.closest<HTMLElement>('[data-sel]');
-      if (blk) {
-        this.selTerr = Number(blk.dataset.sel);
-        this.worldMap(m, onContract);
-        return;
-      }
-      if (!el.closest('.pop') && el.closest('.stage')) {
-        this.selTerr = -1;
+      const row = el.closest<HTMLElement>('[data-sel]');
+      if (row) {
+        this.selTerr = Number(row.dataset.sel);
         this.worldMap(m, onContract);
       }
     };

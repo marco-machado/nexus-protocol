@@ -19,7 +19,9 @@ import {
   type Territory,
 } from './meta';
 import { Screens } from './screens';
+import { settings } from './settings';
 import { hintsFor } from './tutorial';
+import { WorldGlobe } from '../render/globe';
 
 const OBJECTIVES = [
   'Eliminate marked targets, then exfiltrate',
@@ -34,6 +36,7 @@ const OBJECTIVES = [
 export class Game {
   private meta: MetaState = newMeta();
   private mapTimer = 0;
+  private globe: WorldGlobe | null = null;
 
   constructor(
     private renderer: WebGPURenderer,
@@ -41,8 +44,17 @@ export class Game {
     private hud: HTMLElement,
   ) {}
 
+  private ensureGlobe(): WorldGlobe {
+    if (!this.globe) {
+      this.globe = new WorldGlobe(this.renderer, { postFx: settings.postFx });
+      this.screens.setGlobe(this.globe);
+    }
+    return this.globe;
+  }
+
   start(): void {
     this.stopMapTimer();
+    this.globe?.stop();
     this.screens.menu((fresh) => {
       this.meta = fresh ? newMeta() : (loadMeta() ?? newMeta());
       const before = this.meta.credits;
@@ -67,6 +79,7 @@ export class Game {
     advanceTime(this.meta, Date.now());
     saveMeta(this.meta);
     if (campaignWon(this.meta)) {
+      this.globe?.stop();
       this.screens.victory(
         this.meta,
         () => {
@@ -78,6 +91,7 @@ export class Game {
       );
       return;
     }
+    this.ensureGlobe().start();
     this.screens.worldMap(this.meta, (t, defense) => this.equip(t, defense));
     this.mapTimer = window.setInterval(() => {
       advanceTime(this.meta, Date.now());
@@ -88,6 +102,7 @@ export class Game {
 
   private equip(t: Territory, defense = false): void {
     this.stopMapTimer();
+    this.globe?.stop();
     this.screens.equip(
       this.meta,
       t,
@@ -98,6 +113,7 @@ export class Game {
   }
 
   private async launch(t: Territory, defense = false): Promise<void> {
+    this.globe?.stop();
     this.screens.hide();
     const specs = this.meta.agents.filter((a) => a.alive).map((a) => buildSpec(a));
     if (specs.length === 0) {
