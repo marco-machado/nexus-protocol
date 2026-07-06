@@ -5,7 +5,7 @@ import { NPC_CAP } from '../render/crowd';
 import { SCENE_COLORS } from '../render/palette';
 import { createPost } from '../render/post';
 import { createRain } from '../render/rain';
-import { createGameScene, objectiveDone, syncScene } from '../render/scene';
+import { createGameScene, objectiveDone, syncScene, updateSun } from '../render/scene';
 import { fromFx, toFx } from '../sim/fixed';
 import {
   CommandQueue,
@@ -71,7 +71,7 @@ export function runMission(
 ): Promise<MissionResult> {
   return new Promise((resolve) => {
     const state = createMission(seed, missionType, specs, { ...simParams, civCount: opts.civCount ?? simParams.civCount });
-    const gs = createGameScene(state);
+    const gs = createGameScene(state, settings.shadows);
     const rig = createRig(window.innerWidth / window.innerHeight, fromFx(state.agents[0]!.x), fromFx(state.agents[0]!.z));
     const queue = new CommandQueue();
     const recorder = new Recorder();
@@ -555,6 +555,7 @@ export function runMission(
         rig.cz += fx * panSpeed;
       }
       updateRig(rig, window.innerWidth / window.innerHeight);
+      updateSun(gs, rig);
 
       const alpha = Math.min(1, acc / TICK_MS);
       syncScene(gs, state, prevAX, prevAZ, prevVX, prevVZ, alpha, selected);
@@ -608,6 +609,7 @@ export function runMission(
         recorder,
         selected,
         rig,
+        gs,
         send,
         stepN: (n: number) => {
           for (let i = 0; i < n && state.mission.status === STATUS_ACTIVE; i++) {
