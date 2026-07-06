@@ -20,9 +20,9 @@ export function createMinimap(state: SimState): Minimap {
   const canvas = document.createElement('canvas');
   canvas.width = MAP_W * SCALE;
   canvas.height = MAP_H * SCALE;
-  canvas.style.cssText =
-    'position:fixed;right:12px;bottom:34px;z-index:15;pointer-events:none;' +
-    'border:1px solid #24354d;background:#0a0d14;opacity:0.92;';
+  // layout lives in the .minimap stylesheet rule so narrow viewports can
+  // shrink it without fighting inline styles
+  canvas.className = 'minimap';
   document.body.appendChild(canvas);
   const ctx = canvas.getContext('2d')!;
 

@@ -58,6 +58,87 @@ const CONTRACT_NAMES = [
 const RECRUIT_COST = 800;
 const SLOT_CAP = 8;
 
+type StageCell = { c: number; cs: number; r: number; rs: number };
+interface StageLayout {
+  blocks: [StageCell, StageCell, StageCell, StageCell, StageCell];
+  neighbor: StageCell;
+  fillers: StageCell[];
+}
+
+const STAGE_LAYOUTS: StageLayout[] = [
+  {
+    blocks: [
+      { c: 1, cs: 2, r: 1, rs: 1 },
+      { c: 3, cs: 2, r: 1, rs: 2 },
+      { c: 1, cs: 2, r: 2, rs: 2 },
+      { c: 3, cs: 1, r: 3, rs: 2 },
+      { c: 4, cs: 1, r: 3, rs: 2 },
+    ],
+    neighbor: { c: 5, cs: 2, r: 1, rs: 2 },
+    fillers: [
+      { c: 5, cs: 2, r: 3, rs: 2 },
+      { c: 1, cs: 2, r: 4, rs: 1 },
+    ],
+  },
+  {
+    blocks: [
+      { c: 1, cs: 2, r: 1, rs: 2 },
+      { c: 3, cs: 2, r: 1, rs: 1 },
+      { c: 5, cs: 2, r: 1, rs: 2 },
+      { c: 3, cs: 2, r: 2, rs: 2 },
+      { c: 1, cs: 2, r: 3, rs: 1 },
+    ],
+    neighbor: { c: 1, cs: 3, r: 4, rs: 1 },
+    fillers: [
+      { c: 5, cs: 2, r: 3, rs: 2 },
+      { c: 4, cs: 1, r: 4, rs: 1 },
+    ],
+  },
+  {
+    blocks: [
+      { c: 1, cs: 3, r: 1, rs: 1 },
+      { c: 4, cs: 2, r: 1, rs: 2 },
+      { c: 1, cs: 2, r: 2, rs: 2 },
+      { c: 3, cs: 1, r: 2, rs: 2 },
+      { c: 4, cs: 3, r: 3, rs: 1 },
+    ],
+    neighbor: { c: 6, cs: 1, r: 1, rs: 2 },
+    fillers: [
+      { c: 1, cs: 3, r: 4, rs: 1 },
+      { c: 4, cs: 3, r: 4, rs: 1 },
+    ],
+  },
+  {
+    blocks: [
+      { c: 1, cs: 2, r: 1, rs: 2 },
+      { c: 3, cs: 1, r: 1, rs: 2 },
+      { c: 4, cs: 3, r: 1, rs: 1 },
+      { c: 4, cs: 2, r: 2, rs: 2 },
+      { c: 1, cs: 3, r: 3, rs: 1 },
+    ],
+    neighbor: { c: 6, cs: 1, r: 2, rs: 3 },
+    fillers: [
+      { c: 1, cs: 2, r: 4, rs: 1 },
+      { c: 3, cs: 1, r: 4, rs: 1 },
+      { c: 4, cs: 2, r: 4, rs: 1 },
+    ],
+  },
+];
+
+const FILLER_NAMES = ['TRANSIT SPINE', 'UTILITY GRID', 'FREIGHT INTERCHANGE', 'DATA TRUNK', 'CANAL LOCKS', 'POWER SUBSTATION'];
+
+function cellStyle(cell: StageCell): string {
+  return `--gc:${cell.c}/${cell.c + cell.cs};--gr:${cell.r}/${cell.r + cell.rs}`;
+}
+
+function fillerBlock(name: string, cell: StageCell): string {
+  return `<div class="blk filler" style="${cellStyle(cell)}"><div class="nm">${name}</div></div>`;
+}
+
+function shortName(t: Territory): string {
+  return t.name.replace('SECTOR ', '').replace(/"/g, '');
+}
+
 function slotsUsed(a: import('./meta').MetaAgent): number {
   return (
     a.loadout.length +
@@ -78,6 +159,8 @@ export class Screens {
   private el: HTMLElement;
   private selAgent = 0;
   private selRegion = -1;
+  private selTerr = -1;
+  private rdOpen = false;
 
   constructor(el: HTMLElement) {
     this.el = el;
@@ -100,6 +183,7 @@ export class Screens {
     this.show();
     this.el.innerHTML = `
       <div class="panel menu">
+        <img class="logo" src="/logos/nexus-orbital-variant-02.png" alt="" />
         <h1>NEXUS<span>PROTOCOL</span></h1>
         <p class="tag">Corporate acquisitions. Kinetic division.</p>
         ${hasSave ? '<button data-act="continue">RESUME OPERATIONS</button>' : ''}
@@ -167,9 +251,93 @@ export class Screens {
     };
   }
 
+  private mapHud(m: MetaState): string {
+    return `<div class="maphud"><h2>GLOBAL OPERATIONS</h2><span class="credits">${m.credits}cr</span><span>+${incomePerCycle(m) * 2}cr/hr</span><span>R&amp;D +${researchPerCycle(m) * 2}/hr</span><span>ACT ${campaignAct(m)}</span><span class="cyc">CYCLE ${m.cycle} · next in ${Math.max(1, Math.ceil((CYCLE_MS - m.econMs) / 60000))}m</span></div>`;
+  }
+
+  private terrBlock(m: MetaState, t: Territory, cell: StageCell): string {
+    const ownerTag = t.owned
+      ? ' <span class="own">NEXUS</span>'
+      : t.rival >= 0
+        ? ` <span class="riv">${m.syndicates[t.rival]!.name.split(' ')[0]}</span>`
+        : '';
+    const tags = `${ownerTag}${t.hq ? ' <span class="hqtag">HQ</span>' : ''}${t.siege ? ' <span class="sietag">SIEGE</span>' : ''}`;
+    const line = t.owned
+      ? `${Math.round((t.baseIncome * t.taxRate) / 100)}cr/cyc · tax ${t.taxRate}%`
+      : `est ${t.baseIncome}cr`;
+    const ubar = t.owned
+      ? `<div class="ubar${t.unrest > 60 ? ' hot' : ''}"><i style="width:${Math.min(100, t.unrest)}%"></i></div>`
+      : '';
+    const cls = `blk${t.owned ? ' own' : t.rival >= 0 ? ' riv' : ''}${t.siege ? ' sieged' : ''}${t.id === this.selTerr ? ' sel' : ''}`;
+    return `<div class="${cls}" data-sel="${t.id}" style="${cellStyle(cell)}"><div class="nm">${shortName(t)}${tags}</div><div class="cr">${line}</div>${ubar}</div>`;
+  }
+
+  private popover(m: MetaState, t: Territory): string {
+    if (t.owned) {
+      const siegeMin = t.siege ? Math.ceil(Math.max(0, t.siege.deadline - m.lastSeen) / 60000) : 0;
+      const siegeBanner = t.siege
+        ? `<div class="siege">SIEGE: ${m.syndicates[t.siege.rival]!.name} strikes in ${Math.floor(siegeMin / 60)}h ${siegeMin % 60}m</div>`
+        : '';
+      const action = t.siege
+        ? `<button class="primary" data-defend="${t.id}">REPEL TAKEOVER</button>`
+        : t.unrest >= DEFENSE_UNREST
+          ? `<button data-defend="${t.id}">DEFENSE CONTRACT</button>`
+          : '<div class="fine">HOLDING · NO ACTION REQUIRED</div>';
+      return `<div class="pop"><h4>${t.name}</h4><div class="own">NEXUS</div>${siegeBanner}
+        <dl><dt>Income share</dt><dd>${Math.round((t.baseIncome * t.taxRate) / 100)}cr/cycle</dd><dt>Unrest</dt><dd class="unrest ${t.unrest > 60 ? 'hot' : ''}">${t.unrest}/100</dd></dl>
+        <div class="taxrow">Tax <input type="range" min="10" max="50" step="5" value="${t.taxRate}" data-tax="${t.id}"/> <b>${t.taxRate}%</b></div>
+        ${action}</div>`;
+    }
+    const owner = t.rival >= 0 ? `<div class="riv">${m.syndicates[t.rival]!.name}</div>` : '<div class="neutral">NEUTRAL</div>';
+    return `<div class="pop"><h4>${t.name}</h4>${owner}${t.hq ? '<div class="hqtag">RIVAL HQ ARCOLOGY</div>' : ''}
+      <dl><dt>Est. income</dt><dd>${t.baseIncome}cr base</dd><dt>Contract</dt><dd>${CONTRACT_NAMES[t.missionType]}</dd></dl>
+      <button class="primary" data-contract="${t.id}">OPEN CONTRACT</button></div>`;
+  }
+
+  private stage(m: MetaState): string {
+    const layout = STAGE_LAYOUTS[this.selRegion % STAGE_LAYOUTS.length]!;
+    const terrs = m.territories.filter((t) => t.region === this.selRegion);
+    const blocks = terrs.map((t, i) => this.terrBlock(m, t, layout.blocks[i]!)).join('');
+    const nextI = this.selRegion + 1;
+    let neighbor: string;
+    if (nextI >= REGIONS.length) {
+      neighbor = fillerBlock(FILLER_NAMES[(this.selRegion * 3 + 5) % FILLER_NAMES.length]!, layout.neighbor);
+    } else if (regionUnlocked(m, nextI)) {
+      const owned = m.territories.filter((t) => t.region === nextI && t.owned).length;
+      neighbor = `<div class="blk gate" data-region="${nextI}" style="${cellStyle(layout.neighbor)}"><div class="nm">${REGIONS[nextI]!.name}</div><div class="cr">${owned}/5 · ENTER</div></div>`;
+    } else {
+      neighbor = `<div class="fog" style="${cellStyle(layout.neighbor)}">${REGIONS[nextI]!.name}<br>LOCKED · ${REGION_UNLOCK_OWNED} DISTRICTS REQ.</div>`;
+    }
+    const fillers = layout.fillers
+      .map((cell, i) => fillerBlock(FILLER_NAMES[(this.selRegion * 3 + i) % FILLER_NAMES.length]!, cell))
+      .join('');
+    const sel = m.territories[this.selTerr];
+    const pop = sel && sel.region === this.selRegion ? this.popover(m, sel) : '';
+    const legend = `<div class="legend"><span><i class="k-own"></i>NEXUS</span><span><i class="k-riv"></i>RIVAL</span><span><i class="k-neu"></i>NEUTRAL</span></div>`;
+    return `<div class="stage">${blocks}${neighbor}${fillers}${pop}${legend}</div>`;
+  }
+
+  private rdDrawer(m: MetaState): string {
+    const bar = (label: string, pts: number, need: number) =>
+      `<div>${label}: <progress value="${Math.min(pts, need)}" max="${need}"></progress> ${pts >= need ? 'ONLINE' : `${pts}/${need}`}</div>`;
+    const wNext = [2, 3, 4, 5]
+      .map((tier) => ({ label: `WPN T${tier}`, need: WEAPON_TIER_PTS[tier]! }))
+      .find((x) => m.weaponPts < x.need);
+    const aNext = [1, 2, 3]
+      .map((lvl) => ({ label: `AUG V${lvl}`, need: AUG_LEVEL_PTS[lvl]! }))
+      .find((x) => m.augPts < x.need);
+    const nextTxt = `NEXT: ${wNext ? `${wNext.label} ${m.weaponPts}/${wNext.need}` : 'WPN MAXED'} · ${aNext ? `${aNext.label} ${m.augPts}/${aNext.need}` : 'AUG MAXED'}`;
+    const grid = this.rdOpen
+      ? `<div class="rdgrid">${[2, 3, 4, 5].map((tier) => bar(`Weapons tier ${tier}`, m.weaponPts, WEAPON_TIER_PTS[tier]!)).join('')}${[1, 2, 3].map((lvl) => bar(`Augmentation V${lvl}`, m.augPts, AUG_LEVEL_PTS[lvl]!)).join('')}</div>`
+      : '';
+    return `<div class="drawer"><span>R&amp;D</span><b data-wsplit="1">WEAPONS ${m.researchSplit}%</b><input type="range" min="0" max="100" step="10" value="${m.researchSplit}" data-split="1"/><b data-asplit="1">AUGMENTS ${100 - m.researchSplit}%</b><span>${nextTxt}</span><button data-act="rd">${this.rdOpen ? 'LESS' : 'ALL THRESHOLDS'}</button>${grid}</div>`;
+  }
+
   worldMap(m: MetaState, onContract: (t: Territory, defense?: boolean) => void): void {
     this.show();
     if (this.selRegion < 0 || this.selRegion >= m.regionsUnlocked) this.selRegion = m.regionsUnlocked - 1;
+    const st = m.territories[this.selTerr];
+    if (!st || st.region !== this.selRegion) this.selTerr = -1;
     const tabs = REGIONS.map((r, i) => {
       const locked = !regionUnlocked(m, i);
       const ownedCount = m.territories.filter((t) => t.region === i && t.owned).length;
@@ -179,54 +347,49 @@ export class Screens {
     const charterNote = nextLocked
       ? `<div class="fine">Charter extension: manage ${REGION_UNLOCK_OWNED} districts in ${REGIONS[m.regionsUnlocked - 1]!.name} to open ${REGIONS[m.regionsUnlocked]!.name}.</div>`
       : '';
-    const terr = m.territories
-      .filter((t) => t.region === this.selRegion)
-      .map((t) => {
-        const owner = t.owned
-          ? '<b class="own">NEXUS</b>'
-          : t.rival >= 0
-            ? `<b class="riv">${m.syndicates[t.rival]!.name}</b>`
-            : '<b class="neutral">NEUTRAL</b>';
-        const siegeMin = t.siege ? Math.ceil(Math.max(0, t.siege.deadline - m.lastSeen) / 60000) : 0;
-        const siegeBanner = t.siege
-          ? `<div class="siege">SIEGE: ${m.syndicates[t.siege.rival]!.name} strikes in ${Math.floor(siegeMin / 60)}h ${siegeMin % 60}m</div>`
-          : '';
-        const body = t.owned
-          ? `${siegeBanner}<div>Income share <b>${Math.round((t.baseIncome * t.taxRate) / 100)}cr</b>/cycle</div>
-             <div class="taxrow">Tax <input type="range" min="10" max="50" step="5" value="${t.taxRate}" data-tax="${t.id}"/> <b>${t.taxRate}%</b></div>
-             <div>Unrest <span class="unrest ${t.unrest > 60 ? 'hot' : ''}">${t.unrest}</span>/100</div>
-             ${t.siege ? `<button class="primary" data-defend="${t.id}">REPEL TAKEOVER</button>` : t.unrest >= DEFENSE_UNREST ? `<button data-defend="${t.id}">DEFENSE CONTRACT</button>` : ''}`
-          : `<div>Est. income <b>${t.baseIncome}cr</b> base</div>
-             <div>Contract: <b>${CONTRACT_NAMES[t.missionType]}</b>${t.hq ? ' <span class="hqtag">RIVAL HQ ARCOLOGY</span>' : ''}</div>
-             <button data-contract="${t.id}">OPEN CONTRACT</button>`;
-        return `<div class="terr ${t.owned ? 'owned' : ''}${t.siege ? ' sieged' : ''}"><h3>${t.name} ${owner}</h3>${body}</div>`;
-      })
-      .join('');
-    const bar = (label: string, pts: number, need: number) =>
-      `<div>${label}: <progress value="${Math.min(pts, need)}" max="${need}"></progress> ${pts >= need ? 'ONLINE' : `${pts}/${need}`}</div>`;
-    const research = `
-      <div class="research">
-        <h3>R&amp;D ALLOCATION</h3>
-        <div class="taxrow">Weapons <input type="range" min="0" max="100" step="10" value="${m.researchSplit}" data-split="1"/> Augments</div>
-        ${[2, 3, 4, 5].map((tier) => bar(`Weapons tier ${tier}`, m.weaponPts, WEAPON_TIER_PTS[tier]!)).join('')}
-        ${[1, 2, 3].map((lvl) => bar(`Augmentation V${lvl}`, m.augPts, AUG_LEVEL_PTS[lvl]!)).join('')}
-      </div>`;
+    const tickerTitle = m.log.slice(0, 4).join('\n').replace(/"/g, '&quot;');
     this.el.innerHTML = `
       <div class="panel map">
-        <div class="topbar"><h2>GLOBAL OPERATIONS</h2><span class="credits">${m.credits}cr</span><span>+${incomePerCycle(m) * 2}cr/hr</span><span>R&amp;D +${researchPerCycle(m) * 2}/hr</span><span>ACT ${campaignAct(m)}</span><span>CYCLE ${m.cycle} (next in ${Math.max(1, Math.ceil((CYCLE_MS - m.econMs) / 60000))}m)</span></div>
+        ${this.mapHud(m)}
         <div class="regiontabs">${tabs}</div>
         ${charterNote}
-        <div class="terrgrid">${terr}</div>
-        ${research}
-        <div class="loglines">${m.log.slice(0, 4).map((l) => `<div>&gt; ${l}</div>`).join('')}</div>
+        ${this.stage(m)}
+        ${this.rdDrawer(m)}
+        <div class="ticker" title="${tickerTitle}">&gt; ${m.log[0] ?? 'Awaiting first directive.'}</div>
       </div>`;
     this.el.onclick = (e) => {
-      const d = (e.target as HTMLElement).dataset;
-      if (d.region !== undefined) {
-        this.selRegion = Number(d.region);
+      const el = e.target as HTMLElement;
+      const d = el.dataset;
+      if (d.contract !== undefined) {
+        onContract(m.territories[Number(d.contract)]!);
+        return;
+      }
+      if (d.defend !== undefined) {
+        onContract(m.territories[Number(d.defend)]!, true);
+        return;
+      }
+      if (d.act === 'rd') {
+        this.rdOpen = !this.rdOpen;
         this.worldMap(m, onContract);
-      } else if (d.contract !== undefined) onContract(m.territories[Number(d.contract)]!);
-      else if (d.defend !== undefined) onContract(m.territories[Number(d.defend)]!, true);
+        return;
+      }
+      const reg = el.closest<HTMLElement>('[data-region]');
+      if (reg && !(reg as HTMLButtonElement).disabled) {
+        this.selRegion = Number(reg.dataset.region);
+        this.selTerr = -1;
+        this.worldMap(m, onContract);
+        return;
+      }
+      const blk = el.closest<HTMLElement>('[data-sel]');
+      if (blk) {
+        this.selTerr = Number(blk.dataset.sel);
+        this.worldMap(m, onContract);
+        return;
+      }
+      if (!el.closest('.pop') && el.closest('.stage')) {
+        this.selTerr = -1;
+        this.worldMap(m, onContract);
+      }
     };
     this.el.oninput = (e) => {
       const t = e.target as HTMLInputElement;
@@ -237,6 +400,10 @@ export class Screens {
       } else if (t.dataset.split !== undefined) {
         m.researchSplit = Number(t.value);
         saveMeta(m);
+        const w = this.el.querySelector('[data-wsplit]');
+        const a = this.el.querySelector('[data-asplit]');
+        if (w) w.textContent = `WEAPONS ${m.researchSplit}%`;
+        if (a) a.textContent = `AUGMENTS ${100 - m.researchSplit}%`;
       }
     };
   }

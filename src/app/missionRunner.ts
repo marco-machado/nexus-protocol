@@ -700,12 +700,22 @@ function renderHud(
   const agents = state.agents
     .map((a, i) => {
       const w = a.weapons[a.active];
-      const wname = w ? `${WEAPONS[w.wid]!.name} ${w.ammo}` : 'unarmed';
+      const wname = w ? `${WEAPONS[w.wid]!.name} ${w.ammo}` : 'UNARMED';
       const cls = a.alive ? (selected[i] ? 'agent sel' : 'agent') : 'agent dead';
-      const stim = `C${a.stims[0]} F${a.stims[1]} S${a.stims[2]}`;
+      const ratio = a.hp / a.maxHp;
+      const hpCls = ratio > 0.5 ? 'ok' : ratio > 0.2 ? 'low' : 'crit';
       const aggro = ['HOLD', 'DEF', 'FREE'][a.aggression] ?? 'FREE';
-      const flags = `${a.cloakT > 0 ? ' | CLOAK' : ''}${a.stunT > 0 ? ' | JAMMED' : ''}${a.driving >= 0 ? ' | DRIVING' : ''}${a.spec.shieldMax > 0 ? ` | SH${a.shield}` : ''}`;
-      return `<div class="${cls}"><b>A${i + 1}</b> ${a.alive ? a.hp : 'KIA'}<span class="hpbar"><i style="width:${(a.hp / a.maxHp) * 100}%"></i></span><small>${wname} | ${stim} | R${((a.reserve / 10) | 0)} | ${aggro}${flags}</small></div>`;
+      const badges = [
+        a.cloakT > 0 ? '<em class="b-cloak">CLOAK</em>' : '',
+        a.stunT > 0 ? '<em class="b-jam">JAMMED</em>' : '',
+        a.driving >= 0 ? '<em class="b-drive">DRIVING</em>' : '',
+        a.spec.shieldMax > 0 ? `<em class="b-shield">SH ${a.shield}</em>` : '',
+      ].join('');
+      return `<div class="${cls}">
+        <div class="arow"><b>A${i + 1}</b><span class="ahp">${a.alive ? a.hp : 'KIA'}</span>${badges}</div>
+        <span class="hpbar ${hpCls}"><i style="width:${ratio * 100}%"></i></span>
+        <div class="akit"><span class="wpn">${wname}</span><span>C${a.stims[0]} F${a.stims[1]} S${a.stims[2]}</span><span>R${(a.reserve / 10) | 0}</span><span class="agg">${aggro}</span></div>
+      </div>`;
     })
     .join('');
   let objective = objectiveText;
@@ -759,5 +769,10 @@ function renderHud(
       ${status ? `<span class="status">${status}</span>` : ''}
     </div>
     <div class="hud-agents">${agents}</div>
-    <div class="hud-help">LMB select | RMB move/attack | 1-4 squad, 5 all | Z/X/C stims | Tab weapon | R aggression | F persuade | G/H/B swarm | V cloak | J hijack | T charge | Y medbay | U drone | K EMP | WASD/arrows pan | Q/E rotate | space pause | -/= sim speed</div>`;
+    <div class="hud-help">
+      <span class="kgroup"><b>LMB</b>select<b>RMB</b>move/attack<b>1-4</b>squad<b>5</b>all</span>
+      <span class="kgroup"><b>F</b>persuade<b>V</b>cloak<b>J</b>hijack<b>T</b>charge<b>Y</b>medbay<b>U</b>drone<b>K</b>EMP<b>G/H/B</b>swarm</span>
+      <span class="kgroup"><b>Z/X/C</b>stims<b>Tab</b>weapon<b>R</b>aggression</span>
+      <span class="kgroup"><b>WASD</b>pan<b>Q/E</b>rotate<b>SPACE</b>pause<b>-/=</b>speed</span>
+    </div>`;
 }
