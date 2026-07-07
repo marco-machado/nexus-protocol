@@ -86,8 +86,7 @@ Combat is visually vicious but stylized: sharp impact bursts, blood on pavement,
 ## 5. Core Gameplay Loop
 
 ```
-Global Operations -> Select Territory -> Brief and Equip Squad -> Real-Time Contract
--> Debrief (loot, cash, intel) -> Research and Augment -> Tax Territories -> Repeat
+Global Operations -> Select Territory -> Brief and Equip Squad -> Real-Time Contract -> Debrief (loot, cash, intel) -> Research and Augment -> Tax Territories -> Repeat
 ```
 
 A full loop iteration targets 10 to 15 minutes, sized for a browser session. The idle economy runs while the tab is closed, so the loop has a slow outer ring (territory income, research, unrest) and a fast inner ring (the contract itself).
