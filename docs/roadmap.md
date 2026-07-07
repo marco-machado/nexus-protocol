@@ -8,6 +8,12 @@ Snapshot as of 2026-07-05, updated at the close of the Phase D implementation pa
 
 The MVP vertical slice defined in GDD section 12 is functionally complete, and Phases B (content depth), C (world and campaign), and D (city simulation) are fully in: mission time-of-day and weather with real perception effects, autonomous vehicles with hijacking and chain-reacting explosions, a destructible storefront mid-layer, per-time-of-day lighting, and GPU-instanced skeletal crowds with a near/far LOD split. The flow-field question that gated Phase D closure was settled by a committed density probe: per-unit A* holds at flashmob density, so flow fields stay deliberately unbuilt. The architecture rule that could not be retrofitted (deterministic fixed-point command-driven sim) is in place and test-enforced. The Phase A remainder is the manual perf run on a Windows iGPU laptop.
 
+### Current vs. still missing against the GDD
+
+Implemented: single-player campaign, 40-territory globe, all seven mission types, weapon/equipment tiers 1-5, V1-V3 augment research, tax/unrest economy, rival doctrines, real-time counterattack sieges, permadeath, service records, veteran quirks, New Game+, autonomous vehicles, destructible storefront/fuel mid-layer, day/dusk/night and rain conditions, minimap, tutorial comms, palette settings, procedural audio, rain, bloom, WebGPU/WebGL rendering, and GPU-instanced crowd LOD.
+
+Still missing / post-MVP: multiplayer co-op, async PvP, accounts, cloud saves, IndexedDB fallback, mission resume after page exit, input remapping, gamepad support, tablet touch layout, streaming/load-budget work, final accessibility pass, and the remaining manual Windows iGPU perf check.
+
 ## 2. MVP milestone validation (M0-M7)
 
 ### M0 — Skeleton [DONE]
@@ -121,19 +127,18 @@ Riskiest full-release tech after multiplayer; gate each item on the Phase A perf
 - Verification: the crowd/probe pass was exercised in a real browser (headless Chrome via Playwright) on both WebGPU and the WebGL fallback at `?perf&npcs=400`, plus a rain/alarm-RED combat run with panicking and dead NPCs on screen; no console or shader errors, numbers in `docs/perf.md`. That also retires most of the earlier gap for the first pass's render work (per-time-of-day lighting, rubble, vehicle meshes all rendered in these runs); still unexercised by hand: the J/RMB hijack flow feel, cloak flicker, and siege/defense UI under the new lighting
 - Already done (pre-Phase D): pedestrian crowds, schedules, panic propagation, police escalation tiers, LOS-based cover
 
-### Phase E — Multiplayer and accounts
+### Phase E — Post-MVP multiplayer and accounts [TODO]
 The determinism groundwork was built for this from day one; keep the replay CI green throughout every prior phase, since it is the desync test harness.
-- Lockstep co-op (2 players, 2 agents each) over WebRTC with server relay fallback; tactical pause becomes 50 percent slow-mo in co-op
-- Drop-in via shareable link
-- Async PvP: attack ghost versions of other players' defense layouts, regional leaderboards (depends on Phase B defense missions)
-- Accounts and cloud saves with local fallback (migrate `localStorage` to IndexedDB plus server sync)
-- Already done: deterministic fixed-point sim, command-stream replays, state hashing, tick-indexed command queue with target ticks (the lockstep input delay mechanism)
+- [TODO] Lockstep co-op (2 players, 2 agents each) over WebRTC with server relay fallback; tactical pause becomes 50 percent slow-mo in co-op
+- [TODO] Drop-in via shareable link
+- [TODO] Async PvP: attack ghost versions of other players' defense layouts, regional leaderboards (depends on Phase B defense missions)
+- [TODO] Accounts and cloud saves with local fallback (migrate `localStorage` to IndexedDB plus server sync)
+- [DONE] Groundwork: deterministic fixed-point sim, command-stream replays, state hashing, tick-indexed command queue with target ticks (the lockstep input delay mechanism)
 
 ### Phase F — Platform, distribution, release
 - Input: full remapping, gamepad (Gamepad API), tablet touch layout (commands are already input-agnostic)
 - Load budget: district chunk streaming, KTX2 texture atlases, code-splitting the three.js bundle; first playable under 15 MB, full mission under 60 MB
 - Zero-friction start: first mission loads from the landing page, account creation deferred to first debrief
-- Monetization: premium unlock after free Act 1 (3 territories)
 - Accessibility completion: subtitles/captions, final colorblind audit
 - Already done: none beyond mouse/keyboard input abstraction via the command layer
 
