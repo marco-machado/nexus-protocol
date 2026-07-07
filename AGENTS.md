@@ -81,4 +81,4 @@ Reads `SimState` every frame and updates meshes; never mutates sim state.
 
 ## 3D Generator
 
-- When using Tripo for text-to-3D, image-to-3D, texturing, rigging, retargeting, stylization, conversion, downloadable GLB/FBX outputs, and not API key is found, output the prompt so the user can generate from the website instead.
+- When using Tripo for text-to-3D, image-to-3D, texturing, rigging, retargeting, stylization, conversion, downloadable GLB/FBX outputs, and no API key is found, output the prompt so the user can generate from the website instead.
