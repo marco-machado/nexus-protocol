@@ -145,9 +145,13 @@ components:
 
 ## Overview
 
+This file is the machine-readable design-token export. The human-facing visual and experiential intent lives in `docs/game-design.md` (Sections 13 and 14), which is the canonical design bible; keep the two consistent when either changes.
+
 Nexus Protocol looks like proprietary command software for a megacorporation that treats violence as operations work. The interface is dark, compressed, numeric, and unsentimental: cyan telemetry, amber finance, green ownership, red alarm states, and terminal-style language reinforce that the player is an executive operator, not a hero.
 
 The game view is rain-soaked neon cyberpunk with low-poly readability, bloom, minimap pings, and faction-colored units. The app layer should stay colder and more bureaucratic than the city: panels, cards, logs, and buttons should read like an internal corporate control system laid over a chaotic tactical simulation.
+
+The look is systemic, not static. The scene and HUD palette shift with alarm state: cold cyan and amber when the district is clear, amber creeping in at alarm level 1, and red emergency lighting with a lowered bloom threshold at alarm level 2. Treat alarm state as a first-class driver of color, the same signal that drives the audio stems.
 
 ## Colors
 
