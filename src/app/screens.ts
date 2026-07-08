@@ -31,7 +31,7 @@ import { WEAPONS } from '../sim/weapons';
 import { applyPalette, PALETTES, type PaletteName } from '../render/palette';
 import { OWNER_NEUTRAL, OWNER_NEXUS, type GlobeSnapshot, type WorldGlobe } from '../render/globe';
 import { audio } from './audio';
-import { saveSettings, settings } from './settings';
+import { SIM_SPEED_FAST, SIM_SPEED_NORMAL, saveSettings, settings, snapSimSpeed } from './settings';
 
 const POOL_GEAR = {
   persuadertron: { name: 'Persuadertron', desc: 'F-key conversion pulse', price: 500, tier: 1, stock: 'persuadertrons' },
@@ -144,7 +144,10 @@ export class Screens {
       <div class="panel">
         <h2>OPERATOR SETTINGS</h2>
         <h3>ACCESSIBILITY</h3>
-        <div class="taxrow">Simulation speed <input type="range" min="50" max="200" step="5" value="${Math.round(settings.simSpeed * 100)}" data-set="simSpeed"/> <b>${Math.round(settings.simSpeed * 100)}%</b></div>
+        <div class="taxrow">Simulation speed
+          <button data-speed="${SIM_SPEED_NORMAL}" ${settings.simSpeed === SIM_SPEED_NORMAL ? 'class="primary"' : ''}>NORMAL</button>
+          <button data-speed="${SIM_SPEED_FAST}" ${settings.simSpeed === SIM_SPEED_FAST ? 'class="primary"' : ''}>FAST</button>
+        </div>
         <div class="taxrow">Palette ${(Object.keys(PALETTES) as PaletteName[])
           .map((p) => `<button data-palette="${p}" ${p === settings.palette ? 'class="primary"' : ''}>${PALETTES[p].label}</button>`)
           .join('')}</div>
@@ -166,12 +169,16 @@ export class Screens {
         applyPalette(settings.palette);
         saveSettings();
         this.settings(onBack);
+      } else if (d.speed !== undefined) {
+        settings.simSpeed = snapSimSpeed(Number(d.speed));
+        saveSettings();
+        this.settings(onBack);
       }
     };
     this.el.oninput = (e) => {
       const t = e.target as HTMLInputElement;
       const key = t.dataset.set;
-      if (key === 'simSpeed' || key === 'masterVol' || key === 'musicVol' || key === 'sfxVol') {
+      if (key === 'masterVol' || key === 'musicVol' || key === 'sfxVol') {
         settings[key] = Number(t.value) / 100;
         const label = t.nextElementSibling;
         if (label) label.textContent = pct(settings[key]);

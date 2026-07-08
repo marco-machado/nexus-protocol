@@ -9,6 +9,7 @@ import {
 } from '../sim/commands';
 import { SWARM_FLASHMOB, SWARM_FOLLOW, SWARM_HOLD } from '../sim/state';
 import { ORDER_ICONS } from './hudIcons';
+import { snapSimSpeed } from './settings';
 
 // Mouse-operable command HUD (contracts/hud-controls.md). The pure helpers
 // below map data-act controls to the identical Command objects the keyboard
@@ -50,7 +51,7 @@ export function resolveCardScope(
 }
 
 export function clampSimSpeed(v: number): number {
-  return Math.round(Math.min(2, Math.max(0.5, v)) * 100) / 100;
+  return snapSimSpeed(v);
 }
 
 const GEAR_ACTS: Record<string, { gear: number; has: (s: HudAgent['spec']) => boolean }> = {
@@ -170,11 +171,8 @@ const CLUSTER_HTML = `
   </div>
   <div class="speedbar">
     <button data-act="pause">PAUSE</button>
-    <button data-act="speed:0.5">0.5X</button>
-    <button data-act="speed:0.75">0.75X</button>
-    <button data-act="speed:1">1.0X</button>
-    <button data-act="speed:1.5">1.5X</button>
-    <button data-act="speed:2">2.0X</button>
+    <button data-act="speed:0.5">NORMAL</button>
+    <button data-act="speed:1">FAST</button>
   </div>`;
 
 export function createHudControls(host: HTMLElement, hooks: HudControlHooks): HudControls {

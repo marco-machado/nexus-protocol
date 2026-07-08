@@ -49,7 +49,7 @@ import { UI_ICONS, WEAPON_ICON_FALLBACK, WEAPON_ICONS } from './hudIcons';
 import { createMinimap } from './minimap';
 import { createNameplates, plateLabel } from './nameplates';
 import { createPerfOverlay } from './perfOverlay';
-import { saveSettings, settings } from './settings';
+import { SIM_SPEED_FAST, SIM_SPEED_NORMAL, saveSettings, settings } from './settings';
 import type { TutorialHint } from './tutorial';
 
 export interface MissionResult {
@@ -468,7 +468,7 @@ export function runMission(
         e.preventDefault();
         paused = !paused;
       } else if (k === '-' || k === '=') {
-        settings.simSpeed = clampSimSpeed(settings.simSpeed + (k === '-' ? -0.1 : 0.1));
+        settings.simSpeed = k === '-' ? SIM_SPEED_NORMAL : SIM_SPEED_FAST;
         saveSettings();
       } else if (k === '[' || k === 'q') {
         cameraMotionTrace.length = 0;
@@ -1059,7 +1059,7 @@ function renderHud(
       <span class="inf">INFLUENCE <b>${String(inf).padStart(3, '0')}</b><span class="meter"><i style="width:${Math.min(100, (inf / 40) * 100)}%"></i></span></span>
       <span class="spacer"></span>
       ${status ? `<span class="status">${status}</span>` : ''}
-      ${settings.simSpeed !== 1 ? `<span class="simchip">SIM ${Math.round(settings.simSpeed * 100)}%</span>` : ''}
+      ${settings.simSpeed === SIM_SPEED_FAST ? '<span class="simchip">SIM FAST</span>' : ''}
       <span class="clock">TIME ${clock}</span>
       ${paused && state.mission.status === STATUS_ACTIVE ? '<span class="pausechip">PAUSED</span>' : ''}
       <button class="icobtn" data-act="pause" title="${paused ? 'RESUME' : 'PAUSE'}">${paused ? UI_ICONS.play : UI_ICONS.pause}</button>

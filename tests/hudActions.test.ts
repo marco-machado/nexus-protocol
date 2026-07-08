@@ -181,13 +181,14 @@ describe('eligibility (FR-021a)', () => {
 });
 
 describe('speed preset clamping (FR-022)', () => {
-  it('clamps into the 0.5-2.0 band', () => {
+  it('snaps any value to the nearest of normal (0.5) and fast (1.0)', () => {
     expect(clampSimSpeed(0.25)).toBe(0.5);
     expect(clampSimSpeed(0.5)).toBe(0.5);
-    expect(clampSimSpeed(0.75)).toBe(0.75);
+    expect(clampSimSpeed(0.6)).toBe(0.5);
+    expect(clampSimSpeed(0.75)).toBe(1);
     expect(clampSimSpeed(1)).toBe(1);
-    expect(clampSimSpeed(1.5)).toBe(1.5);
-    expect(clampSimSpeed(2)).toBe(2);
-    expect(clampSimSpeed(3)).toBe(2);
+    expect(clampSimSpeed(1.5)).toBe(1);
+    expect(clampSimSpeed(2)).toBe(1);
+    expect(clampSimSpeed(Number.NaN)).toBe(0.5);
   });
 });

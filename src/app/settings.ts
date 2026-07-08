@@ -13,9 +13,18 @@ export interface Settings {
 
 const KEY = 'nexus-protocol-settings-v1';
 
+export const SIM_SPEED_NORMAL = 0.5;
+export const SIM_SPEED_FAST = 1;
+
+// only two supported speeds; values persisted by older builds snap to the
+// nearest one (0.75 rounds up, non-numbers land on normal)
+export function snapSimSpeed(v: number): number {
+  return v >= 0.75 ? SIM_SPEED_FAST : SIM_SPEED_NORMAL;
+}
+
 function defaults(): Settings {
   return {
-    simSpeed: 1,
+    simSpeed: SIM_SPEED_NORMAL,
     palette: 'default',
     masterVol: 0.8,
     musicVol: 0.7,
@@ -30,7 +39,9 @@ function load(): Settings {
   try {
     const raw = localStorage.getItem(KEY);
     if (!raw) return defaults();
-    return { ...defaults(), ...(JSON.parse(raw) as Partial<Settings>) };
+    const s = { ...defaults(), ...(JSON.parse(raw) as Partial<Settings>) };
+    s.simSpeed = snapSimSpeed(Number(s.simSpeed));
+    return s;
   } catch {
     return defaults();
   }
