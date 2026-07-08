@@ -2,10 +2,11 @@ import { Plane, Raycaster, Vector2, Vector3 } from 'three';
 import type { WebGPURenderer } from 'three/webgpu';
 import { createRig, rigYawDelta, targetRigYaw, updateRig } from '../render/camera';
 import { NPC_CAP } from '../render/crowd';
-import { SCENE_COLORS } from '../render/palette';
+import { createAlarmGrade, rgbToCss, updateAlarmGrade } from '../render/alarmScript';
+import { applyPalette, SCENE_COLORS } from '../render/palette';
 import { createPost } from '../render/post';
 import { createRain } from '../render/rain';
-import { createGameScene, objectiveDone, syncScene, updateSun, vehicleRenderDiagnostics } from '../render/scene';
+import { applyAlarmGrade, createGameScene, objectiveDone, syncScene, updateSun, vehicleRenderDiagnostics } from '../render/scene';
 import { fromFx, toFx } from '../sim/fixed';
 import {
   CommandQueue,
@@ -36,7 +37,17 @@ import { V_WRECK } from '../sim/vehicles';
 import { WEAPONS } from '../sim/weapons';
 import { audio } from './audio';
 import { createComms } from './comms';
+import {
+  clampSimSpeed,
+  commandForAction,
+  createHudControls,
+  resolveCardScope,
+  selectionIds,
+  type PanDir,
+} from './hudControls';
+import { UI_ICONS, WEAPON_ICON_FALLBACK, WEAPON_ICONS } from './hudIcons';
 import { createMinimap } from './minimap';
+import { createNameplates, plateLabel } from './nameplates';
 import { createPerfOverlay } from './perfOverlay';
 import { saveSettings, settings } from './settings';
 import type { TutorialHint } from './tutorial';
@@ -57,6 +68,55 @@ export interface MissionOptions {
   civCount?: number;
   perf?: boolean;
   hints?: TutorialHint[];
+  // roster codenames parallel to specs; slots fall back to A1-A4 (FR-017)
+  codenames?: string[];
+  // flavor operation name for the HUD top bar
+  opName?: string;
+}
+
+// agent card portraits: /portraits/a{n}.png when present, else a generated
+// bust silhouette; probed once per page and self-heals on the next rebuild
+const PORTRAIT_HUES = ['#00e5ff', '#5ef2c4', '#7c9bff', '#38d4f0'];
+const portraitSrcs: string[] = [];
+
+function buildPortraitFallback(i: number): string {
+  const c = document.createElement('canvas');
+  c.width = 96;
+  c.height = 96;
+  const ctx = c.getContext('2d')!;
+  const bg = ctx.createLinearGradient(0, 0, 0, 96);
+  bg.addColorStop(0, '#131c2c');
+  bg.addColorStop(1, '#0a0f18');
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, 96, 96);
+  ctx.fillStyle = '#1c2739';
+  ctx.beginPath();
+  ctx.arc(48, 38, 19, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(14, 96);
+  ctx.quadraticCurveTo(48, 56, 82, 96);
+  ctx.closePath();
+  ctx.fill();
+  ctx.fillStyle = PORTRAIT_HUES[i % PORTRAIT_HUES.length]!;
+  ctx.fillRect(33, 34, 30, 6);
+  ctx.globalAlpha = 0.07;
+  ctx.fillStyle = '#00e5ff';
+  for (let y = 0; y < 96; y += 4) ctx.fillRect(0, y, 96, 1);
+  ctx.globalAlpha = 1;
+  return c.toDataURL();
+}
+
+function portraitSrc(i: number): string {
+  if (!portraitSrcs[i]) {
+    portraitSrcs[i] = buildPortraitFallback(i);
+    const img = new Image();
+    img.onload = () => {
+      portraitSrcs[i] = `/portraits/a${i + 1}.png`;
+    };
+    img.src = `/portraits/a${i + 1}.png`;
+  }
+  return portraitSrcs[i]!;
 }
 
 export function runMission(
@@ -158,6 +218,19 @@ export function runMission(
     let paused = false;
     let placeMode = missionType === MISSION_DEFENSE;
     let endTimer = -1;
+    // client-only order chrome: DIRECT routes through the classic per-agent
+    // command path, TACTICAL through the swarm channel; armed orders turn the
+    // next ground click into that command (mouse parity for RMB-only orders)
+    let orderMode: 'direct' | 'tactical' = 'direct';
+    let armedOrder: 'order:move' | 'order:attack' | null = null;
+    let sysTab = 'comms';
+    const syncArmed = () => {
+      for (const b of Array.from(
+        hud.querySelectorAll<HTMLButtonElement>('button[data-act^="order:"]'),
+      )) {
+        b.classList.toggle('on', b.dataset.act === armedOrder);
+      }
+    };
     const raycaster = new Raycaster();
     const groundPlane = new Plane(new Vector3(0, 1, 0), 0);
     const hit = new Vector3();
@@ -176,12 +249,39 @@ export function runMission(
       return { x: hit.x, z: hit.z };
     };
 
+    // pick in screen space; a ground-plane radius misses bodies standing above it
+    const pickNpcAt = (clientX: number, clientY: number): number => {
+      let targetNpc = -1;
+      let bestD = 26;
+      const v = new Vector3();
+      for (const n of state.npcs) {
+        if (n.state === ST_DEAD) continue;
+        v.set(fromFx(n.x), 0.9, fromFx(n.z)).project(rig.camera);
+        const sx = ((v.x + 1) / 2) * window.innerWidth;
+        const sy = ((-v.y + 1) / 2) * window.innerHeight;
+        const d = Math.hypot(sx - clientX, (sy - clientY) * 0.75);
+        if (d < bestD) {
+          bestD = d;
+          targetNpc = n.id;
+        }
+      }
+      return targetNpc;
+    };
+
     let downX = 0;
     let downY = 0;
     let boxDiv: HTMLDivElement | null = null;
 
+    // window-level world handlers must ignore events that originate on
+    // interactive HUD elements so a control click never box-selects or moves
+    // the squad beneath it (FR-025, defense in depth over pointer-events)
+    const isHudTarget = (e: Event): boolean => {
+      const t = e.target as HTMLElement | null;
+      return !!t && !!t.closest?.('[data-act], .panpad, .hud-ctl');
+    };
+
     const onPointerDown = (e: PointerEvent) => {
-      if (e.button !== 0) return;
+      if (e.button !== 0 || isHudTarget(e)) return;
       downX = e.clientX;
       downY = e.clientY;
       boxDiv = document.createElement('div');
@@ -202,6 +302,32 @@ export function runMission(
       boxDiv.remove();
       boxDiv = null;
       const moved = Math.abs(e.clientX - downX) + Math.abs(e.clientY - downY) > 8;
+      if (armedOrder && !moved) {
+        const act = armedOrder;
+        armedOrder = null;
+        syncArmed();
+        const ids = selIds();
+        const g = groundAt(e.clientX, e.clientY);
+        if (ids.length > 0 && g) {
+          if (act === 'order:move') {
+            if (orderMode === 'tactical') {
+              send({ type: 'swarm', mode: SWARM_FLASHMOB, x: toFx(g.x), z: toFx(g.z) });
+            } else {
+              send({
+                type: 'move',
+                ids,
+                x: toFx(Math.max(0.5, Math.min(95.5, g.x))),
+                z: toFx(Math.max(0.5, Math.min(95.5, g.z))),
+              });
+            }
+          } else {
+            const npcId = pickNpcAt(e.clientX, e.clientY);
+            if (npcId >= 0) send({ type: 'attack', ids, npcId });
+          }
+          audio.uiClick();
+        }
+        return;
+      }
       if (placeMode && !moved) {
         const g = groundAt(e.clientX, e.clientY);
         if (g) {
@@ -238,25 +364,14 @@ export function runMission(
     };
     const onContextMenu = (e: MouseEvent) => {
       e.preventDefault();
+      if (isHudTarget(e)) return;
       const g = groundAt(e.clientX, e.clientY);
       if (!g) return;
       const ids = selIds();
       if (ids.length === 0) return;
-      // pick in screen space; a ground-plane radius misses bodies standing above it
-      let targetNpc = -1;
+      const targetNpc = pickNpcAt(e.clientX, e.clientY);
       let bestD = 26;
       const v = new Vector3();
-      for (const n of state.npcs) {
-        if (n.state === ST_DEAD) continue;
-        v.set(fromFx(n.x), 0.9, fromFx(n.z)).project(rig.camera);
-        const sx = ((v.x + 1) / 2) * window.innerWidth;
-        const sy = ((-v.y + 1) / 2) * window.innerHeight;
-        const d = Math.hypot(sx - e.clientX, (sy - e.clientY) * 0.75);
-        if (d < bestD) {
-          bestD = d;
-          targetNpc = n.id;
-        }
-      }
       let targetVeh = -1;
       const anyDriving = ids.some((id) => state.agents[id]!.driving >= 0);
       if (targetNpc < 0 && !anyDriving) {
@@ -353,8 +468,7 @@ export function runMission(
         e.preventDefault();
         paused = !paused;
       } else if (k === '-' || k === '=') {
-        settings.simSpeed = Math.max(0.5, Math.min(1, settings.simSpeed + (k === '-' ? -0.1 : 0.1)));
-        settings.simSpeed = Math.round(settings.simSpeed * 100) / 100;
+        settings.simSpeed = clampSimSpeed(settings.simSpeed + (k === '-' ? -0.1 : 0.1));
         saveSettings();
       } else if (k === '[' || k === 'q') {
         cameraMotionTrace.length = 0;
@@ -416,21 +530,173 @@ export function runMission(
       window.removeEventListener('wheel', onWheel);
       window.removeEventListener('resize', onResize);
       renderer.setAnimationLoop(null);
+      hud.removeEventListener('click', onHudClick);
+      hudControls.dispose();
+      hud.classList.remove('show-help');
       hud.innerHTML = '';
       diagnosticsEl.remove();
+      // restore the operator palette's --accent after the alarm script drove it
+      applyPalette(settings.palette);
       perf?.dispose();
       minimap.dispose();
       comms.dispose();
+      nameplates.dispose();
       arrowLayer.remove();
     };
 
     const perf = opts.perf ? createPerfOverlay() : null;
     const post = settings.postFx ? createPost(renderer, gs.scene, rig.camera) : null;
+    const alarmGrade = createAlarmGrade(settings.palette);
     const rain = settings.rain && state.env.rain === 1 ? createRain(rig.cx, rig.cz) : null;
     if (rain) gs.scene.add(rain.mesh);
-    const minimap = createMinimap(state);
+
+    // static HUD panels live directly under #hud so the 200ms hudDynamic
+    // rebuild never touches them
+    const sysPanel = document.createElement('div');
+    sysPanel.className = 'hud-sys panel-box';
+    sysPanel.innerHTML = `<h4>SYSTEMS</h4><canvas class="syswave" width="196" height="42"></canvas>
+      <div class="systabs">
+        <button data-act="sys:comms" class="on">COMMS</button>
+        <button data-act="sys:scan">SCAN</button>
+        <button data-act="sys:drones">DRONES</button>
+        <button data-act="sys:support">SUPPORT</button>
+      </div>`;
+    hud.appendChild(sysPanel);
+    const waveCtx = sysPanel.querySelector('canvas')!.getContext('2d')!;
+    const waveData = new Uint8Array(256);
+    let waveFrame = 0;
+    const drawWave = (tMs: number) => {
+      waveFrame = (waveFrame + 1) % 3;
+      if (waveFrame !== 0) return;
+      const wCv = 196;
+      const hCv = 42;
+      waveCtx.clearRect(0, 0, wCv, hCv);
+      waveCtx.strokeStyle = 'rgba(0,229,255,0.75)';
+      waveCtx.lineWidth = 1.4;
+      waveCtx.beginPath();
+      const live = audio.waveform(waveData);
+      for (let x = 0; x < wCv; x++) {
+        const y = live
+          ? hCv / 2 + (waveData[((x / wCv) * waveData.length) | 0]! / 255 - 0.5) * hCv * 0.9
+          : hCv / 2 + Math.sin(x * 0.18 + tMs / 260) * Math.sin(x * 0.031 + tMs / 700) * hCv * 0.32;
+        if (x === 0) waveCtx.moveTo(x, y);
+        else waveCtx.lineTo(x, y);
+      }
+      waveCtx.stroke();
+    };
+
+    const mmWrap = document.createElement('div');
+    mmWrap.className = 'minimap-wrap panel-box';
+    mmWrap.innerHTML = `<h4>TACNET<span class="mmz"><button data-act="mmzoom:out">-</button><button data-act="mmzoom:in">+</button></span></h4>`;
+    hud.appendChild(mmWrap);
+    const minimap = createMinimap(state, mmWrap);
     const comms = createComms();
+    const codenames = opts.codenames ?? [];
+    const nameplates = createNameplates(codenames);
     const pendingHints = [...(opts.hints ?? [])];
+
+    // interactive HUD (contracts/hud-controls.md): agent cards rebuild every
+    // 200 ms, so card controls go through one delegated listener on #hud; the
+    // control cluster is static DOM so hold-to-pan state survives
+    const hudDynamic = document.createElement('div');
+    hud.appendChild(hudDynamic);
+    const panBy = (dir: PanDir, amount: number) => {
+      const yaw = rig.yaw;
+      const fx = -Math.sin(yaw);
+      const fz = -Math.cos(yaw);
+      if (dir === 'up') {
+        rig.cx += fx * amount;
+        rig.cz += fz * amount;
+      } else if (dir === 'down') {
+        rig.cx -= fx * amount;
+        rig.cz -= fz * amount;
+      } else if (dir === 'left') {
+        rig.cx += fz * amount;
+        rig.cz -= fx * amount;
+      } else {
+        rig.cx -= fz * amount;
+        rig.cz += fx * amount;
+      }
+    };
+    const hudControls = createHudControls(hud, {
+      panNudge: (dir) => panBy(dir, 2.4 * (rig.viewHeight / 26)),
+      onPanEngage: () => audio.uiClick(),
+    });
+    const refreshControls = () =>
+      hudControls.refresh(state.agents, selected, paused, settings.simSpeed);
+    refreshControls();
+    const dispatchAct = (act: string, el: HTMLButtonElement) => {
+      if (act === 'pause') {
+        paused = !paused;
+        refreshControls();
+      } else if (act.startsWith('speed:')) {
+        // same source of truth as the settings slider (FR-022a)
+        settings.simSpeed = clampSimSpeed(Number(act.slice(6)));
+        saveSettings();
+        refreshControls();
+      } else if (act === 'rotate:ccw') {
+        rig.yawStep = (rig.yawStep + 7) % 8;
+      } else if (act === 'rotate:cw') {
+        rig.yawStep = (rig.yawStep + 1) % 8;
+      } else if (act === 'ui:help') {
+        hud.classList.toggle('show-help');
+      } else if (act.startsWith('mode:')) {
+        orderMode = act === 'mode:tactical' ? 'tactical' : 'direct';
+        armedOrder = null;
+        syncArmed();
+        for (const b of Array.from(
+          hud.querySelectorAll<HTMLButtonElement>('button[data-act^="mode:"]'),
+        )) {
+          b.classList.toggle('on', b.dataset.act === act);
+        }
+      } else if (act === 'order:move' || act === 'order:attack') {
+        armedOrder = armedOrder === act ? null : act;
+        syncArmed();
+      } else if (act === 'order:hold') {
+        const ids = selectionIds(selected, state.agents);
+        if (ids.length > 0) {
+          send(
+            orderMode === 'tactical'
+              ? { type: 'swarm', mode: SWARM_HOLD, x: 0, z: 0 }
+              : { type: 'aggro', ids, level: 0 },
+          );
+        }
+      } else if (act.startsWith('sys:')) {
+        sysTab = act.slice(4);
+        for (const b of Array.from(
+          hud.querySelectorAll<HTMLButtonElement>('button[data-act^="sys:"]'),
+        )) {
+          b.classList.toggle('on', b.dataset.act === act);
+        }
+      } else if (act === 'mmzoom:in' || act === 'mmzoom:out') {
+        minimap.setZoom(minimap.zoom() + (act === 'mmzoom:in' ? 0.5 : -0.5));
+      } else {
+        const idxAttr = el.dataset.idx;
+        const ids =
+          idxAttr !== undefined
+            ? resolveCardScope(Number(idxAttr), selected, state.agents)
+            : selectionIds(selected, state.agents);
+        const cmd = commandForAction(act, ids, state.agents, lastGround);
+        // stale click on a just-ineligible control: no sound, no command
+        if (!cmd) return;
+        send(cmd);
+        if (cmd.type === 'persuade') audio.persuadePulse();
+      }
+      audio.uiClick();
+      el.classList.add('pressed');
+      window.setTimeout(() => el.classList.remove('pressed'), 130);
+    };
+    const onHudClick = (e: MouseEvent) => {
+      const el = (e.target as HTMLElement).closest?.('button[data-act]') as
+        | HTMLButtonElement
+        | null;
+      if (!el || el.disabled) return;
+      const act = el.dataset.act!;
+      // pan buttons act through their pointer-capture hold/nudge path
+      if (act.startsWith('pan:')) return;
+      dispatchAct(act, el);
+    };
+    hud.addEventListener('click', onHudClick);
 
     let prevAlarmLevel = state.alarm.level;
     let prevDone = false;
@@ -594,26 +860,13 @@ export function runMission(
         }
       }
 
+      // hold-to-pan feeds the same yaw-relative vector as the keyboard path
       const panSpeed = 0.03 * dt * (rig.viewHeight / 26);
-      const yaw = rig.yaw;
-      const fx = -Math.sin(yaw);
-      const fz = -Math.cos(yaw);
-      if (panKeys.has('ArrowUp')) {
-        rig.cx += fx * panSpeed;
-        rig.cz += fz * panSpeed;
-      }
-      if (panKeys.has('ArrowDown')) {
-        rig.cx -= fx * panSpeed;
-        rig.cz -= fz * panSpeed;
-      }
-      if (panKeys.has('ArrowLeft')) {
-        rig.cx += fz * panSpeed;
-        rig.cz -= fx * panSpeed;
-      }
-      if (panKeys.has('ArrowRight')) {
-        rig.cx -= fz * panSpeed;
-        rig.cz += fx * panSpeed;
-      }
+      const heldPan = hudControls.activePan();
+      if (panKeys.has('ArrowUp') || heldPan === 'up') panBy('up', panSpeed);
+      if (panKeys.has('ArrowDown') || heldPan === 'down') panBy('down', panSpeed);
+      if (panKeys.has('ArrowLeft') || heldPan === 'left') panBy('left', panSpeed);
+      if (panKeys.has('ArrowRight') || heldPan === 'right') panBy('right', panSpeed);
       updateRig(rig, window.innerWidth / window.innerHeight, dt);
       if (cameraMotionTrace.length > 0 && cameraMotionTrace.length < 36) {
         const yawSample = Number(rig.yaw.toFixed(4));
@@ -621,14 +874,26 @@ export function runMission(
       }
       updateSun(gs, rig);
 
+      // alarm color script: render-local ease over the time-of-day baseline
+      updateAlarmGrade(alarmGrade, state.alarm.level, settings.palette, dt / 1000);
+      applyAlarmGrade(gs, alarmGrade, time / 1000);
+      if (post) post.handles.bloomThreshold.value = alarmGrade.bloomThreshold;
+      document.documentElement.style.setProperty('--accent', rgbToCss(alarmGrade.cssAccent));
+
       const alpha = Math.min(1, acc / TICK_MS);
-      syncScene(gs, state, prevAX, prevAZ, prevVX, prevVZ, alpha, selected);
+      syncScene(gs, state, prevAX, prevAZ, prevVX, prevVZ, alpha, selected, rig);
       updateDiagnostics();
       gs.crowd.update(state, prevNX, prevNZ, alpha, dt, rig);
       rain?.update(dt, rig.cx, rig.cz);
-      if (post) post.render();
+      if (post) post.pipeline.render();
       else renderer.render(gs.scene, rig.camera);
-      minimap.update(state, rig, state.agents.some((a) => a.alive && a.spec.scanner));
+      minimap.update(
+        state,
+        rig,
+        sysTab === 'scan' || state.agents.some((a) => a.alive && a.spec.scanner),
+      );
+      drawWave(time);
+      nameplates.update(state, prevAX, prevAZ, alpha, selected, rig);
       updateArrows();
       audio.update(state);
       if (perf) {
@@ -640,7 +905,8 @@ export function runMission(
       hudT += dt;
       if (hudT > 200) {
         hudT = 0;
-        renderHud(hud, state, selected, objectiveText, paused, placeMode);
+        renderHud(hudDynamic, state, selected, objectiveText, paused, placeMode, codenames, opts.opName ?? 'NIGHTWIRE');
+        refreshControls();
         pollEvents();
         for (let i = pendingHints.length - 1; i >= 0; i--) {
           if (pendingHints[i]!.when(state)) {
@@ -695,12 +961,15 @@ function renderHud(
   objectiveText: string,
   paused: boolean,
   placeMode: boolean,
+  codenames: string[] = [],
+  opName = 'NIGHTWIRE',
 ): void {
   const inf = influence(state);
   const agents = state.agents
     .map((a, i) => {
       const w = a.weapons[a.active];
-      const wname = w ? `${WEAPONS[w.wid]!.name} ${w.ammo}` : 'UNARMED';
+      const wname = w ? WEAPONS[w.wid]!.name.toUpperCase() : 'UNARMED';
+      const wicon = w ? (WEAPON_ICONS[w.wid] ?? WEAPON_ICON_FALLBACK) : WEAPON_ICON_FALLBACK;
       const cls = a.alive ? (selected[i] ? 'agent sel' : 'agent') : 'agent dead';
       const ratio = a.hp / a.maxHp;
       const hpCls = ratio > 0.5 ? 'ok' : ratio > 0.2 ? 'low' : 'crit';
@@ -711,14 +980,32 @@ function renderHud(
         a.driving >= 0 ? '<em class="b-drive">DRIVING</em>' : '',
         a.spec.shieldMax > 0 ? `<em class="b-shield">SH ${a.shield}</em>` : '',
       ].join('');
+      const dis = a.alive ? '' : ' disabled';
+      const items = a.stims[0] + a.stims[1] + a.stims[2];
       return `<div class="${cls}">
-        <div class="arow"><b>A${i + 1}</b><span class="ahp">${a.alive ? a.hp : 'KIA'}</span>${badges}</div>
-        <span class="hpbar ${hpCls}"><i style="width:${ratio * 100}%"></i></span>
-        <div class="akit"><span class="wpn">${wname}</span><span>C${a.stims[0]} F${a.stims[1]} S${a.stims[2]}</span><span>R${(a.reserve / 10) | 0}</span><span class="agg">${aggro}</span></div>
+        <div class="acard">
+          <img class="portrait" src="${portraitSrc(i)}" alt=""/>
+          <div class="abody">
+            <div class="arow"><b>${plateLabel(codenames[i], i)}</b>${badges}</div>
+            <div class="blabel">HEALTH <b>${a.alive ? `${a.hp}/${a.maxHp}` : 'KIA'}</b></div>
+            <span class="hpbar ${hpCls}"><i style="width:${ratio * 100}%"></i></span>
+            <div class="blabel">FOCUS <b>${(a.reserve / 10) | 0}%</b></div>
+            <span class="hpbar focus"><i style="width:${a.reserve / 10}%"></i></span>
+          </div>
+        </div>
+        <div class="akit">
+          <button class="wpn" data-act="cycle" data-idx="${i}"${dis} title="${wname}">${wicon}<span>${w ? w.ammo : 0}</span></button>
+          <button data-act="stim:0" data-idx="${i}"${dis}>C${a.stims[0]}</button>
+          <button data-act="stim:1" data-idx="${i}"${dis}>F${a.stims[1]}</button>
+          <button data-act="stim:2" data-idx="${i}"${dis}>S${a.stims[2]}</button>
+          <span class="chip">x${items}</span>
+          <button class="agg" data-act="aggro" data-idx="${i}"${dis}>${aggro}</button>
+        </div>
       </div>`;
     })
     .join('');
   let objective = objectiveText;
+  const bullets: string[] = [];
   const m = state.mission;
   if (m.type === 2) {
     const left = m.assets.filter((a) => a.alive).length;
@@ -733,40 +1020,55 @@ function renderHud(
     objective += ` (${left} left)`;
   } else if (m.type === 4) {
     const relay = m.assets[0];
-    objective += ` | WAVE ${m.wave}/${m.wavesTotal} | RELAY ${relay?.alive ? relay.hp : 0}`;
+    bullets.push(`WAVE ${m.wave}/${m.wavesTotal} | RELAY ${relay?.alive ? relay.hp : 0}`);
     if (placeMode)
-      objective += ` | PLACING: click turret (${m.turretBudget}), shift-click trap (${m.trapBudget}), Enter done`;
+      bullets.push(
+        `PLACING: click turret (${m.turretBudget}), shift-click trap (${m.trapBudget}), Enter done`,
+      );
   } else if (m.type === 5) {
-    const stageText =
+    bullets.push(
       m.stage === 0
         ? '1/3 cut power'
         : m.stage === 1
           ? m.crackT > 0
             ? `2/3 cracking vault ${Math.min(99, Math.round((m.crackT / 300) * 100))}%`
             : '2/3 open the vault'
-          : '3/3 exfiltrate';
-    objective += ` | ${stageText}`;
+          : '3/3 exfiltrate',
+    );
   } else if (m.vipId >= 0) {
     const vip = state.npcs[m.vipId];
-    objective += vip && vip.state === ST_PERSUADED ? ' (VIP acquired: reach exfil)' : '';
+    if (vip && vip.state === ST_PERSUADED) bullets.push('VIP acquired: reach exfil');
+  }
+  bullets.unshift(objective);
+  if (state.mission.status === STATUS_ACTIVE && objectiveDone(state)) {
+    bullets.push('Proceed to exfil');
   }
   const status =
     state.mission.status === STATUS_ACTIVE
-      ? paused
-        ? 'PAUSED'
-        : ''
+      ? ''
       : state.mission.status === STATUS_WON
         ? 'CONTRACT FULFILLED'
         : m.type === 4 && m.assets[0] && !m.assets[0].alive
           ? 'RELAY LOST'
           : 'SQUAD WRITTEN OFF';
+  const clock = new Date(state.tick * TICK_MS).toISOString().slice(11, 19);
   hud.innerHTML = `
     <div class="hud-top">
-      <span class="obj">${objective}</span>
-      <span class="alarm a${state.alarm.level}">ALERT ${['GREEN', 'AMBER', 'RED'][state.alarm.level]}</span>
-      <span class="inf">INFLUENCE ${inf}</span>
-      ${settings.simSpeed < 1 ? `<span class="alarm">SIM ${Math.round(settings.simSpeed * 100)}%</span>` : ''}
+      <span class="op">OPERATION: <b>${opName}</b></span>
+      <span class="alarm a${state.alarm.level}">ALERT LEVEL <b>${['GREEN', 'AMBER', 'RED'][state.alarm.level]}</b></span>
+      <span class="inf">INFLUENCE <b>${String(inf).padStart(3, '0')}</b><span class="meter"><i style="width:${Math.min(100, (inf / 40) * 100)}%"></i></span></span>
+      <span class="spacer"></span>
       ${status ? `<span class="status">${status}</span>` : ''}
+      ${settings.simSpeed !== 1 ? `<span class="simchip">SIM ${Math.round(settings.simSpeed * 100)}%</span>` : ''}
+      <span class="clock">TIME ${clock}</span>
+      ${paused && state.mission.status === STATUS_ACTIVE ? '<span class="pausechip">PAUSED</span>' : ''}
+      <button class="icobtn" data-act="pause" title="${paused ? 'RESUME' : 'PAUSE'}">${paused ? UI_ICONS.play : UI_ICONS.pause}</button>
+      <button class="icobtn" data-act="ui:help" title="CONTROLS">${UI_ICONS.help}</button>
+      <button class="icobtn" data-act="ui:menu" title="COMMAND UPLINK OFFLINE UNTIL MISSION END" disabled>${UI_ICONS.menu}</button>
+    </div>
+    <div class="hud-obj panel-box">
+      <h4>OBJECTIVES</h4>
+      <ul>${bullets.map((b) => `<li>${b}</li>`).join('')}</ul>
     </div>
     <div class="hud-agents">${agents}</div>
     <div class="hud-help">

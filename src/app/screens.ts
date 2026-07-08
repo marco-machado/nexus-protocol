@@ -144,7 +144,7 @@ export class Screens {
       <div class="panel">
         <h2>OPERATOR SETTINGS</h2>
         <h3>ACCESSIBILITY</h3>
-        <div class="taxrow">Simulation speed <input type="range" min="50" max="100" step="5" value="${Math.round(settings.simSpeed * 100)}" data-set="simSpeed"/> <b>${Math.round(settings.simSpeed * 100)}%</b></div>
+        <div class="taxrow">Simulation speed <input type="range" min="50" max="200" step="5" value="${Math.round(settings.simSpeed * 100)}" data-set="simSpeed"/> <b>${Math.round(settings.simSpeed * 100)}%</b></div>
         <div class="taxrow">Palette ${(Object.keys(PALETTES) as PaletteName[])
           .map((p) => `<button data-palette="${p}" ${p === settings.palette ? 'class="primary"' : ''}>${PALETTES[p].label}</button>`)
           .join('')}</div>

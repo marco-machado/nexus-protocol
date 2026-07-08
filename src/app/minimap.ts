@@ -11,20 +11,23 @@ const NEAR_RADIUS = 14;
 
 export interface Minimap {
   update(state: SimState, rig: CameraRig, mapWide: boolean): void;
+  setZoom(z: number): void;
+  zoom(): number;
   dispose(): void;
 }
 
 const css = (c: { getHexString(): string }) => `#${c.getHexString()}`;
 
-export function createMinimap(state: SimState): Minimap {
+export function createMinimap(state: SimState, host?: HTMLElement): Minimap {
   const canvas = document.createElement('canvas');
   canvas.width = MAP_W * SCALE;
   canvas.height = MAP_H * SCALE;
   // layout lives in the .minimap stylesheet rule so narrow viewports can
   // shrink it without fighting inline styles
   canvas.className = 'minimap';
-  document.body.appendChild(canvas);
+  (host ?? document.body).appendChild(canvas);
   const ctx = canvas.getContext('2d')!;
+  let zoom = 1;
 
   const base = document.createElement('canvas');
   base.width = canvas.width;
@@ -54,6 +57,16 @@ export function createMinimap(state: SimState): Minimap {
       if (now - lastDraw < REDRAW_MS) return;
       lastDraw = now;
 
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.fillStyle = '#0d1119';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      if (zoom > 1) {
+        // magnified view recenters on the camera, clamped to the map edges
+        const half = canvas.width / (2 * zoom);
+        const cx = Math.max(half, Math.min(canvas.width - half, rig.cx * SCALE));
+        const cz = Math.max(half, Math.min(canvas.height - half, rig.cz * SCALE));
+        ctx.setTransform(zoom, 0, 0, zoom, canvas.width / 2 - cx * zoom, canvas.height / 2 - cz * zoom);
+      }
       ctx.drawImage(base, 0, 0);
 
       ctx.strokeStyle = css(SCENE_COLORS.exfil);
@@ -122,6 +135,13 @@ export function createMinimap(state: SimState): Minimap {
       ctx.lineWidth = 1;
       ctx.strokeRect(-halfW, -halfH, halfW * 2, halfH * 2);
       ctx.restore();
+    },
+    setZoom(z) {
+      zoom = Math.max(1, Math.min(2, z));
+      lastDraw = 0;
+    },
+    zoom() {
+      return zoom;
     },
     dispose() {
       canvas.remove();

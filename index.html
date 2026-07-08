@@ -35,49 +35,272 @@
         color: #b9c4d6;
         font-size: 12px;
       }
+      /* interactive-overlay contract: the HUD container never eats world
+         input; only explicit controls opt back in */
+      #hud [data-act],
+      #hud .panpad {
+        pointer-events: auto;
+      }
+      #hud button[data-act] {
+        background: #14202f;
+        color: #c7d2e4;
+        border: 1px solid #24354d;
+        border-radius: 0;
+        font: inherit;
+        font-size: 10px;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+        padding: 4px 8px;
+        margin: 0;
+        cursor: pointer;
+        min-width: 34px;
+      }
+      #hud button[data-act]:hover:not(:disabled) { border-color: var(--accent); color: #fff; }
+      #hud button[data-act].on {
+        background: #063c46;
+        border-color: var(--accent);
+        color: #aff6ff;
+      }
+      #hud button[data-act].pressed { background: #0a5666; border-color: #aff6ff; color: #fff; }
+      #hud button[data-act]:disabled {
+        opacity: 0.35;
+        border-color: #1a2635;
+        cursor: default;
+      }
+      .hud-ctl {
+        position: absolute;
+        right: 12px;
+        top: 44px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        align-items: flex-end;
+        font-size: 10px;
+      }
+      .hud-ctl .ctlrow { display: flex; gap: 4px; }
+      .hud-ctl .ctllabel {
+        color: #55627a;
+        font-size: 9px;
+        letter-spacing: 1.5px;
+        align-self: flex-end;
+        margin-top: 3px;
+      }
+      .railbox {
+        position: relative;
+        background: rgba(9, 14, 23, 0.85);
+        border: 1px solid #24354d;
+        padding: 8px 10px;
+      }
+      .modes button { min-width: 66px; }
+      .ordergrid {
+        display: grid;
+        grid-template-columns: repeat(3, 58px);
+        gap: 4px;
+      }
+      #hud .ordergrid button[data-act] {
+        min-width: 0;
+        height: 46px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 3px;
+        padding: 3px 0;
+      }
+      .ordergrid svg { width: 16px; height: 16px; }
+      .ordergrid i { font-style: normal; font-size: 8px; letter-spacing: 1px; color: #7d8aa0; }
+      #hud .ordergrid button.on i,
+      #hud .ordergrid button:hover:not(:disabled) i { color: inherit; }
+      .speedbar {
+        position: fixed;
+        right: 12px;
+        bottom: 8px;
+        display: flex;
+        gap: 4px;
+      }
+      .panpad {
+        display: grid;
+        grid-template-columns: repeat(3, 28px);
+        grid-template-rows: repeat(2, 24px);
+        gap: 3px;
+      }
+      .panpad button[data-act] { min-width: 0; padding: 2px 0; }
+      .panpad .pu { grid-column: 2; grid-row: 1; }
+      .panpad .pl { grid-column: 1; grid-row: 2; }
+      .panpad .pd { grid-column: 2; grid-row: 2; }
+      .panpad .pr { grid-column: 3; grid-row: 2; }
+      .panpad .rl { grid-column: 1; grid-row: 1; }
+      .panpad .rr { grid-column: 3; grid-row: 1; }
+      /* nameplates: projected in-world labels, never interactive */
+      #nameplates {
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        z-index: 12;
+        overflow: hidden;
+      }
+      .plate {
+        position: absolute;
+        transform: translate(-50%, -100%);
+        background: rgba(10, 16, 26, 0.78);
+        border: 1px solid #24354d;
+        color: #c7d2e4;
+        font-size: 10px;
+        letter-spacing: 1.2px;
+        padding: 1px 6px;
+        white-space: nowrap;
+      }
+      .plate.sel { border-color: var(--accent); color: #e8fbff; }
+      .plate.sel::before { content: '\25B8 '; color: var(--accent); }
+      .plate.wound { border-color: var(--plate-wound); color: var(--plate-wound); }
+      .plate.down {
+        border-color: var(--plate-down);
+        color: var(--plate-down);
+        text-decoration: line-through;
+        opacity: 0.8;
+      }
       .hud-top {
         position: absolute;
-        top: 10px;
-        left: 12px;
-        right: 12px;
+        top: 0;
+        left: 0;
+        right: 0;
         display: flex;
-        gap: 18px;
+        gap: 14px;
         align-items: center;
+        padding: 7px 12px;
+        background: linear-gradient(180deg, rgba(8, 12, 20, 0.92), rgba(8, 12, 20, 0.55));
+        border-bottom: 1px solid #1a2635;
       }
-      .obj {
+      .hud-top .spacer { flex: 1; }
+      .op {
         color: #e8eef8;
-        background: rgba(10, 16, 26, 0.75);
-        padding: 5px 10px;
+        letter-spacing: 1px;
         border-left: 3px solid var(--accent);
+        padding: 2px 0 2px 8px;
       }
-      .alarm {
-        padding: 4px 8px;
-        background: rgba(10, 16, 26, 0.75);
+      .alarm { padding: 2px 8px; letter-spacing: 1px; color: #8fa3bd; }
+      .alarm.a0 b { color: var(--good); }
+      .alarm.a1 b { color: var(--warn); }
+      .alarm.a2 b { color: var(--bad); }
+      .inf { color: #8fa3bd; letter-spacing: 1px; display: flex; align-items: center; gap: 8px; }
+      .inf b { color: var(--persuaded); }
+      .meter {
+        display: inline-block;
+        width: 90px;
+        height: 6px;
+        background: #1a2433;
+        position: relative;
+        overflow: hidden;
       }
-      .alarm.a0 { color: var(--good); }
-      .alarm.a1 { color: var(--warn); }
-      .alarm.a2 { color: var(--bad); }
-      .inf { color: var(--persuaded); background: rgba(10, 16, 26, 0.75); padding: 4px 8px; }
-      .status {
+      .meter i {
+        display: block;
+        height: 100%;
+        background: var(--persuaded);
+        transition: width 0.4s;
+      }
+      .meter::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: repeating-linear-gradient(90deg, transparent 0 8px, #0a0d14 8px 9px);
+      }
+      .clock { color: #c7d2e4; letter-spacing: 1px; }
+      .pausechip {
         color: var(--gold);
-        font-size: 16px;
-        font-weight: bold;
-        background: rgba(10, 16, 26, 0.9);
-        padding: 6px 14px;
+        border: 1px solid var(--gold);
+        padding: 2px 8px;
+        letter-spacing: 1px;
       }
+      .simchip { color: var(--warn); letter-spacing: 1px; }
+      .status { color: var(--gold); font-size: 15px; font-weight: bold; padding: 2px 10px; }
+      #hud button.icobtn[data-act] { min-width: 0; padding: 3px 6px; line-height: 0; }
+      .icobtn svg { width: 13px; height: 13px; }
+      .panel-box {
+        position: absolute;
+        background: rgba(9, 14, 23, 0.85);
+        border: 1px solid #24354d;
+        padding: 8px 10px;
+      }
+      .panel-box::before {
+        content: '';
+        position: absolute;
+        top: -1px;
+        left: -1px;
+        width: 8px;
+        height: 8px;
+        border-top: 2px solid var(--accent);
+        border-left: 2px solid var(--accent);
+      }
+      .panel-box::after {
+        content: '';
+        position: absolute;
+        bottom: -1px;
+        right: -1px;
+        width: 8px;
+        height: 8px;
+        border-bottom: 2px solid var(--accent);
+        border-right: 2px solid var(--accent);
+      }
+      .panel-box h4,
+      .railbox h4 {
+        margin: 0 0 6px;
+        font-size: 9px;
+        font-weight: normal;
+        letter-spacing: 2px;
+        color: #55627a;
+      }
+      .railbox h4:not(:first-child) { margin-top: 8px; }
+      .hud-obj { top: 44px; left: 12px; min-width: 180px; }
+      .hud-obj ul { margin: 0; padding: 0 0 0 14px; color: #c7d2e4; }
+      .hud-obj li { margin: 2px 0; }
+      .hud-sys { left: 12px; bottom: 34px; width: 200px; }
+      .syswave {
+        display: block;
+        background: rgba(10, 16, 26, 0.6);
+        border: 1px solid #1a2635;
+        margin-bottom: 6px;
+      }
+      .systabs { display: flex; gap: 3px; }
+      #hud .systabs button[data-act] { min-width: 0; flex: 1; padding: 3px 0; font-size: 9px; }
       .hud-agents {
         position: absolute;
-        left: 12px;
+        left: 236px;
+        right: 236px;
         bottom: 34px;
         display: flex;
         gap: 8px;
       }
+      .acard { display: flex; gap: 8px; }
+      .portrait {
+        width: 46px;
+        height: 58px;
+        object-fit: cover;
+        border: 1px solid #24354d;
+        background: #0a0f18;
+      }
+      .agent.sel .portrait { border-color: var(--accent); }
+      .abody { flex: 1; min-width: 0; overflow: hidden; }
+      .blabel {
+        display: flex;
+        justify-content: space-between;
+        gap: 8px;
+        font-size: 8px;
+        letter-spacing: 1.5px;
+        color: #55627a;
+        margin-top: 4px;
+      }
+      .blabel b { color: #8fa3bd; font-weight: normal; letter-spacing: 0.5px; }
+      .hpbar.focus i { background: var(--persuaded); }
+      .akit .chip { color: #8fa3bd; border: 1px solid #24354d; padding: 1px 4px; font-size: 9px; }
+      .akit .wpn svg { width: 18px; height: 13px; vertical-align: -3px; margin-right: 3px; }
       .agent {
         background: linear-gradient(180deg, rgba(14, 22, 36, 0.92), rgba(9, 14, 23, 0.88));
         border: 1px solid #24354d;
         border-top: 2px solid #31465f;
         padding: 6px 9px 7px;
-        min-width: 148px;
+        flex: 1 1 160px;
+        min-width: 0;
+        max-width: 215px;
       }
       .agent.sel { border-color: var(--accent); border-top-color: var(--accent); box-shadow: 0 0 12px rgba(0, 229, 255, 0.18); }
       .agent.dead { opacity: 0.45; border-top-color: var(--bad); }
@@ -97,7 +320,8 @@
       .b-shield { color: var(--accent); }
       .akit {
         display: flex;
-        gap: 8px;
+        gap: 4px;
+        align-items: center;
         color: #7d8aa0;
         font-size: 10px;
         margin-top: 4px;
@@ -105,6 +329,15 @@
       }
       .akit .wpn { color: #a8b6cc; }
       .akit .agg { color: #8fa3bd; letter-spacing: 0.5px; }
+      /* card controls stay chip-sized so the cards keep their footprint */
+      #hud .akit button[data-act] {
+        padding: 1px 4px;
+        min-width: 0;
+        font-size: 9px;
+        letter-spacing: 0.5px;
+      }
+      #hud .akit button.wpn[data-act] { color: #a8b6cc; }
+      #hud .akit button.agg[data-act] { color: #8fa3bd; }
       .hpbar {
         display: block;
         height: 3px;
@@ -123,13 +356,14 @@
         position: absolute;
         bottom: 8px;
         left: 12px;
-        right: 12px;
-        display: flex;
+        right: 260px;
+        display: none;
         flex-wrap: wrap;
         gap: 4px 14px;
         color: #55627a;
         font-size: 10px;
       }
+      #hud.show-help .hud-help { display: flex; }
       .kgroup { white-space: nowrap; }
       .kgroup b {
         color: #8fa3bd;
@@ -151,20 +385,48 @@
         background: #0a0d14;
         opacity: 0.92;
       }
+      .minimap-wrap {
+        position: fixed;
+        right: 12px;
+        bottom: 40px;
+        z-index: 15;
+        padding: 6px 8px 8px;
+      }
+      .minimap-wrap h4 {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        margin-bottom: 5px;
+      }
+      .mmz { display: flex; gap: 3px; }
+      #hud .mmz button[data-act] { min-width: 22px; padding: 0 4px; font-size: 11px; }
+      .minimap-wrap .minimap {
+        position: static;
+        display: block;
+        border: 1px solid #1a2635;
+      }
       @media (max-width: 700px) {
         /* keyboard hints are meaningless on touch-size viewports and the
            bottom band gets crowded: shrink the minimap, tighten the cards */
-        .hud-help { display: none; }
-        .minimap { width: 104px; height: 104px; bottom: 10px; }
+        .hud-help,
+        #hud.show-help .hud-help { display: none; }
+        .hud-sys { display: none; }
+        .minimap { width: 104px; height: 104px; }
+        .minimap-wrap { bottom: 44px; }
         .hud-agents {
           left: 8px;
-          right: 122px;
-          bottom: 10px;
+          right: 130px;
+          bottom: 40px;
           flex-wrap: wrap;
           gap: 5px;
         }
         .agent { min-width: 100px; padding: 4px 6px; }
+        .portrait { display: none; }
         .akit { gap: 5px; font-size: 9px; }
+        .ordergrid { grid-template-columns: repeat(3, 44px); }
+        #hud .ordergrid button[data-act] { height: 38px; }
+        .ordergrid i { display: none; }
       }
       .comms {
         position: fixed;

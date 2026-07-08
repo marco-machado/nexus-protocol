@@ -15,6 +15,7 @@ interface Buses {
 }
 
 let buses: Buses | null = null;
+let analyser: AnalyserNode | null = null;
 
 function noiseBuffer(ctx: AudioContext, seconds: number): AudioBuffer {
   const buf = ctx.createBuffer(1, Math.max(1, (ctx.sampleRate * seconds) | 0), ctx.sampleRate);
@@ -213,6 +214,23 @@ export const audio = {
     buses = { ctx, master, music, sfx, ui, layers };
     startAmbient(buses);
     void ctx.resume();
+  },
+
+  // fills target with the master-bus time-domain signal for the HUD
+  // waveform; returns false while the context is still locked so the caller
+  // can draw a synthetic trace instead
+  waveform(target: Uint8Array<ArrayBuffer>): boolean {
+    if (!buses) return false;
+    if (!analyser) {
+      analyser = buses.ctx.createAnalyser();
+      analyser.fftSize = 256;
+      analyser.smoothingTimeConstant = 0.6;
+      buses.master.disconnect();
+      buses.master.connect(analyser);
+      analyser.connect(buses.ctx.destination);
+    }
+    analyser.getByteTimeDomainData(target);
+    return true;
   },
 
   update(state: SimState): void {
