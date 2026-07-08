@@ -85,6 +85,13 @@ const R = 1;
 const REGION_COUNT = 8;
 const PER_REGION = 5;
 
+// camera framing keeps the globe (atmosphere shell plus margin) inside the
+// UI chrome: the usable box is capped at 16:9, with pixel reserves for the
+// header/tab rows on top and the R&D drawer/ticker on the bottom
+const FIT_RADIUS = R * 1.1;
+const CHROME_RESERVE_Y = 240;
+const CHROME_RESERVE_X = 80;
+
 const COL_NEXUS = new Color(0x33e08a);
 const COL_NEUTRAL = new Color(0x5b6b86);
 const COL_UNREST = new Color(0xe8b23a);
@@ -651,6 +658,12 @@ export class WorldGlobe {
     const w = window.innerWidth;
     const h = window.innerHeight;
     this.camera.aspect = w / h;
+    const bandW = Math.min(w, (16 / 9) * h);
+    const fitPx = Math.max(160, Math.min(h - CHROME_RESERVE_Y, bandW - CHROME_RESERVE_X));
+    // a sphere's silhouette has angular radius asin(FIT_RADIUS / distance);
+    // solve the distance that projects it to fitPx of the viewport height
+    const tanTheta = (fitPx / h) * Math.tan(((this.camera.fov / 2) * Math.PI) / 180);
+    this.camera.position.z = FIT_RADIUS / Math.sin(Math.atan(tanTheta));
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(w, h);
     this.layoutBackdrop();

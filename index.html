@@ -13,17 +13,16 @@
         --bad: #ef4444;
         --persuaded: #22d3ee;
         --gold: #facc15;
-        /* UI chrome lives in a centered 16:9 usable box; the 3D canvas and
-           world-tracking overlays (nameplates, offscreen arrows, selection
-           box) stay full-window */
+        /* UI chrome is responsive up to a max aspect of 16:9: wider windows
+           pillarbox it into a centered band, narrower ones use the full
+           viewport. The 3D canvas and world-tracking overlays (nameplates,
+           offscreen arrows, selection box) stay full-window */
         --ui-inset-x: max(0px, calc((100vw - (16 / 9) * 100vh) / 2));
-        --ui-inset-y: max(0px, calc((100vh - (9 / 16) * 100vw) / 2));
       }
-      /* the small-screen layouts predate the 16:9 box and must not shift */
+      /* the small-screen layouts predate the 16:9 cap and must not shift */
       @media (max-width: 760px) {
         :root {
           --ui-inset-x: 0px;
-          --ui-inset-y: 0px;
         }
       }
       html,
@@ -42,7 +41,7 @@
       }
       #hud {
         position: fixed;
-        inset: var(--ui-inset-y) var(--ui-inset-x);
+        inset: 0 var(--ui-inset-x);
         pointer-events: none;
         color: #b9c4d6;
         font-size: 12px;
@@ -126,7 +125,7 @@
       .speedbar {
         position: fixed;
         right: calc(12px + var(--ui-inset-x));
-        bottom: calc(8px + var(--ui-inset-y));
+        bottom: 8px;
         display: flex;
         gap: 4px;
       }
@@ -400,7 +399,7 @@
       .minimap-wrap {
         position: fixed;
         right: calc(12px + var(--ui-inset-x));
-        bottom: calc(40px + var(--ui-inset-y));
+        bottom: 40px;
         z-index: 15;
         padding: 6px 8px 8px;
       }
@@ -444,7 +443,7 @@
         position: fixed;
         left: 50%;
         transform: translateX(-50%);
-        bottom: calc(130px + var(--ui-inset-y));
+        bottom: 130px;
         z-index: 16;
         pointer-events: none;
         display: flex;
@@ -558,7 +557,7 @@
       }
       .mapframe {
         position: fixed;
-        inset: var(--ui-inset-y) var(--ui-inset-x);
+        inset: 0 var(--ui-inset-x);
         display: flex;
         flex-direction: column;
         color: #c7d2e4;
@@ -572,12 +571,12 @@
         z-index: 0;
       }
       .mapscrim.top {
-        top: var(--ui-inset-y);
+        top: 0;
         height: 200px;
         background: linear-gradient(180deg, rgba(6, 9, 14, 0.92) 0%, rgba(6, 9, 14, 0.5) 46%, rgba(6, 9, 14, 0) 100%);
       }
       .mapscrim.bottom {
-        bottom: var(--ui-inset-y);
+        bottom: 0;
         height: 220px;
         background: linear-gradient(0deg, rgba(6, 9, 14, 0.94) 0%, rgba(6, 9, 14, 0.5) 50%, rgba(6, 9, 14, 0) 100%);
       }
