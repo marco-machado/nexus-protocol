@@ -20,9 +20,12 @@ export const SCENE_COLORS = {
   vip: new Color(0xfacc15),
   agent: new Color(0x00e5ff),
   select: new Color(0x00ff88),
-  exfil: new Color(0x00ff88),
+  exfil: new Color(0x00ffcc),
   asset: new Color(0xff5533),
   target: new Color(0xff3344),
+  alarmClear: new Color(0x00e5ff),
+  alarmWarn: new Color(0xffb23a),
+  alarmSiege: new Color(0xff2233),
 };
 
 export const PALETTES: Record<PaletteName, PaletteDef> = {
@@ -35,6 +38,11 @@ export const PALETTES: Record<PaletteName, PaletteDef> = {
       '--bad': '#ef4444',
       '--persuaded': '#22d3ee',
       '--gold': '#facc15',
+      '--exfil': '#00ffcc',
+      '--accent-warn': '#ffb23a',
+      '--accent-siege': '#ff3344',
+      '--plate-wound': '#e8b23a',
+      '--plate-down': '#ef4444',
     },
     scene: {
       civ: 0x7a8699,
@@ -48,9 +56,12 @@ export const PALETTES: Record<PaletteName, PaletteDef> = {
       vip: 0xfacc15,
       agent: 0x00e5ff,
       select: 0x00ff88,
-      exfil: 0x00ff88,
+      exfil: 0x00ffcc,
       asset: 0xff5533,
       target: 0xff3344,
+      alarmClear: 0x00e5ff,
+      alarmWarn: 0xffb23a,
+      alarmSiege: 0xff2233,
     },
   },
   // Okabe-Ito colorblind-safe set for the red/magenta/orange faction cluster
@@ -63,6 +74,11 @@ export const PALETTES: Record<PaletteName, PaletteDef> = {
       '--bad': '#d55e00',
       '--persuaded': '#56b4e9',
       '--gold': '#e69f00',
+      '--exfil': '#56b4e9',
+      '--accent-warn': '#f0e442',
+      '--accent-siege': '#d55e00',
+      '--plate-wound': '#f0e442',
+      '--plate-down': '#d55e00',
     },
     scene: {
       civ: 0x7a8699,
@@ -79,6 +95,10 @@ export const PALETTES: Record<PaletteName, PaletteDef> = {
       exfil: 0x56b4e9,
       asset: 0xe69f00,
       target: 0x009e73,
+      // siege avoids red-green separation: vermillion vs the yellow warn
+      alarmClear: 0x00e5ff,
+      alarmWarn: 0xf0e442,
+      alarmSiege: 0xd55e00,
     },
   },
   contrast: {
@@ -90,6 +110,11 @@ export const PALETTES: Record<PaletteName, PaletteDef> = {
       '--bad': '#ff3333',
       '--persuaded': '#00ffff',
       '--gold': '#ffd700',
+      '--exfil': '#00ffcc',
+      '--accent-warn': '#ffcc00',
+      '--accent-siege': '#ff3333',
+      '--plate-wound': '#ffcc00',
+      '--plate-down': '#ff3333',
     },
     scene: {
       civ: 0x9aa7bd,
@@ -103,9 +128,12 @@ export const PALETTES: Record<PaletteName, PaletteDef> = {
       vip: 0xffd700,
       agent: 0x00ffff,
       select: 0x00ff66,
-      exfil: 0x00ff66,
+      exfil: 0x00ffcc,
       asset: 0xff6040,
       target: 0xff3333,
+      alarmClear: 0x00ffff,
+      alarmWarn: 0xffcc00,
+      alarmSiege: 0xff3333,
     },
   },
 };

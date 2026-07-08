@@ -115,7 +115,11 @@ export class Game {
   private async launch(t: Territory, defense = false): Promise<void> {
     this.globe?.stop();
     this.screens.hide();
-    const specs = this.meta.agents.filter((a) => a.alive).map((a) => buildSpec(a));
+    const roster = this.meta.agents.filter((a) => a.alive);
+    const specs = roster.map((a) => buildSpec(a));
+    // codenames travel as a parallel app-layer array so AgentSpec and the
+    // sim boundary stay untouched (FR-017); indices align with state.agents
+    const codenames = roster.map((a) => a.name);
     if (specs.length === 0) {
       this.map();
       return;
@@ -145,7 +149,7 @@ export class Game {
       this.hud,
       OBJECTIVES[missionType] ?? 'Contract',
       simParams,
-      { hints: hintsFor(this.meta, t, missionType) },
+      { hints: hintsFor(this.meta, t, missionType), codenames },
     );
     const aliveIdx = this.meta.agents.map((a, i) => (a.alive ? i : -1)).filter((i) => i >= 0);
     const survivors = this.meta.agents.map(() => true);
