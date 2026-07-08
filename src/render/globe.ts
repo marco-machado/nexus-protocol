@@ -302,27 +302,64 @@ function globeLayout(): GlobeLayout {
   return layoutCache;
 }
 
-function labelSprite(text: string, color: string): Sprite {
-  const pad = 10;
+function labelSprite(text: string): Sprite {
+  const pad = 30;
   const canvas = document.createElement('canvas');
   const ctx = canvas.getContext('2d')!;
-  const font = '600 40px Menlo, Consolas, monospace';
+  const font = '700 64px Menlo, Consolas, monospace';
   ctx.font = font;
-  const w = Math.ceil(ctx.measureText(text).width) + pad * 2;
-  const h = 56;
+  const tw = Math.ceil(ctx.measureText(text).width);
+  const w = tw + pad * 2;
+  const h = 116;
   canvas.width = w;
   canvas.height = h;
   ctx.font = font;
   ctx.textBaseline = 'middle';
-  ctx.fillStyle = color;
-  ctx.shadowColor = color;
-  ctx.shadowBlur = 7;
-  ctx.fillText(text, pad, h / 2 + 2);
+  const ty = h / 2 - 4;
+
+  // wide cyan glow halo
+  ctx.shadowColor = 'rgba(0, 229, 255, 0.95)';
+  ctx.shadowBlur = 28;
+  ctx.fillStyle = 'rgba(0, 229, 255, 0.85)';
+  ctx.fillText(text, pad, ty);
+  ctx.fillText(text, pad, ty);
+
+  // chromatic fringe, then a hot near-white core
+  ctx.globalCompositeOperation = 'lighter';
+  ctx.shadowBlur = 0;
+  ctx.fillStyle = 'rgba(255, 80, 170, 0.3)';
+  ctx.fillText(text, pad - 2.5, ty);
+  ctx.fillStyle = 'rgba(90, 255, 230, 0.32)';
+  ctx.fillText(text, pad + 2.5, ty);
+  ctx.shadowColor = 'rgba(190, 255, 255, 0.9)';
+  ctx.shadowBlur = 6;
+  ctx.fillStyle = '#f2ffff';
+  ctx.fillText(text, pad, ty);
+
+  // projector underline with end ticks
+  ctx.globalCompositeOperation = 'source-over';
+  ctx.fillStyle = 'rgba(0, 229, 255, 0.55)';
+  ctx.fillRect(pad, h - 16, tw, 2.5);
+  ctx.fillRect(pad, h - 24, 3, 10);
+  ctx.fillRect(pad + tw - 3, h - 24, 3, 10);
+
+  // scanlines punch through everything for the hologram banding
+  ctx.globalCompositeOperation = 'destination-out';
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+  for (let y = 0; y < h; y += 4) ctx.fillRect(0, y, w, 1.5);
+
   const tex = new CanvasTexture(canvas);
   tex.anisotropy = 4;
-  const mat = new SpriteMaterial({ map: tex, transparent: true, depthWrite: false, depthTest: false, opacity: 0 });
+  const mat = new SpriteMaterial({
+    map: tex,
+    transparent: true,
+    depthWrite: false,
+    depthTest: false,
+    blending: AdditiveBlending,
+    opacity: 0,
+  });
   const spr = new Sprite(mat);
-  spr.scale.set((w / h) * 0.125, 0.125, 1);
+  spr.scale.set((w / h) * 0.155, 0.155, 1);
   spr.renderOrder = 10;
   return spr;
 }
@@ -731,7 +768,7 @@ export class WorldGlobe {
 
     for (let r = 0; r < REGION_COUNT; r++) {
       const c = regionCenter(r);
-      const spr = labelSprite(REGION_NAMES[r] ?? `REGION ${r + 1}`, '#cdecff');
+      const spr = labelSprite(REGION_NAMES[r] ?? `REGION ${r + 1}`);
       spr.position.copy(c.clone().multiplyScalar(R * 1.1));
       spr.position.y += 0.32;
       this.globe.add(spr);
@@ -991,7 +1028,9 @@ export class WorldGlobe {
       spr.getWorldPosition(this.tmpV);
       const facing = this.tmpV.normalize().dot(camDir);
       const front = Math.max(0, (facing - 0.1) / 0.9);
-      const want = (r === this.focusRegion ? 0.62 : 0.14) * front;
+      // projector shimmer keeps the holographic read without strobing
+      const flicker = 1 - (0.05 + 0.05 * Math.sin(tsec * 16 + r * 5.3)) * mo;
+      const want = (r === this.focusRegion ? 0.95 : 0.34) * front * flicker;
       const m = spr.material as SpriteMaterial;
       m.opacity += (want - m.opacity) * 0.12;
     }
