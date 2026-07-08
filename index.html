@@ -670,10 +670,19 @@
       }
       .maphint { color: #45526b; font-size: 10px; letter-spacing: 2px; }
 
-      .terrlist {
+      .leftcol {
         width: 268px;
         align-self: stretch;
         margin: 12px 0 12px 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        min-height: 0;
+        pointer-events: none;
+      }
+      .terrlist {
+        flex: 0 1 auto;
+        min-height: 0;
         display: flex;
         flex-direction: column;
         background: rgba(10, 14, 22, 0.78);
@@ -736,9 +745,11 @@
       .trow .hqtag { color: var(--gold); font-size: 8.5px; }
       .trow .sietag { color: var(--bad); font-size: 8.5px; }
 
-      .detailwrap { width: 300px; align-self: flex-start; margin: 12px 12px 0 0; pointer-events: none; }
+      .detailwrap { pointer-events: none; }
       .pop {
         pointer-events: auto;
+        position: relative;
+        overflow: hidden;
         background: rgba(10, 14, 22, 0.9);
         border: 1px solid var(--accent);
         border-top: 2px solid var(--accent);
@@ -746,6 +757,32 @@
         box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
         font-size: 12px;
         backdrop-filter: blur(4px);
+      }
+      /* holographic materialize: unfold from a scanline, overshoot, settle,
+         with a projector sweep passing down the panel */
+      @media (prefers-reduced-motion: no-preference) {
+        .detailwrap.enter .pop {
+          transform-origin: top left;
+          animation: pop-unfold 0.34s cubic-bezier(0.2, 0.9, 0.25, 1);
+        }
+        .detailwrap.enter .pop::after {
+          content: '';
+          position: absolute;
+          inset: 0;
+          background: linear-gradient(180deg, transparent 20%, rgba(0, 229, 255, 0.28) 50%, transparent 80%);
+          pointer-events: none;
+          animation: pop-sweep 0.55s ease-out 0.1s both;
+        }
+      }
+      @keyframes pop-unfold {
+        0% { opacity: 0; transform: translateX(-18px) scaleY(0.05); filter: brightness(2.6) saturate(0.3); }
+        45% { opacity: 1; transform: translateX(0) scaleY(1.04); filter: brightness(1.7); }
+        70% { transform: scaleY(0.985); filter: brightness(1.15); }
+        100% { transform: none; filter: none; }
+      }
+      @keyframes pop-sweep {
+        from { transform: translateY(-110%); }
+        to { transform: translateY(110%); }
       }
       .pop-h { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
       .pop h4 { margin: 0; color: #e8eef8; font-size: 12.5px; letter-spacing: 0.05em; }
@@ -827,9 +864,9 @@
         .maphud .stat { min-width: 56px; }
         .maphud .stat b { font-size: 13px; }
         .mapbody { flex-direction: column; }
-        .terrlist { width: auto; margin: 8px 8px 0; max-height: 32vh; }
+        .leftcol { width: auto; margin: 8px 8px 0; gap: 8px; }
+        .terrlist { max-height: 32vh; }
         .mapcenter { flex: none; min-height: 88px; order: 4; }
-        .detailwrap { width: auto; margin: 8px 8px 0; order: 5; }
         .legend { position: static; margin: 4px 8px 0; align-self: flex-start; order: 6; }
         .rdgrid { grid-template-columns: 1fr; }
       }

@@ -84,6 +84,9 @@ export class Screens {
   private selAgent = 0;
   private selRegion = -1;
   private selTerr = -1;
+  // replay the detail-panel entrance only when the selection actually changes,
+  // not on the constant full re-renders (tax slider, R&D drawer, etc.)
+  private lastDetailTerr = -1;
   private rdOpen = false;
   private globe: WorldGlobe | null = null;
   private globeWired = false;
@@ -334,6 +337,8 @@ export class Screens {
       : '';
     const sel = m.territories[this.selTerr];
     const detail = sel && sel.region === this.selRegion ? this.popover(m, sel) : '';
+    const detailEnter = detail !== '' && this.selTerr !== this.lastDetailTerr;
+    this.lastDetailTerr = detail === '' ? -1 : this.selTerr;
     const tickerTitle = m.log.slice(0, 4).join('\n').replace(/"/g, '&quot;');
     this.el.innerHTML = `
       <div class="mapframe">
@@ -342,9 +347,11 @@ export class Screens {
         ${this.mapHud(m)}
         <div class="regiontabs">${tabs}</div>
         <div class="mapbody">
-          ${this.terrList(m)}
+          <div class="leftcol">
+            ${this.terrList(m)}
+            <div class="detailwrap${detailEnter ? ' enter' : ''}">${detail}</div>
+          </div>
           <div class="mapcenter">${charterNote}<div class="maphint">DRAG TO ROTATE · SELECT A BEACON</div></div>
-          <div class="detailwrap">${detail}</div>
           ${this.legend()}
         </div>
         ${this.rdDrawer(m)}
