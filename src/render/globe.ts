@@ -6,9 +6,11 @@ import {
   CanvasTexture,
   Color,
   CylinderGeometry,
+  DataTexture,
   DirectionalLight,
   Float32BufferAttribute,
   Group,
+  LinearFilter,
   LineBasicMaterial,
   LineSegments,
   Mesh,
@@ -22,6 +24,8 @@ import {
   QuadraticBezierCurve3,
   Quaternion,
   Raycaster,
+  RepeatWrapping,
+  RGBAFormat,
   RingGeometry,
   Scene,
   SphereGeometry,
@@ -36,8 +40,11 @@ import {
 } from 'three';
 import { MeshBasicNodeMaterial, RenderPipeline, WebGPURenderer } from 'three/webgpu';
 import {
+  asin,
+  atan,
   cameraPosition,
   clamp,
+  cos,
   dot,
   float,
   fract,
@@ -49,10 +56,13 @@ import {
   positionWorld,
   pow,
   screenUV,
+  sin,
   smoothstep,
+  texture as tslTexture,
   time,
   uniform,
   uv,
+  vec2,
   vec3,
 } from 'three/tsl';
 import { bloom } from 'three/examples/jsm/tsl/display/BloomNode.js';
@@ -116,32 +126,180 @@ function ownerColor(t: GlobeTerritory): Color {
 /** Deterministic region centre: latitude bands with golden-angle longitude. */
 function regionCenter(i: number): Vector3 {
   const golden = Math.PI * (3 - Math.sqrt(5));
-  const yc = 0.82 - (i / (REGION_COUNT - 1)) * 1.64;
+  // latitudes stay within +/-43 degrees so yaw-only focus keeps every region
+  // well inside the visible hemisphere and clear of the polar ice
+  const yc = 0.68 - (i / (REGION_COUNT - 1)) * 1.36;
   const r = Math.sqrt(Math.max(0, 1 - yc * yc));
   const th = golden * i + 0.6;
   return new Vector3(Math.cos(th) * r, yc, Math.sin(th) * r).normalize();
 }
 
-/** 40 territory directions, clustered 5 per region around each region centre. */
-function territoryDirs(): Vector3[] {
+const REGION_CENTERS = Array.from({ length: REGION_COUNT }, (_, i) => regionCenter(i));
+
+// ---- procedural land layout ----------------------------------------------
+// Landmasses and territory positions come from ONE deterministic JS field:
+// the planet shader samples it from a baked texture while placement queries
+// it directly, so territories always sit on rendered land. Anywhere the
+// noise refuses to cooperate, an island is stamped under the territory
+// before the bake, which keeps the guarantee unconditional.
+
+const FIELD_W = 512;
+const FIELD_H = 256;
+const LAND_SEED = 11;
+// placement requires this much field above the coast threshold so the GPU
+// detail noise (amplitude ~0.065) can never push a territory into the sea
+const LAND_MARGIN = 0.1;
+const METRO_SIGMA = 0.045;
+const ISLAND_SIGMA = 0.07;
+
+function hash3(xi: number, yi: number, zi: number, seed: number): number {
+  let n =
+    (Math.imul(xi, 374761393) +
+      Math.imul(yi, 668265263) +
+      Math.imul(zi, 1274126177) +
+      Math.imul(seed, 974711)) |
+    0;
+  n = Math.imul(n ^ (n >>> 13), 1274126177);
+  n ^= n >>> 16;
+  return (n >>> 0) / 4294967295;
+}
+
+function valueNoise3(x: number, y: number, z: number, seed: number): number {
+  const xi = Math.floor(x);
+  const yi = Math.floor(y);
+  const zi = Math.floor(z);
+  const xf = x - xi;
+  const yf = y - yi;
+  const zf = z - zi;
+  const sx = xf * xf * (3 - 2 * xf);
+  const sy = yf * yf * (3 - 2 * yf);
+  const sz = zf * zf * (3 - 2 * zf);
+  const c000 = hash3(xi, yi, zi, seed);
+  const c100 = hash3(xi + 1, yi, zi, seed);
+  const c010 = hash3(xi, yi + 1, zi, seed);
+  const c110 = hash3(xi + 1, yi + 1, zi, seed);
+  const c001 = hash3(xi, yi, zi + 1, seed);
+  const c101 = hash3(xi + 1, yi, zi + 1, seed);
+  const c011 = hash3(xi, yi + 1, zi + 1, seed);
+  const c111 = hash3(xi + 1, yi + 1, zi + 1, seed);
+  const x00 = c000 + (c100 - c000) * sx;
+  const x10 = c010 + (c110 - c010) * sx;
+  const x01 = c001 + (c101 - c001) * sx;
+  const x11 = c011 + (c111 - c011) * sx;
+  const y0 = x00 + (x10 - x00) * sy;
+  const y1 = x01 + (x11 - x01) * sy;
+  return y0 + (y1 - y0) * sz;
+}
+
+/** Value-noise fbm in roughly [-1, 1]. */
+function fbm3(x: number, y: number, z: number, octaves: number, seed: number): number {
+  let amp = 0.5;
+  let freq = 1;
+  let sum = 0;
+  let norm = 0;
+  for (let o = 0; o < octaves; o++) {
+    sum += (valueNoise3(x * freq + o * 19.19, y * freq + o * 7.7, z * freq + o * 31.3, seed + o) * 2 - 1) * amp;
+    norm += amp;
+    amp *= 0.5;
+    freq *= 2.03;
+  }
+  return sum / norm;
+}
+
+/** Continent field: positive is land, zero is the coastline. */
+function macroLand(d: Vector3): number {
+  let boost = 0;
+  for (const c of REGION_CENTERS) {
+    const t = Math.min(1, Math.max(0, (d.dot(c) - 0.84) / 0.16));
+    if (t > boost) boost = t;
+  }
+  const n = fbm3(d.x * 2.2, d.y * 2.2, d.z * 2.2, 4, LAND_SEED);
+  const polar = Math.max(0, (Math.abs(d.y) - 0.86) / 0.14);
+  return n * 0.5 + Math.sqrt(boost) * 0.62 - 0.3 - polar * polar * 0.9;
+}
+
+interface GlobeLayout {
+  /** RGBA8 equirect field: R = land field remapped to [0,1], G = metro glow. */
+  field: Uint8Array;
+  terrDirs: Vector3[];
+}
+
+let layoutCache: GlobeLayout | null = null;
+
+function globeLayout(): GlobeLayout {
+  if (layoutCache) return layoutCache;
+
   const dirs: Vector3[] = [];
   const up = new Vector3(0, 1, 0);
-  const altUp = new Vector3(1, 0, 0);
+  const uAxis = new Vector3();
+  const vAxis = new Vector3();
   for (let region = 0; region < REGION_COUNT; region++) {
-    const c = regionCenter(region);
-    const u = new Vector3().crossVectors(Math.abs(c.y) > 0.9 ? altUp : up, c).normalize();
-    const v = new Vector3().crossVectors(c, u).normalize();
-    for (let k = 0; k < PER_REGION; k++) {
-      const ang = k * 2.399963; // golden angle
-      const spread = 0.17 * Math.sqrt((k + 0.6) / PER_REGION);
-      const off = u
+    const c = REGION_CENTERS[region]!;
+    uAxis.crossVectors(up, c).normalize();
+    vAxis.crossVectors(c, uAxis).normalize();
+    const candidates: { d: Vector3; score: number }[] = [];
+    for (let k = 0; k < 140; k++) {
+      const ang = k * 2.399963 + region * 1.7;
+      const rad = (0.07 + 0.29 * Math.sqrt((k + 0.5) / 140)) * (0.9 + hash3(k, region, 1, LAND_SEED) * 0.2);
+      const d = c
         .clone()
-        .multiplyScalar(Math.cos(ang) * spread)
-        .add(v.clone().multiplyScalar(Math.sin(ang) * spread));
-      dirs.push(c.clone().add(off).normalize());
+        .addScaledVector(uAxis, Math.cos(ang) * rad)
+        .addScaledVector(vAxis, Math.sin(ang) * rad)
+        .normalize();
+      if (Math.abs(d.y) > 0.84) continue;
+      candidates.push({ d, score: macroLand(d) });
+    }
+    candidates.sort((a, b) => b.score - a.score);
+    const landers = candidates.filter((x) => x.score > LAND_MARGIN);
+    const pool = landers.length >= PER_REGION ? landers : candidates;
+    const picked: Vector3[] = [pool[0]!.d];
+    while (picked.length < PER_REGION) {
+      let best = pool[0]!.d;
+      let bestMin = -1;
+      for (const cand of pool) {
+        if (picked.includes(cand.d)) continue;
+        let minAng = Infinity;
+        for (const p of picked) minAng = Math.min(minAng, p.angleTo(cand.d));
+        if (minAng > bestMin) {
+          bestMin = minAng;
+          best = cand.d;
+        }
+      }
+      picked.push(best);
+    }
+    dirs.push(...picked);
+  }
+
+  const data = new Uint8Array(FIELD_W * FIELD_H * 4);
+  const texel = new Vector3();
+  const metroDot = Math.cos(0.2);
+  for (let ty = 0; ty < FIELD_H; ty++) {
+    const lat = ((ty + 0.5) / FIELD_H - 0.5) * Math.PI;
+    const cl = Math.cos(lat);
+    for (let tx = 0; tx < FIELD_W; tx++) {
+      const lon = ((tx + 0.5) / FIELD_W - 0.5) * 2 * Math.PI;
+      texel.set(cl * Math.cos(lon), Math.sin(lat), cl * Math.sin(lon));
+      let f = macroLand(texel);
+      let metro = 0;
+      for (const td of dirs) {
+        const dp = texel.dot(td);
+        if (dp < metroDot) continue;
+        const a = Math.acos(Math.min(1, dp));
+        metro = Math.max(metro, Math.exp((-a * a) / (2 * METRO_SIGMA * METRO_SIGMA)));
+        const island =
+          (LAND_MARGIN + 0.07) *
+          Math.min(1, 1.6 * Math.exp((-a * a) / (2 * ISLAND_SIGMA * ISLAND_SIGMA)));
+        if (island > f) f = island;
+      }
+      const o = (ty * FIELD_W + tx) * 4;
+      data[o] = Math.round(Math.min(1, Math.max(0, (f + 1) / 2)) * 255);
+      data[o + 1] = Math.round(metro * 255);
+      data[o + 3] = 255;
     }
   }
-  return dirs;
+
+  layoutCache = { field: data, terrDirs: dirs };
+  return layoutCache;
 }
 
 function labelSprite(text: string, color: string): Sprite {
@@ -207,7 +365,7 @@ export class WorldGlobe {
   private hovered = -1;
   private focusRegion = 0;
   private selected = -1;
-  private terrDirs = territoryDirs();
+  private terrDirs = globeLayout().terrDirs;
   private reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
   private uMotion = uniform(this.reduceMotion ? 0 : 1);
   private pickCb: (id: number) => void = () => {};
@@ -338,23 +496,88 @@ export class WorldGlobe {
   }
 
   private buildPlanet(): void {
+    const layout = globeLayout();
+    const fieldTex = new DataTexture(layout.field, FIELD_W, FIELD_H, RGBAFormat);
+    fieldTex.wrapS = RepeatWrapping;
+    fieldTex.magFilter = LinearFilter;
+    fieldTex.minFilter = LinearFilter;
+    fieldTex.needsUpdate = true;
+
     const coreMat = new MeshBasicNodeMaterial();
     const dir = positionLocal.normalize();
-    const nA = mx_noise_float(dir.mul(1.7));
-    const nB = mx_noise_float(dir.mul(3.4).add(vec3(4, 1, 9)));
-    const nC = mx_noise_float(dir.mul(7.1).add(vec3(2, 8, 3)));
-    const land = nA.mul(0.6).add(nB.mul(0.3)).add(nC.mul(0.1));
-    const landMask = smoothstep(0.02, 0.17, land);
-    const base = mix(vec3(0.015, 0.05, 0.09), vec3(0.04, 0.11, 0.14), landMask);
-    const cityN = mx_noise_float(dir.mul(23.0));
-    const city = smoothstep(0.34, 0.56, cityN).mul(landMask);
-    const cityMix = mix(vec3(1.0, 0.66, 0.26).mul(1.7), vec3(0.25, 0.9, 1.0).mul(1.2), smoothstep(-0.2, 0.45, mx_noise_float(dir.mul(4.0))));
-    const coast = clamp(smoothstep(0.14, 0.17, land).sub(smoothstep(0.17, 0.24, land)), 0, 1);
-    const coastGlow = vec3(0.05, 0.22, 0.3).mul(coast.mul(0.8));
-    coreMat.colorNode = base.add(cityMix.mul(city.mul(0.62))).add(coastGlow);
-    this.globe.add(new Mesh(new SphereGeometry(R * 0.992, 96, 64), coreMat));
+    const equirect = vec2(
+      atan(dir.z, dir.x).div(Math.PI * 2).add(0.5),
+      asin(clamp(dir.y, -1, 1)).div(Math.PI).add(0.5),
+    );
+    const sampled = tslTexture(fieldTex, equirect);
+    const macro = sampled.r.mul(2).sub(1);
+    const metro = sampled.g;
+    // high-frequency GPU detail keeps coastlines crisp past the baked field's
+    // 512x256 resolution; its amplitude stays below LAND_MARGIN
+    const detail = mx_noise_float(dir.mul(16))
+      .mul(0.045)
+      .add(mx_noise_float(dir.mul(44).add(vec3(5, 2, 8))).mul(0.02));
+    const land = macro.add(detail);
+    const landMask = smoothstep(-0.012, 0.012, land);
+
+    // day/night terminator from the key light, in world space so it holds
+    // still while the globe yaws underneath it
+    const keyDir = vec3(0.57, 0.456, 0.684);
+    const dayside = smoothstep(-0.55, 0.75, dot(normalWorld, keyDir));
+    const shade = float(0.42).add(dayside.mul(0.58));
+
+    const currents = mx_noise_float(dir.mul(5.0).add(vec3(9, 4, 2))).mul(0.5).add(0.5);
+    const oceanCol = mix(vec3(0.02, 0.1, 0.16), vec3(0.006, 0.028, 0.055), smoothstep(0.01, -0.24, land)).mul(
+      float(0.8).add(currents.mul(0.4)),
+    );
+    const relief = mx_noise_float(dir.mul(30).add(vec3(1, 6, 4))).mul(0.5).add(0.5);
+    const landCol = mix(vec3(0.045, 0.12, 0.13), vec3(0.11, 0.21, 0.19), smoothstep(0.02, 0.34, land)).mul(
+      float(0.75).add(relief.mul(0.5)),
+    );
+    const ice = smoothstep(0.86, 0.95, dir.y.abs());
+    const surface = mix(mix(oceanCol, landCol, landMask), vec3(0.5, 0.68, 0.78), ice.mul(0.85));
+
+    const coast = smoothstep(0.045, 0.004, land.abs());
+    const coastGlow = vec3(0.07, 0.35, 0.45).mul(coast).mul(float(0.35).add(metro.mul(0.9)));
+
+    const cityMacro = smoothstep(0.22, 0.62, mx_noise_float(dir.mul(24).add(vec3(3, 7, 1))));
+    const cityFine = smoothstep(0.4, 0.75, mx_noise_float(dir.mul(90).add(vec3(12, 5, 9))));
+    const coastal = smoothstep(0.12, 0.02, land);
+    const cityAmt = landMask
+      .mul(float(1).sub(ice))
+      .mul(
+        cityMacro
+          .mul(0.35)
+          .add(cityFine.mul(0.5))
+          .mul(float(0.4).add(coastal.mul(0.6)))
+          .add(metro.mul(1.3)),
+      );
+    const cityCol = mix(
+      vec3(1.0, 0.62, 0.22),
+      vec3(0.3, 0.85, 1.0),
+      smoothstep(-0.2, 0.5, mx_noise_float(dir.mul(4.0))),
+    );
+    const nightBoost = float(1.35).sub(dayside.mul(0.6));
+    coreMat.colorNode = surface.mul(shade).add(cityCol.mul(cityAmt).mul(nightBoost)).add(coastGlow);
+    this.globe.add(new Mesh(new SphereGeometry(R * 0.992, 192, 128), coreMat));
 
     this.globe.add(this.gridLines());
+
+    // slow independent cloud drift; kept faint so land and markers read through
+    const cloudMat = new MeshBasicNodeMaterial();
+    cloudMat.transparent = true;
+    cloudMat.depthWrite = false;
+    const ct = time.mul(this.uMotion).mul(0.008);
+    const cdir = positionLocal.normalize();
+    const cd = vec3(
+      cdir.x.mul(cos(ct)).sub(cdir.z.mul(sin(ct))),
+      cdir.y,
+      cdir.x.mul(sin(ct)).add(cdir.z.mul(cos(ct))),
+    );
+    const cn = mx_noise_float(cd.mul(3.1)).mul(0.65).add(mx_noise_float(cd.mul(7.2).add(vec3(4, 8, 2))).mul(0.35));
+    cloudMat.colorNode = vec3(0.72, 0.85, 1.0).mul(float(0.35).add(dayside.mul(0.65)));
+    cloudMat.opacityNode = smoothstep(0.16, 0.6, cn).mul(0.14);
+    this.scene.add(new Mesh(new SphereGeometry(R * 1.018, 96, 64), cloudMat));
 
     const viewDir = cameraPosition.sub(positionWorld).normalize();
     const rimBase = clamp(float(1).sub(dot(normalWorld, viewDir).abs()), 0, 1);
@@ -602,8 +825,10 @@ export class WorldGlobe {
   }
 
   private updateTarget(region: number): void {
-    const aim = new Vector3(0, 0.24, 0.97).normalize();
-    this.target.setFromUnitVectors(regionCenter(region), aim);
+    // the globe stays upright: focusing a region only ever yaws it around the
+    // vertical axis, bringing the region's longitude to the camera meridian
+    const c = REGION_CENTERS[region] ?? REGION_CENTERS[0]!;
+    this.target.setFromAxisAngle(new Vector3(0, 1, 0), -Math.atan2(c.x, c.z));
   }
 
   // ---- lifecycle ---------------------------------------------------------
