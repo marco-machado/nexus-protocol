@@ -13,6 +13,18 @@
         --bad: #ef4444;
         --persuaded: #22d3ee;
         --gold: #facc15;
+        /* UI chrome lives in a centered 16:9 usable box; the 3D canvas and
+           world-tracking overlays (nameplates, offscreen arrows, selection
+           box) stay full-window */
+        --ui-inset-x: max(0px, calc((100vw - (16 / 9) * 100vh) / 2));
+        --ui-inset-y: max(0px, calc((100vh - (9 / 16) * 100vw) / 2));
+      }
+      /* the small-screen layouts predate the 16:9 box and must not shift */
+      @media (max-width: 760px) {
+        :root {
+          --ui-inset-x: 0px;
+          --ui-inset-y: 0px;
+        }
       }
       html,
       body {
@@ -30,7 +42,7 @@
       }
       #hud {
         position: fixed;
-        inset: 0;
+        inset: var(--ui-inset-y) var(--ui-inset-x);
         pointer-events: none;
         color: #b9c4d6;
         font-size: 12px;
@@ -113,8 +125,8 @@
       #hud .ordergrid button:hover:not(:disabled) i { color: inherit; }
       .speedbar {
         position: fixed;
-        right: 12px;
-        bottom: 8px;
+        right: calc(12px + var(--ui-inset-x));
+        bottom: calc(8px + var(--ui-inset-y));
         display: flex;
         gap: 4px;
       }
@@ -387,8 +399,8 @@
       }
       .minimap-wrap {
         position: fixed;
-        right: 12px;
-        bottom: 40px;
+        right: calc(12px + var(--ui-inset-x));
+        bottom: calc(40px + var(--ui-inset-y));
         z-index: 15;
         padding: 6px 8px 8px;
       }
@@ -432,7 +444,7 @@
         position: fixed;
         left: 50%;
         transform: translateX(-50%);
-        bottom: 130px;
+        bottom: calc(130px + var(--ui-inset-y));
         z-index: 16;
         pointer-events: none;
         display: flex;
@@ -546,7 +558,7 @@
       }
       .mapframe {
         position: fixed;
-        inset: 0;
+        inset: var(--ui-inset-y) var(--ui-inset-x);
         display: flex;
         flex-direction: column;
         color: #c7d2e4;
@@ -554,18 +566,18 @@
       .mapframe > * { position: relative; z-index: 1; }
       .mapscrim {
         position: fixed;
-        left: 0;
-        right: 0;
+        left: var(--ui-inset-x);
+        right: var(--ui-inset-x);
         pointer-events: none;
         z-index: 0;
       }
       .mapscrim.top {
-        top: 0;
+        top: var(--ui-inset-y);
         height: 200px;
         background: linear-gradient(180deg, rgba(6, 9, 14, 0.92) 0%, rgba(6, 9, 14, 0.5) 46%, rgba(6, 9, 14, 0) 100%);
       }
       .mapscrim.bottom {
-        bottom: 0;
+        bottom: var(--ui-inset-y);
         height: 220px;
         background: linear-gradient(0deg, rgba(6, 9, 14, 0.94) 0%, rgba(6, 9, 14, 0.5) 50%, rgba(6, 9, 14, 0) 100%);
       }
