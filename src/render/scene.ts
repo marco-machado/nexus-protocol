@@ -1,5 +1,9 @@
 import {
   AdditiveBlending,
+  type AnimationAction,
+  type AnimationClip,
+  AnimationMixer,
+  type Bone,
   Box3,
   BoxGeometry,
   BufferAttribute,
@@ -31,15 +35,17 @@ import {
   Scene,
   Shape,
   SRGBColorSpace,
+  type Texture,
   TextureLoader,
   TorusGeometry,
   Vector2,
   Vector3,
 } from 'three';
 import { MeshPhongNodeMaterial } from 'three/webgpu';
-import { color as tslColor, dot, normalView, oneMinus, positionViewDirection, pow, saturate, uniform } from 'three/tsl';
+import { color as tslColor, dot, normalView, oneMinus, positionViewDirection, pow, saturate, texture as tslTexture, uniform } from 'three/tsl';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
+import { clone as skeletonClone } from 'three/examples/jsm/utils/SkeletonUtils.js';
 import { fromFx } from '../sim/fixed';
 import { BLOCK, MAP_W, STREET } from '../sim/map';
 import { PROJ_SUBSTEPS } from '../sim/weapons';
@@ -116,6 +122,17 @@ export interface AgentRig {
   modelRoot: Object3D | null;
   modelMats: MeshPhongNodeMaterial[];
   modelReady: boolean;
+  // set when the GLB ships skinned animation clips; null keeps the
+  // stride-locked bob fallback for static hero meshes
+  mixer: AnimationMixer | null;
+  actIdle: AnimationAction | null;
+  // the only gait: agents never run, fast movement (stim) speeds the walk up
+  actWalk: AnimationAction | null;
+  activeAction: AnimationAction | null;
+  // native ground speed (world units/sec) the walk clip was authored at,
+  // measured from baked root motion; playback is time-scaled against the
+  // actual sim velocity so feet grip the ground instead of gliding
+  walkClipSpeed: number;
   procMeshes: Mesh[];
   heading: number;
   phase: number;
@@ -289,7 +306,7 @@ const GENERATED_TRAM_URL = '/models/cyberpunk-tram.glb';
 const GENERATED_TRAM_LENGTH = 6.0;
 const GENERATED_AGENT_URL = '/models/agent-operative.glb';
 const GENERATED_AGENT_HEIGHT = 1.9;
-const GENERATED_AGENT_YAW = 0;
+const GENERATED_AGENT_YAW = -Math.PI / 2;
 const BILLBOARD_URL = '/billboard/corporate-trust.png';
 
 function carVariant(id: number): number {
@@ -714,6 +731,15 @@ function agentRimEmissive(rimUniform: AgentRimUniform): unknown {
   return rimUniform.mul(fresnel).mul(0.9).add(tslColor(0x0a3540));
 }
 
+// the generated hero mesh is near-black under the night grade, so its baked
+// albedo doubles as a faint self-light; the rim runs weaker than on the
+// procedural rig so the texture stays readable inside the silhouette
+function agentModelEmissive(rimUniform: AgentRimUniform, map: Texture | null): unknown {
+  const fresnel = pow(saturate(oneMinus(dot(normalView, positionViewDirection))), 2.5);
+  const rim = rimUniform.mul(fresnel).mul(0.55);
+  return map ? rim.add(tslTexture(map).rgb.mul(0.32)) : rim.add(tslColor(0x0a3540));
+}
+
 function createAgentRig(scene: Scene): AgentRig {
   const { segs, joints } = buildRig();
   // agents get a subtle specular pop the Lambert crowd doesn't have, plus a
@@ -781,6 +807,11 @@ function createAgentRig(scene: Scene): AgentRig {
     modelRoot: null,
     modelMats: [],
     modelReady: false,
+    mixer: null,
+    actIdle: null,
+    actWalk: null,
+    activeAction: null,
+    walkClipSpeed: 0,
     procMeshes: [...segs, visor, rim, pack, antenna, stripe, padL, padR, gun],
     heading: 0,
     phase: 0,
@@ -792,14 +823,64 @@ function createAgentRig(scene: Scene): AgentRig {
 }
 
 // hero agent GLB (user-generated via Tripo): loaded like the car model with
-// the procedural rig as the always-available fallback. Static mesh driven by
-// the rig root (heading, bob, downed roll); the walk cycle stays procedural.
+// the procedural rig as the always-available fallback. The rig root still
+// drives heading and the downed roll; when the GLB ships skinned clips an
+// AnimationMixer per agent plays idle/walk/run, otherwise the mesh stays
+// static and the stride-locked bob stands in for a walk cycle.
 function loadGeneratedAgentModel(rigs: AgentRig[]): void {
   const loader = new GLTFLoader();
   loader.load(
     GENERATED_AGENT_URL,
     (gltf) => {
       const source = gltf.scene;
+      const clips = gltf.animations;
+      // keep baked root motion vertical only: locomotion is owned by the sim,
+      // so the horizontal components of the root bone track are pinned to the
+      // bone's REST position; clips can start mid-stride, so flattening to
+      // the first frame instead would bake in a constant world offset
+      // (never re-export with animate_in_place, it corrupts the bake)
+      let rootBone: Bone | null = null;
+      source.traverse((obj) => {
+        const bone = obj as Bone;
+        if (bone.isBone && !rootBone && !(bone.parent as Bone | null)?.isBone) {
+          rootBone = bone;
+        }
+      });
+      // native gait speed in source units/sec, read from the baked root
+      // travel before it gets flattened
+      const clipGroundSpeed = new Map<AnimationClip, number>();
+      if (rootBone !== null) {
+        const rest = (rootBone as Bone).position;
+        const trackName = `${(rootBone as Bone).name}.position`;
+        for (const clip of clips) {
+          for (const tr of clip.tracks) {
+            if (tr.name !== trackName) continue;
+            const v = tr.values;
+            const n = v.length;
+            const travel = Math.hypot(v[n - 3]! - v[0]!, v[n - 1]! - v[2]!);
+            if (clip.duration > 0) clipGroundSpeed.set(clip, travel / clip.duration);
+            for (let i = 0; i < n; i += 3) {
+              v[i] = rest.x;
+              v[i + 2] = rest.z;
+            }
+          }
+        }
+      }
+      // Tripo batch exports name clips NlaTrack, NlaTrack.001, ... so the
+      // names carry no meaning. The order is NOT the export picker's; it was
+      // measured from the clip data of this export (idle: 15s static, fall:
+      // pelvis pitches 90 degrees and holds, walk: rooted travel over a 2.4s
+      // loop, run: short 1.3s in-place cycle). Re-measure if re-exported.
+      if (clips.length === 4 && clips.every((c) => c.name.startsWith('NlaTrack'))) {
+        const sorted = [...clips].sort((a, b) => a.name.localeCompare(b.name));
+        const presetOrder = ['idle', 'fall', 'walk', 'run'] as const;
+        sorted.forEach((c, ci) => {
+          c.name = presetOrder[ci]!;
+        });
+      }
+      const findClip = (re: RegExp) => clips.find((c) => re.test(c.name)) ?? null;
+      const walkClip = findClip(/walk/i) ?? clips[0] ?? null;
+      const idleClip = findClip(/idle|breath|stand/i);
       const bounds = new Box3().setFromObject(source);
       const size = new Vector3();
       const center = new Vector3();
@@ -813,7 +894,8 @@ function loadGeneratedAgentModel(rigs: AgentRig[]): void {
       normalizer.scale.setScalar(GENERATED_AGENT_HEIGHT / Math.max(0.001, size.y) / 1.12);
       normalizer.add(source);
       for (const rig of rigs) {
-        const clone = normalizer.clone(true);
+        // SkinnedMesh bone bindings survive only the skeleton-aware clone
+        const clone = clips.length > 0 ? skeletonClone(normalizer) : normalizer.clone(true);
         const mats: MeshPhongNodeMaterial[] = [];
         clone.traverse((obj) => {
           const mesh = obj as Mesh;
@@ -827,14 +909,22 @@ function loadGeneratedAgentModel(rigs: AgentRig[]): void {
             transparent: true,
           });
           if (rig.rimColor) {
-            (mat as unknown as { emissiveNode: unknown }).emissiveNode = agentRimEmissive(
+            (mat as unknown as { emissiveNode: unknown }).emissiveNode = agentModelEmissive(
               rig.rimColor as unknown as AgentRimUniform,
+              src.map ?? null,
             );
           }
           mesh.material = mat;
           mesh.castShadow = true;
           mats.push(mat);
         });
+        if (clips.length > 0) {
+          rig.mixer = new AnimationMixer(clone);
+          rig.actWalk = walkClip ? rig.mixer.clipAction(walkClip) : null;
+          rig.actIdle = idleClip ? rig.mixer.clipAction(idleClip) : null;
+          const worldScale = GENERATED_AGENT_HEIGHT / Math.max(0.001, size.y);
+          rig.walkClipSpeed = walkClip ? (clipGroundSpeed.get(walkClip) ?? 0) * worldScale : 0;
+        }
         rig.joints.root.add(clone);
         rig.modelRoot = clone;
         rig.modelMats = mats;
@@ -3032,7 +3122,29 @@ export function syncScene(
     const adv = def.stride > 0 ? Math.sqrt(dist2) * def.stride : dtSec * def.fps;
     rig.phase = (rig.phase + adv / FRAMES) % 1;
     let bounce: number;
-    if (rig.modelReady) {
+    if (rig.modelReady && rig.mixer) {
+      const idling = clip === CLIP_IDLE;
+      const act = idling ? (rig.actIdle ?? rig.actWalk) : rig.actWalk;
+      if (act) {
+        if (idling) {
+          // a clip set without an idle preset parks the walk on its first frame
+          act.timeScale = rig.actIdle ? 1 : 0;
+        } else {
+          // play the walk at the rate that matches ground speed so the feet
+          // grip instead of gliding; stimmed agents just stride faster
+          const speed = Math.sqrt(dist2) / dtSec;
+          act.timeScale =
+            rig.walkClipSpeed > 0 ? Math.min(4, Math.max(0.5, speed / rig.walkClipSpeed)) : 1;
+        }
+        if (act !== rig.activeAction) {
+          rig.activeAction?.fadeOut(0.2);
+          act.reset().fadeIn(0.2).play();
+          rig.activeAction = act;
+        }
+        rig.mixer.update(dtSec);
+      }
+      bounce = 0;
+    } else if (rig.modelReady) {
       // the static hero mesh has no gait clips: a subtle idle breathe and a
       // stride-locked bob stand in for them
       bounce =
