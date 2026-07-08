@@ -20,6 +20,7 @@ There is no lint/format tooling configured in this repo.
 - `DESIGN.md` is the machine-readable design-token export consumed by the build tooling; treat it as the source for exact token values, but the visual-identity intent behind those tokens now lives in `docs/game-design.md` (Sections 13-14). Keep the two consistent when either changes.
 - `docs/roadmap.md` is the canonical source of truth for implementation status (done, partial, or not started); `docs/game-design.md` describes design intent, not build state. Do not use the design bible to infer what is or is not implemented.
 - Token exports live at `tailwind.theme.json` and `tokens.json`; regenerate them from `DESIGN.md` with `npx -y @google/design.md export --format tailwind DESIGN.md > tailwind.theme.json` and `npx -y @google/design.md export --format dtcg DESIGN.md > tokens.json` after token changes.
+- The UI targets desktop only. All UI chrome is constrained to a centered 16:9 usable box via the `--ui-inset-x`/`--ui-inset-y` variables in `index.html`; the 3D canvas and world-tracking overlays (nameplates, offscreen arrows, selection box) always fill the window. New fixed-position chrome must anchor against those inset variables. Keep the existing 700px/760px mobile media queries working, but do not add new mobile affordances or optimizations.
 
 ## Architecture
 
