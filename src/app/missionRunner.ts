@@ -6,7 +6,15 @@ import { createAlarmGrade, rgbToCss, updateAlarmGrade } from '../render/alarmScr
 import { applyPalette, SCENE_COLORS } from '../render/palette';
 import { createPost } from '../render/post';
 import { createRain } from '../render/rain';
-import { applyAlarmGrade, createGameScene, objectiveDone, syncScene, updateSun, vehicleRenderDiagnostics } from '../render/scene';
+import {
+  applyAlarmGrade,
+  createGameScene,
+  installDistrictEnvironment,
+  objectiveDone,
+  syncScene,
+  updateSun,
+  vehicleRenderDiagnostics,
+} from '../render/scene';
 import { fromFx, toFx } from '../sim/fixed';
 import {
   CommandQueue,
@@ -132,6 +140,16 @@ export function runMission(
   return new Promise((resolve) => {
     const state = createMission(seed, missionType, specs, { ...simParams, civCount: opts.civCount ?? simParams.civCount });
     const gs = createGameScene(state, settings.shadows);
+    // night-oriented PMREM so wet PBR asphalt and Standard concrete pick up neon IBL
+    const rainOn = state.env.rain === 1 || !!state.map.visualTest;
+    const envIntensity = rainOn
+      ? state.env.tod >= 1
+        ? 1.15
+        : 0.75
+      : state.env.tod >= 1
+        ? 0.95
+        : 0.45;
+    installDistrictEnvironment(renderer, gs.scene, state.env.tod, rainOn, envIntensity);
     (window as unknown as { __THREE_GAME_DIAGNOSTICS__?: unknown }).__THREE_GAME_DIAGNOSTICS__ = {
       renderer: renderer.info,
       get vehicles() {

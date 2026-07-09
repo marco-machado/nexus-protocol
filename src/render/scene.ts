@@ -3,6 +3,7 @@ import {
   type AnimationAction,
   type AnimationClip,
   AnimationMixer,
+  BackSide,
   type Bone,
   Box3,
   BoxGeometry,
@@ -22,11 +23,13 @@ import {
   IcosahedronGeometry,
   InstancedMesh,
   LatheGeometry,
+  LinearSRGBColorSpace,
   Matrix4,
   Mesh,
   MeshBasicMaterial,
   MeshLambertMaterial,
   MeshPhongMaterial,
+  MeshPhysicalMaterial,
   MeshStandardMaterial,
   Object3D,
   PlaneGeometry,
@@ -34,14 +37,16 @@ import {
   RingGeometry,
   Scene,
   Shape,
+  SphereGeometry,
   SRGBColorSpace,
   type Texture,
   TextureLoader,
   TorusGeometry,
   Vector2,
   Vector3,
+  type Wrapping,
 } from 'three';
-import { MeshPhongNodeMaterial } from 'three/webgpu';
+import { MeshPhongNodeMaterial, PMREMGenerator, type WebGPURenderer } from 'three/webgpu';
 import { color as tslColor, dot, normalView, oneMinus, positionViewDirection, pow, saturate, texture as tslTexture, uniform } from 'three/tsl';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
@@ -263,6 +268,198 @@ const LIGHTING = [
   { amb: 0x8fa8d8, groundAmb: 0x18202e, ambI: 1.15, dir: 0xa9c2f0, dirI: 1.3, pos: [40, 70, 25], bg: 0x05070d, fog: 0.0062, neon: 1, ground: 0x233049, shadowI: 0.55, bldg: 0x222f45, floor: 0x1d2939 },
 ] as const;
 
+// wetness and IBL strength by time-of-day / rain for district PBR surfaces
+type WetProfile = {
+  groundRoughness: number;
+  groundClearcoat: number;
+  groundClearcoatRoughness: number;
+  groundEnv: number;
+  groundMetalness: number;
+  concreteRoughness: number;
+  concreteMetalness: number;
+  concreteEnv: number;
+  skylineEnv: number;
+  envIntensity: number;
+};
+
+function wetProfile(tod: number, rain: boolean, visualTest: boolean): WetProfile {
+  const dusky = tod >= 1;
+  const soaked = rain || visualTest;
+  if (soaked) {
+    return {
+      groundRoughness: dusky ? 0.22 : 0.32,
+      groundClearcoat: dusky ? 0.72 : 0.5,
+      groundClearcoatRoughness: 0.12,
+      groundEnv: dusky ? 1.35 : 0.85,
+      groundMetalness: 0.06,
+      concreteRoughness: 0.78,
+      concreteMetalness: 0.08,
+      concreteEnv: dusky ? 0.55 : 0.35,
+      skylineEnv: dusky ? 0.4 : 0.25,
+      envIntensity: dusky ? 1.15 : 0.75,
+    };
+  }
+  if (dusky) {
+    return {
+      groundRoughness: 0.38,
+      groundClearcoat: 0.38,
+      groundClearcoatRoughness: 0.2,
+      groundEnv: 1.05,
+      groundMetalness: 0.04,
+      concreteRoughness: 0.86,
+      concreteMetalness: 0.06,
+      concreteEnv: 0.42,
+      skylineEnv: 0.32,
+      envIntensity: 0.95,
+    };
+  }
+  return {
+    groundRoughness: 0.62,
+    groundClearcoat: 0.08,
+    groundClearcoatRoughness: 0.45,
+    groundEnv: 0.4,
+    groundMetalness: 0.02,
+    concreteRoughness: 0.92,
+    concreteMetalness: 0.04,
+    concreteEnv: 0.22,
+    skylineEnv: 0.15,
+    envIntensity: 0.45,
+  };
+}
+
+// custom cyberpunk night probe for PMREM (not RoomEnvironment: too warm/studio)
+function buildNightEnvScene(tod: number, rain: boolean): Scene {
+  const env = new Scene();
+  const dusky = tod >= 1;
+  const sky = new Color(dusky ? (rain ? 0x05070c : 0x0a1220) : 0x7a8fa8);
+  env.background = sky;
+  const shell = new Mesh(
+    new SphereGeometry(12, 24, 16),
+    new MeshBasicMaterial({ color: sky, side: BackSide }),
+  );
+  env.add(shell);
+  // large emissive panels act as distant neon city bounce for IBL
+  const panels: { color: number; pos: [number, number, number]; scale: [number, number, number]; intensity: number }[] = [
+    { color: 0x00e5ff, pos: [6, 1.5, -2], scale: [0.4, 5, 8], intensity: dusky ? 2.4 : 0.6 },
+    { color: 0xff2fd6, pos: [-5.5, 2, 3], scale: [0.4, 4.5, 7], intensity: dusky ? 2.0 : 0.5 },
+    { color: 0xff9f1c, pos: [2, 0.5, 7], scale: [7, 3, 0.35], intensity: dusky ? 1.6 : 0.7 },
+    { color: 0x7c4dff, pos: [-1, 3.5, -7], scale: [6, 2.5, 0.35], intensity: dusky ? 1.4 : 0.35 },
+    { color: 0xa8d8ff, pos: [0, 8, 0], scale: [10, 0.3, 10], intensity: dusky ? 0.35 : 1.8 },
+  ];
+  for (const p of panels) {
+    const m = new Mesh(
+      new BoxGeometry(1, 1, 1),
+      new MeshBasicMaterial({ color: new Color(p.color).multiplyScalar(p.intensity) }),
+    );
+    m.position.set(p.pos[0], p.pos[1], p.pos[2]);
+    m.scale.set(p.scale[0], p.scale[1], p.scale[2]);
+    env.add(m);
+  }
+  // dim warm ground bounce so asphalt has a soft fill from below the horizon
+  const floor = new Mesh(
+    new PlaneGeometry(24, 24),
+    new MeshBasicMaterial({ color: new Color(dusky ? 0x1a1520 : 0x6a6358).multiplyScalar(rain ? 0.55 : 0.75) }),
+  );
+  floor.rotation.x = -Math.PI / 2;
+  floor.position.y = -2.5;
+  env.add(floor);
+  return env;
+}
+
+/** Install a night-oriented PMREM on the mission scene. Renderer must already be init()'d. */
+export function installDistrictEnvironment(
+  renderer: WebGPURenderer,
+  scene: Scene,
+  tod: number,
+  rain: boolean,
+  intensity = 1,
+): Texture {
+  const pmrem = new PMREMGenerator(renderer);
+  const envScene = buildNightEnvScene(tod, rain);
+  const rt = pmrem.fromScene(envScene, 0.04);
+  scene.environment = rt.texture;
+  scene.environmentIntensity = intensity;
+  pmrem.dispose();
+  return rt.texture;
+}
+
+const texLoader = new TextureLoader();
+
+type TexOpts = {
+  srgb?: boolean;
+  wrap?: Wrapping;
+  repeat?: number;
+  anisotropy?: number;
+};
+
+/** Load a texture asynchronously; on success configure wrap/colorSpace and call onLoad. Failures are silent (keep fallbacks). */
+function loadMap(url: string, opts: TexOpts, onLoad: (t: Texture) => void): void {
+  texLoader.load(
+    url,
+    (t) => {
+      // albedo/UI sRGB; normal and roughness stay linear
+      t.colorSpace = opts.srgb ? SRGBColorSpace : LinearSRGBColorSpace;
+      const wrap = opts.wrap ?? RepeatWrapping;
+      t.wrapS = wrap;
+      t.wrapT = wrap;
+      const rep = opts.repeat ?? 1;
+      t.repeat.set(rep, rep);
+      t.anisotropy = opts.anisotropy ?? 8;
+      t.needsUpdate = true;
+      onLoad(t);
+    },
+    undefined,
+    () => {},
+  );
+}
+
+function applyFacadeMaps(mat: MeshStandardMaterial): void {
+  const rep = 3.5;
+  loadMap('/textures/facade-albedo.jpg', { srgb: true, repeat: rep }, (t) => {
+    mat.map = t;
+    mat.needsUpdate = true;
+  });
+  loadMap('/textures/facade-normal.jpg', { repeat: rep }, (t) => {
+    mat.normalMap = t;
+    mat.normalScale.set(0.55, 0.55);
+    mat.needsUpdate = true;
+  });
+  loadMap('/textures/facade-roughness.jpg', { repeat: rep }, (t) => {
+    mat.roughnessMap = t;
+    mat.needsUpdate = true;
+  });
+}
+
+function applyAsphaltMaps(mat: MeshPhysicalMaterial | MeshStandardMaterial, repeat: number): void {
+  loadMap('/textures/asphalt-normal.jpg', { repeat }, (t) => {
+    mat.normalMap = t;
+    if ('normalScale' in mat) mat.normalScale.set(0.65, 0.65);
+    mat.needsUpdate = true;
+  });
+  loadMap('/textures/asphalt-roughness.jpg', { repeat }, (t) => {
+    mat.roughnessMap = t;
+    mat.needsUpdate = true;
+  });
+}
+
+function swapMapWhenLoaded(mat: MeshBasicMaterial | MeshStandardMaterial, url: string, srgb = true): void {
+  loadMap(url, { srgb, wrap: RepeatWrapping, repeat: 1 }, (t) => {
+    mat.map = t;
+    mat.needsUpdate = true;
+  });
+}
+
+function concreteMaterial(wet: WetProfile, envScale = 1): MeshStandardMaterial {
+  const mat = new MeshStandardMaterial({
+    color: 0xffffff,
+    roughness: wet.concreteRoughness,
+    metalness: wet.concreteMetalness,
+    envMapIntensity: wet.concreteEnv * envScale,
+  });
+  applyFacadeMaps(mat);
+  return mat;
+}
+
 const dummy = new Object3D();
 const npcTint = new Color();
 const poolTint = new Color();
@@ -307,7 +504,9 @@ const GENERATED_TRAM_LENGTH = 6.0;
 const GENERATED_AGENT_URL = '/models/agent-operative.glb';
 const GENERATED_AGENT_HEIGHT = 1.9;
 const GENERATED_AGENT_YAW = -Math.PI / 2;
-const BILLBOARD_URL = '/billboard/corporate-trust.png';
+const BILLBOARD_URL = '/billboard/corporate-trust.jpg';
+const WINDOW_GRID_URL = '/textures/window-grid.jpg';
+const SIGN_ATLAS_URL = '/textures/sign-atlas.jpg';
 
 function carVariant(id: number): number {
   return ((id * 1103515245 + 12345) >>> 29) % 3;
@@ -1201,7 +1400,7 @@ function buildGroundTexture(state: SimState): CanvasTexture {
   return tex;
 }
 
-function createFacadeWindows(state: SimState, scene: Scene, neonI: number): void {
+function createFacadeWindows(state: SimState, scene: Scene, neonI: number, wet: WetProfile): void {
   const next = seededNext({ rng: ((state.mapSeed | 0) ^ 0x5eed) || 1 });
   const bands: Matrix4[] = [];
   const lit: { m: Matrix4; c: Color }[] = [];
@@ -1253,7 +1452,12 @@ function createFacadeWindows(state: SimState, scene: Scene, neonI: number): void
   dummy.scale.set(1, 1, 1);
   const bandMesh = new InstancedMesh(
     new BoxGeometry(1, 1, 1),
-    new MeshLambertMaterial({ color: 0x0d1420 }),
+    new MeshStandardMaterial({
+      color: 0x0d1420,
+      roughness: 0.55,
+      metalness: 0.35,
+      envMapIntensity: wet.concreteEnv * 0.9,
+    }),
     bands.length,
   );
   bands.forEach((m, i) => bandMesh.setMatrixAt(i, m));
@@ -1301,9 +1505,9 @@ function createRoofClutter(state: SimState, scene: Scene, shadows: boolean): voi
     ]),
   ];
   const mats = [
-    new MeshLambertMaterial({ color: 0x39404d }),
-    new MeshLambertMaterial({ color: 0x4a5262 }),
-    new MeshLambertMaterial({ color: 0x2c333f }),
+    new MeshStandardMaterial({ color: 0x39404d, roughness: 0.7, metalness: 0.45, envMapIntensity: 0.55 }),
+    new MeshStandardMaterial({ color: 0x4a5262, roughness: 0.65, metalness: 0.5, envMapIntensity: 0.6 }),
+    new MeshStandardMaterial({ color: 0x2c333f, roughness: 0.75, metalness: 0.25, envMapIntensity: 0.4 }),
   ];
   const placed: Matrix4[][] = [[], [], []];
   for (const b of state.map.buildings) {
@@ -1403,11 +1607,16 @@ function createOutskirts(
   state: SimState,
   scene: Scene,
   light: (typeof LIGHTING)[number],
+  wet: WetProfile,
 ): void {
-  const apron = new Mesh(
-    new PlaneGeometry(MAP_W * 14, MAP_W * 14),
-    new MeshLambertMaterial({ color: new Color(light.ground).multiplyScalar(0.82) }),
-  );
+  const apronMat = new MeshStandardMaterial({
+    color: new Color(light.ground).multiplyScalar(0.82),
+    roughness: Math.min(1, wet.groundRoughness + 0.12),
+    metalness: wet.groundMetalness,
+    envMapIntensity: wet.groundEnv * 0.75,
+  });
+  applyAsphaltMaps(apronMat, Math.max(12, (MAP_W * 14) / 8));
+  const apron = new Mesh(new PlaneGeometry(MAP_W * 14, MAP_W * 14), apronMat);
   apron.rotation.x = -Math.PI / 2;
   apron.position.set(MAP_W / 2, -0.08, MAP_W / 2);
   scene.add(apron);
@@ -1457,10 +1666,17 @@ function createOutskirts(
   }
   dummy.rotation.set(0, 0, 0);
   dummy.scale.set(1, 1, 1);
-  for (const [items, mat] of [
-    [near, new MeshLambertMaterial({ color: 0xffffff })],
-    [far, new MeshLambertMaterial({ color: 0xffffff })],
-  ] as const) {
+  for (const [items, envScale] of [
+    [near, 1] as const,
+    [far, 0.7] as const,
+  ]) {
+    const mat = new MeshStandardMaterial({
+      color: 0xffffff,
+      roughness: wet.concreteRoughness,
+      metalness: wet.concreteMetalness,
+      envMapIntensity: wet.skylineEnv * envScale,
+    });
+    applyFacadeMaps(mat);
     const mesh = new InstancedMesh(new BoxGeometry(1, 1, 1), mat, items.length);
     items.forEach((it, i) => {
       mesh.setMatrixAt(i, it.m);
@@ -1691,6 +1907,7 @@ function createVisualTestDistrict(
   scene: Scene,
   light: (typeof LIGHTING)[number],
   shadows: boolean,
+  wet: WetProfile,
 ): { spill: PoolSource[]; streaks: StreakSource[]; hulls: DistrictHull[] } {
   const next = seededNext({ rng: ((state.mapSeed | 0) ^ 0xd157) || 1 });
   const hulls: DistrictHull[] = [];
@@ -1703,14 +1920,16 @@ function createVisualTestDistrict(
   }
   const hullMesh = new InstancedMesh(
     new BoxGeometry(1, 1, 1),
-    new MeshLambertMaterial({ color: 0xffffff }),
+    concreteMaterial(wet),
     hulls.length,
   );
   // every camera-facing wall carries a window grid: the plaza face plus both
   // flanks, so the 8-way orbit never lands on a bare black slab
+  const windowMat = new MeshBasicMaterial({ map: buildWindowGridTexture() });
+  swapMapWhenLoaded(windowMat, WINDOW_GRID_URL);
   const windowMesh = new InstancedMesh(
     new PlaneGeometry(1, 1),
-    new MeshBasicMaterial({ map: buildWindowGridTexture() }),
+    windowMat,
     hulls.length * 3,
   );
   const base = new Color(light.bldg);
@@ -1816,15 +2035,14 @@ function createVisualTestDistrict(
     streaks.push({ x: sx, z: sz, h: y, c: c.clone().multiplyScalar(0.7), w: def.w * 0.5 });
   }
   if (signParts.length > 0) {
-    const signBoard = new Mesh(
-      mergeGeometries(signParts),
-      new MeshBasicMaterial({
-        map: buildSignAtlasTexture(),
-        transparent: true,
-        side: DoubleSide,
-      }),
-    );
-    (signBoard.material as MeshBasicMaterial).color.setScalar(1.3 * light.neon);
+    const signMat = new MeshBasicMaterial({
+      map: buildSignAtlasTexture(),
+      transparent: true,
+      side: DoubleSide,
+    });
+    swapMapWhenLoaded(signMat, SIGN_ATLAS_URL);
+    const signBoard = new Mesh(mergeGeometries(signParts), signMat);
+    signMat.color.setScalar(1.3 * light.neon);
     scene.add(signBoard);
   }
   return { spill, streaks, hulls };
@@ -2279,20 +2497,21 @@ export function createGameScene(state: SimState, shadows = true): GameScene {
 
   const groundColor = new Color(light.ground);
   if (rain) groundColor.multiplyScalar(0.8);
-  // the city is always-wet at dusk and night (design Section 13): the old
-  // rain-only sheen is now the baseline and rain intensifies it further; the
-  // staging square gets the full rain-grade gloss under the streak mirrors
-  const dusky = state.env.tod >= 1;
-  const soaked = rain || state.map.visualTest;
-  const ground = new Mesh(
-    new PlaneGeometry(MAP_W, MAP_W),
-    new MeshPhongMaterial({
-      color: groundColor,
-      map: buildGroundTexture(state),
-      specular: soaked ? (dusky ? 0x5a7188 : 0x445566) : dusky ? 0x445566 : 0x111111,
-      shininess: soaked ? (dusky ? 90 : 60) : dusky ? 60 : 30,
-    }),
-  );
+  // wet PBR asphalt: canvas map keeps street readability; clearcoat + env
+  // give real wet specular (dusk/night/rain). Staging square is always soaked.
+  const wet = wetProfile(state.env.tod, rain, !!state.map.visualTest);
+  const groundMat = new MeshPhysicalMaterial({
+    color: groundColor,
+    map: buildGroundTexture(state),
+    roughness: wet.groundRoughness,
+    metalness: wet.groundMetalness,
+    clearcoat: wet.groundClearcoat,
+    clearcoatRoughness: wet.groundClearcoatRoughness,
+    envMapIntensity: wet.groundEnv,
+  });
+  // tiling asphalt microdetail under the street-layout albedo
+  applyAsphaltMaps(groundMat, Math.max(8, MAP_W / 6));
+  const ground = new Mesh(new PlaneGeometry(MAP_W, MAP_W), groundMat);
   ground.rotation.x = -Math.PI / 2;
   ground.position.set(MAP_W / 2, 0, MAP_W / 2);
   scene.add(ground);
@@ -2313,7 +2532,7 @@ export function createGameScene(state: SimState, shadows = true): GameScene {
   // on buildingless maps like the visualtest staging scene
   const groundFloorMesh = new InstancedMesh(
     new BoxGeometry(1, 1, 1),
-    new MeshLambertMaterial({ color: 0xffffff }),
+    concreteMaterial(wet),
     Math.max(1, groundCells),
   );
   groundFloorMesh.count = groundCells;
@@ -2339,7 +2558,7 @@ export function createGameScene(state: SimState, shadows = true): GameScene {
 
   const buildings = new InstancedMesh(
     new BoxGeometry(1, 1, 1),
-    new MeshLambertMaterial({ color: 0xffffff }),
+    concreteMaterial(wet),
     Math.max(1, state.map.buildings.length),
   );
   buildings.count = state.map.buildings.length;
@@ -2354,7 +2573,7 @@ export function createGameScene(state: SimState, shadows = true): GameScene {
   buildings.instanceMatrix.needsUpdate = true;
   if (buildings.instanceColor) buildings.instanceColor.needsUpdate = true;
   scene.add(buildings);
-  createFacadeWindows(state, scene, light.neon);
+  createFacadeWindows(state, scene, light.neon, wet);
   createRoofClutter(state, scene, shadows);
   const { signMesh, cellToSign, spillSources } = createStorefrontSigns(state, scene, light.neon);
   const { mesh: strips, spillSources: stripSpill } = createNeonStrips(state);
@@ -2369,7 +2588,7 @@ export function createGameScene(state: SimState, shadows = true): GameScene {
   scene.add(strips);
   const lamps = createStreetLamps(state, scene, light.neon);
   const district = state.map.visualTest
-    ? createVisualTestDistrict(state, scene, light, shadows)
+    ? createVisualTestDistrict(state, scene, light, shadows, wet)
     : null;
   const billboard = district ? createBillboard(scene, light, district.hulls) : null;
   // colored pools on wet asphalt: lamps first (primary street lighting),
@@ -2404,7 +2623,7 @@ export function createGameScene(state: SimState, shadows = true): GameScene {
     }
     if (streakSources.length > 0) streaks = createLightStreaks(scene, streakSources);
   }
-  createOutskirts(state, scene, light);
+  createOutskirts(state, scene, light, wet);
   if (state.map.visualTest) createVisualTestCurbs(scene, light.neon);
 
   const rubbleMesh = new InstancedMesh(

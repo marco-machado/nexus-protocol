@@ -63,6 +63,29 @@ function shortName(t: Territory): string {
   return t.name.replace('SECTOR ', '').replace(/"/g, '');
 }
 
+function fillPct(value: number, min: number, max: number): number {
+  return Math.round(((value - min) / (max - min)) * 100);
+}
+
+function rangeInput(attrs: string, value: number, min: number, max: number, step: number): string {
+  return `<input type="range" min="${min}" max="${max}" step="${step}" value="${value}" style="--fill:${fillPct(value, min, max)}%" ${attrs}/>`;
+}
+
+function syncRangeFill(t: HTMLInputElement): void {
+  t.style.setProperty('--fill', `${fillPct(Number(t.value), Number(t.min), Number(t.max))}%`);
+}
+
+function toggleRow(label: string, note: string, key: string, on: boolean): string {
+  return `<div class="setrow"><span class="setlbl">${label}${note ? `<small>${note}</small>` : ''}</span>
+    <label class="toggle"><input type="checkbox" ${on ? 'checked' : ''} data-set="${key}"/><i class="tgl"></i><em class="tglval"></em></label>
+  </div>`;
+}
+
+function slotSegments(used: number): string {
+  const cells = Array.from({ length: SLOT_CAP }, (_, i) => `<i${i < used ? ' class="f"' : ''}></i>`).join('');
+  return `<span class="slots${used >= SLOT_CAP ? ' full' : ''}">${cells}</span>`;
+}
+
 function slotsUsed(a: import('./meta').MetaAgent): number {
   return (
     a.loadout.length +
@@ -119,11 +142,12 @@ export class Screens {
     this.show();
     this.el.innerHTML = `
       <div class="panel menu">
+        <div class="menustat"><span>NEXUS INTERNAL SYSTEMS</span><span class="live">LINK ACTIVE</span></div>
         <img class="logo" src="/logos/nexus-orbital-variant-02.png" alt="" />
         <h1>NEXUS<span>PROTOCOL</span></h1>
         <p class="tag">Corporate acquisitions. Kinetic division.</p>
-        ${hasSave ? '<button data-act="continue">RESUME OPERATIONS</button>' : ''}
-        <button data-act="new">NEW OPERATION</button>
+        ${hasSave ? '<button class="primary" data-act="continue">RESUME OPERATIONS</button>' : ''}
+        <button ${hasSave ? '' : 'class="primary" '}data-act="new">NEW OPERATION</button>
         <button data-act="settings">SETTINGS</button>
         <p class="fine">Nexus Corp is an equal-opportunity employer. Asset attrition figures available on request.</p>
       </div>`;
@@ -143,24 +167,38 @@ export class Screens {
   settings(onBack: () => void): void {
     this.show();
     const pct = (v: number) => `${Math.round(v * 100)}%`;
+    const vol = (label: string, note: string, key: 'masterVol' | 'musicVol' | 'sfxVol') =>
+      `<div class="setrow"><span class="setlbl">${label}${note ? `<small>${note}</small>` : ''}</span>${rangeInput(
+        `data-set="${key}"`,
+        Math.round(settings[key] * 100),
+        0,
+        100,
+        5,
+      )}<b class="setval">${pct(settings[key])}</b></div>`;
     this.el.innerHTML = `
       <div class="panel">
         <h2>OPERATOR SETTINGS</h2>
+        <p class="tag">Terminal preferences. Applied immediately.</p>
         <h3>ACCESSIBILITY</h3>
-        <div class="taxrow">Simulation speed
-          <button data-speed="${SIM_SPEED_NORMAL}" ${settings.simSpeed === SIM_SPEED_NORMAL ? 'class="primary"' : ''}>NORMAL</button>
-          <button data-speed="${SIM_SPEED_FAST}" ${settings.simSpeed === SIM_SPEED_FAST ? 'class="primary"' : ''}>FAST</button>
+        <div class="setrow"><span class="setlbl">Simulation speed<small>NORMAL runs contracts at half tempo for readability</small></span>
+          <span class="seg">
+            <button data-speed="${SIM_SPEED_NORMAL}" class="${settings.simSpeed === SIM_SPEED_NORMAL ? 'on' : ''}">NORMAL</button>
+            <button data-speed="${SIM_SPEED_FAST}" class="${settings.simSpeed === SIM_SPEED_FAST ? 'on' : ''}">FAST</button>
+          </span>
         </div>
-        <div class="taxrow">Palette ${(Object.keys(PALETTES) as PaletteName[])
-          .map((p) => `<button data-palette="${p}" ${p === settings.palette ? 'class="primary"' : ''}>${PALETTES[p].label}</button>`)
-          .join('')}</div>
+        <div class="setrow"><span class="setlbl">Color palette<small>faction state is always paired with text and shape</small></span>
+          <span class="seg">${(Object.keys(PALETTES) as PaletteName[])
+            .map((p) => `<button data-palette="${p}" class="${p === settings.palette ? 'on' : ''}">${PALETTES[p].label}</button>`)
+            .join('')}</span>
+        </div>
         <h3>AUDIO</h3>
-        <div class="taxrow">Master <input type="range" min="0" max="100" step="5" value="${Math.round(settings.masterVol * 100)}" data-set="masterVol"/> <b>${pct(settings.masterVol)}</b></div>
-        <div class="taxrow">Score <input type="range" min="0" max="100" step="5" value="${Math.round(settings.musicVol * 100)}" data-set="musicVol"/> <b>${pct(settings.musicVol)}</b></div>
-        <div class="taxrow">Effects <input type="range" min="0" max="100" step="5" value="${Math.round(settings.sfxVol * 100)}" data-set="sfxVol"/> <b>${pct(settings.sfxVol)}</b></div>
+        ${vol('Master bus', '', 'masterVol')}
+        ${vol('Score', 'adaptive stems follow the district alarm state', 'musicVol')}
+        ${vol('Effects', 'weapons, comms, and city one-shots', 'sfxVol')}
         <h3>VIDEO</h3>
-        <div class="taxrow"><label><input type="checkbox" ${settings.postFx ? 'checked' : ''} data-set="postFx"/> Neon post-processing</label></div>
-        <div class="taxrow"><label><input type="checkbox" ${settings.rain ? 'checked' : ''} data-set="rain"/> Weather effects (rain falls when the contract forecast says so)</label></div>
+        ${toggleRow('Neon post-processing', 'bloom and vignette over the night palette', 'postFx', settings.postFx)}
+        ${toggleRow('Weather effects', 'rain renders when the contract forecast calls it', 'rain', settings.rain)}
+        ${toggleRow('Dynamic shadows', 'applies from the next deployment', 'shadows', settings.shadows)}
         <div class="btnrow"><button data-act="back">BACK</button></div>
         <p class="fine">Settings persist independently of operation saves.</p>
       </div>`;
@@ -183,9 +221,10 @@ export class Screens {
       const key = t.dataset.set;
       if (key === 'masterVol' || key === 'musicVol' || key === 'sfxVol') {
         settings[key] = Number(t.value) / 100;
+        syncRangeFill(t);
         const label = t.nextElementSibling;
         if (label) label.textContent = pct(settings[key]);
-      } else if (key === 'postFx' || key === 'rain') {
+      } else if (key === 'postFx' || key === 'rain' || key === 'shadows') {
         settings[key] = t.checked;
       } else {
         return;
@@ -199,7 +238,7 @@ export class Screens {
     return `<div class="maphud">
       <div class="maphud-brand"><i class="glyph"></i><h2>GLOBAL OPERATIONS</h2></div>
       <div class="stat"><label>BALANCE</label><b class="credits">${m.credits}<small>cr</small></b></div>
-      <div class="stat"><label>INCOME</label><b class="good">+${incomePerCycle(m) * 2}<small>cr/hr</small></b></div>
+      <div class="stat"><label>INCOME</label><b class="good"><span data-incomehr="1">+${incomePerCycle(m) * 2}</span><small>cr/hr</small></b></div>
       <div class="stat"><label>R&amp;D</label><b class="accentv">+${researchPerCycle(m) * 2}<small>/hr</small></b></div>
       <div class="stat"><label>CAMPAIGN</label><b>ACT ${campaignAct(m)}</b></div>
       <div class="stat"><label>CYCLE ${m.cycle}</label><b class="muted">next ${nextMin}m</b></div>
@@ -231,13 +270,17 @@ export class Screens {
       : '';
     return `<button class="trow ${owner}${t.id === this.selTerr ? ' sel' : ''}" data-sel="${t.id}">
       <span class="trow-top"><span class="trow-nm">${shortName(t)}</span>${tag}${extra}</span>
-      <span class="trow-sub">${line}</span>
+      <span class="trow-sub"${t.owned ? ` data-inc="${t.id}"` : ''}>${line}</span>
       <span class="trow-ub">${ubar}</span>
     </button>`;
   }
 
   private popover(m: MetaState, t: Territory): string {
-    const head = `<div class="pop-h"><h4>${t.name}</h4><button class="pop-x" data-deselect="1" aria-label="Deselect">&times;</button></div>`;
+    const parts = /^SECTOR (\d+) "(.*)"$/.exec(t.name);
+    const title = parts
+      ? `<span class="seclbl">SECTOR ${parts[1]}</span><h4>${parts[2]}</h4>`
+      : `<h4>${t.name}</h4>`;
+    const head = `<div class="pop-h"><div>${title}</div><button class="pop-x" data-deselect="1" aria-label="Deselect">&times;</button></div>`;
     if (t.owned) {
       const siegeMin = t.siege ? Math.ceil(Math.max(0, t.siege.deadline - m.lastSeen) / 60000) : 0;
       const siegeBanner = t.siege
@@ -249,8 +292,8 @@ export class Screens {
           ? `<button data-defend="${t.id}">DEFENSE CONTRACT</button>`
           : '<div class="fine">HOLDING · NO ACTION REQUIRED</div>';
       return `<div class="pop">${head}<div class="own">NEXUS CONTROLLED</div>${siegeBanner}
-        <dl><dt>Income share</dt><dd>${Math.round((t.baseIncome * t.taxRate) / 100)}cr/cycle</dd><dt>Unrest</dt><dd class="unrest ${t.unrest > 60 ? 'hot' : ''}">${t.unrest}/100</dd></dl>
-        <div class="taxrow">Tax <input type="range" min="10" max="50" step="5" value="${t.taxRate}" data-tax="${t.id}"/> <b>${t.taxRate}%</b></div>
+        <dl><dt>Income share</dt><dd data-incval="1">${Math.round((t.baseIncome * t.taxRate) / 100)}cr/cycle</dd><dt>Unrest</dt><dd class="unrest ${t.unrest > 60 ? 'hot' : ''}">${t.unrest}/100</dd></dl>
+        <div class="taxrow">Tax ${rangeInput(`data-tax="${t.id}"`, t.taxRate, 10, 50, 5)} <b>${t.taxRate}%</b></div>
         ${action}</div>`;
     }
     const owner = t.rival >= 0 ? `<div class="riv">${m.syndicates[t.rival]!.name}</div>` : '<div class="neutral">NEUTRAL</div>';
@@ -299,8 +342,10 @@ export class Screens {
   }
 
   private rdDrawer(m: MetaState): string {
-    const bar = (label: string, pts: number, need: number) =>
-      `<div>${label}: <progress value="${Math.min(pts, need)}" max="${need}"></progress> ${pts >= need ? 'ONLINE' : `${pts}/${need}`}</div>`;
+    const bar = (label: string, pts: number, need: number) => {
+      const done = pts >= need;
+      return `<div class="rdrow${done ? ' done' : ''}"><span class="rdlbl">${label}</span><span class="meterbar${done ? ' done' : ''}"><i style="width:${Math.min(100, fillPct(pts, 0, need))}%"></i></span><b class="rdval">${done ? 'ONLINE' : `${pts}/${need}`}</b></div>`;
+    };
     const wNext = [2, 3, 4, 5]
       .map((tier) => ({ label: `WPN T${tier}`, need: WEAPON_TIER_PTS[tier]! }))
       .find((x) => m.weaponPts < x.need);
@@ -309,9 +354,9 @@ export class Screens {
       .find((x) => m.augPts < x.need);
     const nextTxt = `NEXT: ${wNext ? `${wNext.label} ${m.weaponPts}/${wNext.need}` : 'WPN MAXED'} · ${aNext ? `${aNext.label} ${m.augPts}/${aNext.need}` : 'AUG MAXED'}`;
     const grid = this.rdOpen
-      ? `<div class="rdgrid">${[2, 3, 4, 5].map((tier) => bar(`Weapons tier ${tier}`, m.weaponPts, WEAPON_TIER_PTS[tier]!)).join('')}${[1, 2, 3].map((lvl) => bar(`Augmentation V${lvl}`, m.augPts, AUG_LEVEL_PTS[lvl]!)).join('')}</div>`
+      ? `<div class="rdgrid">${[2, 3, 4, 5].map((tier) => bar(`WEAPONS TIER ${tier}`, m.weaponPts, WEAPON_TIER_PTS[tier]!)).join('')}${[1, 2, 3].map((lvl) => bar(`AUGMENTATION V${lvl}`, m.augPts, AUG_LEVEL_PTS[lvl]!)).join('')}</div>`
       : '';
-    return `<div class="drawer"><span>R&amp;D</span><b data-wsplit="1">WEAPONS ${m.researchSplit}%</b><input type="range" min="0" max="100" step="10" value="${m.researchSplit}" data-split="1"/><b data-asplit="1">AUGMENTS ${100 - m.researchSplit}%</b><span>${nextTxt}</span><button data-act="rd">${this.rdOpen ? 'LESS' : 'ALL THRESHOLDS'}</button>${grid}</div>`;
+    return `<div class="drawer"><span>R&amp;D ALLOCATION</span><b data-wsplit="1">WEAPONS ${m.researchSplit}%</b>${rangeInput('data-split="1"', m.researchSplit, 0, 100, 10)}<b data-asplit="1">AUGMENTS ${100 - m.researchSplit}%</b><span class="dnext">${nextTxt}</span><button data-act="rd">${this.rdOpen ? 'LESS' : 'ALL THRESHOLDS'}</button>${grid}</div>`;
   }
 
   worldMap(m: MetaState, onContract: (t: Territory, defense?: boolean) => void): void {
@@ -395,12 +440,24 @@ export class Screens {
     this.el.oninput = (e) => {
       const t = e.target as HTMLInputElement;
       if (t.dataset.tax !== undefined) {
-        m.territories[Number(t.dataset.tax)]!.taxRate = Number(t.value);
+        // update in place: a full re-render would tear the slider out mid-drag
+        const terr = m.territories[Number(t.dataset.tax)]!;
+        terr.taxRate = Number(t.value);
         saveMeta(m);
-        this.worldMap(m, onContract);
+        syncRangeFill(t);
+        const pctLabel = t.nextElementSibling;
+        if (pctLabel) pctLabel.textContent = `${terr.taxRate}%`;
+        const income = Math.round((terr.baseIncome * terr.taxRate) / 100);
+        const dd = this.el.querySelector('[data-incval]');
+        if (dd) dd.textContent = `${income}cr/cycle`;
+        const sub = this.el.querySelector(`[data-inc="${terr.id}"]`);
+        if (sub) sub.textContent = `${income}cr/cyc`;
+        const hr = this.el.querySelector('[data-incomehr]');
+        if (hr) hr.textContent = `+${incomePerCycle(m) * 2}`;
       } else if (t.dataset.split !== undefined) {
         m.researchSplit = Number(t.value);
         saveMeta(m);
+        syncRangeFill(t);
         const w = this.el.querySelector('[data-wsplit]');
         const a = this.el.querySelector('[data-asplit]');
         if (w) w.textContent = `WEAPONS ${m.researchSplit}%`;
@@ -411,61 +468,103 @@ export class Screens {
 
   equip(m: MetaState, t: Territory, onLaunch: () => void, onBack: () => void, defense = false): void {
     this.show();
+    const selAgent = m.agents[this.selAgent]!;
+    const selFull = selAgent.alive && slotsUsed(selAgent) >= SLOT_CAP;
+    const rdCell = '<span class="rd">R&amp;D REQUIRED</span>';
+
     const wpnRows = WEAPONS.map((w) => {
       const locked = w.tier > 1 && !weaponTierUnlocked(m, w.tier);
       const owned = m.arsenal[w.id] ?? 0;
-      return `<div class="row">
-        <span>${w.name} <small>T${w.tier} dmg${w.damage}${w.pellets > 1 ? 'x' + w.pellets : ''} rng${w.range}</small></span>
-        <span>x${owned}</span>
-        ${locked ? '<i>R&amp;D REQUIRED</i>' : `<button data-buy="${w.id}" ${m.credits < w.price ? 'disabled' : ''}>BUY ${w.price}</button>`}
-        <button data-give="${w.id}" ${owned <= 0 ? 'disabled' : ''}>EQUIP</button>
+      const actions = locked
+        ? rdCell
+        : `<button data-buy="${w.id}" ${m.credits < w.price ? 'disabled' : ''}>BUY ${w.price}</button>
+           <button data-give="${w.id}" ${owned <= 0 || !selAgent.alive || selFull ? 'disabled' : ''}>EQUIP</button>`;
+      return `<div class="srow${locked ? ' locked' : ''}">
+        <span class="tier t${w.tier}">T${w.tier}</span>
+        <span class="s-name">${w.name}<small>DMG ${w.damage}${w.pellets > 1 ? 'x' + w.pellets : ''} · RNG ${w.range} · MAG ${w.ammoMax}</small></span>
+        <span class="s-stock">x${owned}</span>
+        ${actions}
       </div>`;
     }).join('');
+
     const poolRows = (Object.keys(POOL_GEAR) as (keyof typeof POOL_GEAR)[])
       .map((g) => {
         const def = POOL_GEAR[g];
         const locked = def.tier > 1 && !weaponTierUnlocked(m, def.tier);
         const stock = m[def.stock];
-        return `<div class="row"><span>${def.name} <small>${def.tier > 1 ? `T${def.tier} ` : ''}${def.desc}</small></span><span>x${stock}</span>
-          ${locked ? '<i>R&amp;D REQUIRED</i>' : `<button data-buygear="${g}" ${m.credits < def.price ? 'disabled' : ''}>BUY ${def.price}</button>`}
-          <button data-givegear="${g}" ${stock <= 0 ? 'disabled' : ''}>EQUIP</button></div>`;
+        const carried = selAgent.alive && selAgent.gear[g] === true;
+        const actions = locked
+          ? rdCell
+          : `<button data-buygear="${g}" ${m.credits < def.price ? 'disabled' : ''}>BUY ${def.price}</button>
+             <button data-givegear="${g}" ${stock <= 0 || !selAgent.alive || selFull || carried ? 'disabled' : ''}>EQUIP</button>`;
+        return `<div class="srow${locked ? ' locked' : ''}">
+          <span class="tier t${def.tier}">T${def.tier}</span>
+          <span class="s-name">${def.name}<small>${def.desc}</small></span>
+          <span class="s-stock">x${stock}</span>
+          ${actions}
+        </div>`;
       })
       .join('');
+
     const consumableRows = (Object.keys(CONSUMABLES) as (keyof typeof CONSUMABLES)[])
       .map((g) => {
         const def = CONSUMABLES[g];
         const locked = def.tier > 1 && !weaponTierUnlocked(m, def.tier);
-        return `<div class="row"><span>${def.name} <small>${def.tier > 1 ? `T${def.tier} ` : ''}${def.desc}</small></span><span></span>
-          ${locked ? '<i>R&amp;D REQUIRED</i>' : `<button data-buygear="${g}" ${m.credits < def.price ? 'disabled' : ''}>BUY ${def.price} (sel. agent)</button>`}<span></span></div>`;
+        const count = selAgent.alive ? selAgent.gear[def.field] : 0;
+        const canBuy =
+          m.credits >= def.price && selAgent.alive && (count > 0 || !selFull);
+        const actions = locked
+          ? rdCell
+          : `<button class="wide" data-buygear="${g}" ${canBuy ? '' : 'disabled'}>BUY ${def.price}</button>`;
+        return `<div class="srow${locked ? ' locked' : ''}">
+          <span class="tier t${def.tier}">T${def.tier}</span>
+          <span class="s-name">${def.name}<small>${def.desc}</small></span>
+          <span class="s-stock">x${count}</span>
+          ${actions}
+        </div>`;
       })
       .join('');
-    const gearRows = poolRows + consumableRows;
 
-    const selForAugs = m.agents[this.selAgent]!;
     const augRows = AUG_SLOTS.map((slot) => {
-      const lvl = selForAugs.alive ? augLevel(selForAugs, slot.key) : 0;
+      const lvl = selAgent.alive ? augLevel(selAgent, slot.key) : 0;
+      const pips = `<span class="pips">${[0, 1, 2]
+        .map((p) => `<i${p < lvl ? ' class="f"' : ''}></i>`)
+        .join('')}</span>`;
       if (lvl >= 3) {
-        return `<div class="row"><span>${slot.name} V3 <small>fully augmented</small></span><span>V3</span><span></span><span></span></div>`;
+        return `<div class="srow">
+          <span class="tier t5">V3</span>
+          <span class="s-name">${slot.name}<small>fully augmented</small></span>
+          <span class="s-stock">${pips}</span>
+          <span class="max">MAXED</span>
+        </div>`;
       }
       const def = slot.levels[lvl]!;
       const locked = !augLevelUnlocked(m, lvl + 1);
-      return `<div class="row"><span>${slot.name} V${lvl + 1} <small>${def.desc}</small></span><span>${lvl > 0 ? `V${lvl}` : ''}</span>
-        ${locked ? '<i>R&amp;D REQUIRED</i>' : `<button data-aug="${slot.key}" ${m.credits < def.price ? 'disabled' : ''}>INSTALL ${def.price} (sel. agent)</button>`}<span></span></div>`;
+      const actions = locked
+        ? rdCell
+        : `<button class="wide" data-aug="${slot.key}" ${m.credits < def.price || !selAgent.alive ? 'disabled' : ''}>INSTALL ${def.price}</button>`;
+      return `<div class="srow${locked ? ' locked' : ''}">
+        <span class="tier${lvl + 1 >= 3 ? ' t5' : lvl + 1 === 2 ? ' t3' : ''}">V${lvl + 1}</span>
+        <span class="s-name">${slot.name}<small>${def.desc}</small></span>
+        <span class="s-stock">${pips}</span>
+        ${actions}
+      </div>`;
     }).join('');
 
     const gearChip = (label: string, key: string, cyan = false) =>
-      `<span class="chip${cyan ? ' cyan' : ''}">${label}<b data-dropgear="${key}">x</b></span>`;
+      `<span class="chip${cyan ? ' cyan' : ''}">${label}<b data-dropgear="${key}" title="Return to pool">x</b></span>`;
     const agents = m.agents
       .map((a, i) => {
-        const spec = buildSpec(a);
         if (!a.alive) {
           return `<div class="acard dead ${i === this.selAgent ? 'sel' : ''}" data-agent="${i}">
-            <h4>${a.name} - WRITTEN OFF</h4>
-            <button data-recruit="${i}" ${m.credits < RECRUIT_COST ? 'disabled' : ''}>DECANT REPLACEMENT ${RECRUIT_COST}cr</button>
+            <div class="ac-h"><b class="ac-name">${a.name}</b><span class="ac-dead">ASSET WRITTEN OFF</span></div>
+            <button data-recruit="${i}" ${m.credits < RECRUIT_COST ? 'disabled' : ''}>DECANT REPLACEMENT · ${RECRUIT_COST}cr</button>
           </div>`;
         }
+        const spec = buildSpec(a);
+        const used = slotsUsed(a);
         const load = a.loadout
-          .map((wid, li) => `<span class="chip">${WEAPONS[wid]!.name}<b data-drop="${li}">x</b></span>`)
+          .map((wid, li) => `<span class="chip">${WEAPONS[wid]!.name}<b data-drop="${li}" title="Return to arsenal">x</b></span>`)
           .join('');
         const chips =
           (a.gear.persuadertron ? gearChip('Persuadertron', 'persuadertron', true) : '') +
@@ -479,18 +578,16 @@ export class Screens {
           (a.gear.charges > 0 ? `<span class="chip">Charge x${a.gear.charges}</span>` : '') +
           (a.gear.emps > 0 ? `<span class="chip">EMP x${a.gear.emps}</span>` : '');
         const augText = AUG_SLOTS.filter((slot) => augLevel(a, slot.key) > 0)
-          .map((slot) => `${slot.name} V${augLevel(a, slot.key)}`)
-          .join(', ');
+          .map((slot) => `${slot.name.toUpperCase()} <b>V${augLevel(a, slot.key)}</b>`)
+          .join(' · ');
         const quirkChips = agentQuirks(a)
           .map((q) => `<span class="chip gold" title="${q.desc}">${q.name}</span>`)
           .join('');
         return `<div class="acard ${i === this.selAgent ? 'sel' : ''}" data-agent="${i}">
-          <h4>${a.name}</h4>
-          <small>HP ${spec.maxHp} | missions ${a.missions} | kills ${a.kills} | persuasions ${a.persuasions} | SLOTS ${slotsUsed(a)}/${SLOT_CAP}</small>
-          <div>${load || '<i>unarmed</i>'}</div>
-          <div class="chips">${chips}</div>
-          ${quirkChips ? `<div class="chips">${quirkChips}</div>` : ''}
-          <small>${augText || 'no augments'}</small>
+          <div class="ac-h"><b class="ac-name">${a.name}</b>${quirkChips}<span class="ac-hp">HP ${spec.maxHp}</span></div>
+          <div class="ac-stats"><span>OPS <b>${a.missions}</b></span><span>KILLS <b>${a.kills}</b></span><span>PERSUADED <b>${a.persuasions}</b></span><span>SLOTS <b>${used}/${SLOT_CAP}</b>${slotSegments(used)}</span></div>
+          <div class="chips">${load || '<span class="chip empty">UNARMED</span>'}${chips}</div>
+          <div class="ac-augs">${augText ? `AUG ${augText}` : 'NO AUGMENTS INSTALLED'}</div>
         </div>`;
       })
       .join('');
@@ -501,16 +598,28 @@ export class Screens {
     const condNotes: string[] = [];
     if (cond.rain === 1) condNotes.push('counterparty sensor performance degraded 25%; umbrellas are not reimbursable');
     if (cond.tod === 2) condNotes.push('low light favors cloak fields');
+    const aliveN = m.agents.filter((a) => a.alive).length;
     this.el.innerHTML = `
       <div class="panel equip">
-        <div class="topbar"><h2>SQUAD PROVISIONING - ${t.name}${defense ? ' (DEFENSE)' : ''}</h2><span class="credits">${m.credits}cr</span></div>
-        <div class="loglines">&gt; CONDITIONS: ${CONDITION_NAMES[cond.tod]}${cond.rain === 1 ? ' / RAIN' : ''}${condNotes.length > 0 ? ` (${condNotes.join('; ')})` : ''}</div>
-        ${needsPersuadertron ? '<div class="loglines">&gt; COMPANY ISSUE: this contract requires a Persuadertron. Equip one before launch.</div>' : ''}
-        <div class="cols">
-          <div class="col"><h3>SQUAD (click to select)</h3>${agents}</div>
-          <div class="col"><h3>ARMORY</h3>${wpnRows}<h3>EQUIPMENT</h3>${gearRows}<h3>AUGMENTATION (sel. agent)</h3>${augRows}</div>
+        <div class="equiphead">
+          <div><h2>SQUAD PROVISIONING</h2><span class="eqsub">${t.name} · ${defense ? 'DEFENSE CONTRACT' : CONTRACT_NAMES[t.missionType]}</span></div>
+          <div class="eqbal"><label>BALANCE</label><b>${m.credits}<small>cr</small></b></div>
         </div>
-        <div class="btnrow"><button data-act="back">BACK</button><button class="primary" data-act="launch">LAUNCH CONTRACT</button></div>
+        <div class="condbar">
+          <span class="cchip">${CONDITION_NAMES[cond.tod]}</span>${cond.rain === 1 ? '<span class="cchip">RAIN</span>' : ''}
+          <span class="condnote">${condNotes.length > 0 ? condNotes.join('; ') : 'standard operating conditions'}</span>
+          ${needsPersuadertron ? '<span class="alertline">COMPANY ISSUE: this contract requires a Persuadertron. Equip one before launch.</span>' : ''}
+        </div>
+        <div class="cols">
+          <div class="col squad"><h3>SQUAD ROSTER<span class="h3tag">SELECT AN OPERATIVE TO PROVISION</span></h3>${agents}</div>
+          <div class="col shop">
+            <h3>ARMORY<span class="h3tag">SQUAD ARSENAL</span></h3>${wpnRows}
+            <h3>EQUIPMENT<span class="h3tag">POOL STOCK</span></h3>${poolRows}
+            <h3>CONSUMABLES<span class="h3tag">ISSUED TO ${selAgent.alive ? selAgent.name : 'NO ACTIVE ASSET'}</span></h3>${consumableRows}
+            <h3>AUGMENTATION<span class="h3tag">INSTALL TARGET: ${selAgent.alive ? selAgent.name : 'NO ACTIVE ASSET'}</span></h3>${augRows}
+          </div>
+        </div>
+        <div class="btnbar"><button data-act="back">BACK</button><span class="launchmeta">${aliveN}/${m.agents.length} ASSETS ACTIVE</span><button class="primary" data-act="launch">LAUNCH CONTRACT</button></div>
       </div>`;
 
     const rerender = () => {
@@ -605,14 +714,17 @@ export class Screens {
     this.show();
     const verdict = info.won ? 'CONTRACT FULFILLED' : 'CONTRACT UNFULFILLED';
     this.el.innerHTML = `
-      <div class="panel debrief">
-        <h2 class="${info.won ? 'good' : 'bad'}">${verdict}</h2>
+      <div class="panel debrief${info.won ? '' : ' fail'}">
+        <div class="verdict ${info.won ? 'good' : 'bad'}">
+          <small>CONTRACT REVIEW · ${info.territory.name}</small>
+          <h2>${verdict}</h2>
+        </div>
         <div class="loglines">
           ${info.lines.map((l) => `<div>&gt; ${l}</div>`).join('')}
           ${info.salvage ? `<div>&gt; Augment salvage: +${info.salvage}cr</div>` : ''}
         </div>
-        <div class="topbar"><span class="credits">BALANCE ${m.credits}cr</span></div>
-        <button class="primary" data-act="continue">${campaignWon(m) ? 'FINALIZE GLOBAL ACQUISITION' : 'RETURN TO OPERATIONS'}</button>
+        <div class="dbstat"><span>BALANCE<b>${m.credits}cr</b></span><span>CYCLE<b>${m.cycle}</b></span><span>CAMPAIGN<b>ACT ${campaignAct(m)}</b></span></div>
+        <div class="btnrow"><span></span><button class="primary" data-act="continue">${campaignWon(m) ? 'FINALIZE GLOBAL ACQUISITION' : 'RETURN TO OPERATIONS'}</button></div>
       </div>`;
     this.el.onclick = (e) => {
       if ((e.target as HTMLElement).dataset.act === 'continue') onContinue();
@@ -622,12 +734,13 @@ export class Screens {
   victory(m: MetaState, onNgPlus: () => void, onNewGame: () => void): void {
     this.show();
     this.el.innerHTML = `
-      <div class="panel menu">
+      <div class="panel menu victory">
+        <div class="menustat"><span>NEXUS INTERNAL SYSTEMS</span><span class="live">BOARD SESSION ACTIVE</span></div>
         <h1>GLOBAL<span>MONOPOLY</span></h1>
         <p class="tag">All forty territories under Nexus management. Three rival boards liquidated.${m.ngPlus > 0 ? ` (NG+${m.ngPlus})` : ''} The board demands growth.</p>
         <div class="loglines">${m.log.slice(0, 6).map((l) => `<div>&gt; ${l}</div>`).join('')}</div>
-        <button class="primary" data-act="ngplus">NEW GAME+ (RETAIN ASSETS, HARDER RIVALS)</button>
-        <button data-act="new">NEW OPERATION (CLEAN LEDGER)</button>
+        <button class="primary" data-act="ngplus">NEW GAME+ · RETAIN ASSETS, HARDER RIVALS</button>
+        <button data-act="new">NEW OPERATION · CLEAN LEDGER</button>
       </div>`;
     this.el.onclick = (e) => {
       const act = (e.target as HTMLElement).dataset.act;
