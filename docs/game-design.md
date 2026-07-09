@@ -10,7 +10,7 @@
 | Platform | Browser (WebGPU with automatic WebGL2 fallback) |
 | Inspiration | Syndicate (Bullfrog, 1993) |
 | Reference peers | Satellite Reign, Syndicate (2012), Ruiner, Phantom Doctrine |
-| Document version | 2.0 |
+| Document version | 2.1 |
 | Status | Living document; single source of design truth |
 
 This bible is the canonical design reference. `DESIGN.md` remains the machine-readable token export used by the build tooling; everything a human needs to understand the visual and experiential intent now lives here.
@@ -81,7 +81,7 @@ The year is 2089. Nation-states have collapsed into administrative zones owned b
 
 Tone is a rain-soaked neon dystopia: brutalist megastructures, holographic advertising, indifferent crowds. Violence is sudden, loud, and consequence-free for the corporation, since the cleanup invoice is just another line item. UI and narrative are framed as corporate software. Missions are contracts, deaths are asset write-offs, civilians are demographic units.
 
-Combat is visually vicious but stylized: sharp impact bursts, blood on pavement, scorched blast marks, shattered bodies implied through silhouettes and debris rather than medical realism. Gore exists to make corporate indifference feel grotesque, not to turn kills into the reward loop.
+Combat is visually vicious and high-fidelity: sharp impact bursts, blood on pavement, scorched blast marks, wounds, and body damage rendered with real proportions and material response. Gore is visceral and specific so corporate indifference lands as grotesque, not cartoon; it is never the reward loop.
 
 ## 5. Core Gameplay Loop
 
@@ -170,9 +170,9 @@ Each mission map is a living district of roughly two to four city blocks.
 Systems spec what combat does. This section specs how it should feel, which is where premium separates from prototype.
 
 - **Time-to-kill bands.** Tier 1 weapons resolve a civilian in a shot and an unarmored guard in a short burst. Higher tiers compress this. Enemy agents in Act 3 with V3 augments should never die instantly, so a firefight against a peer squad reads as an exchange, not a delete.
-- **Impact feedback within one frame.** Every trigger pull produces muzzle flash, a surface decal, a punchy sample, and a short light kick together. No hit should be silent or invisible.
+- **Impact feedback within one frame.** Every trigger pull produces muzzle flash, a surface decal, credible blood or debris response, a punchy sample, and a short light kick together. No hit should be silent or invisible.
 - **Telegraphs before escalation.** Tactical and enforcer tiers announce themselves (siren shift, comms line, holographic threat ping) before they arrive, so the player owns the decision to stay or pull out.
-- **Readability-under-chaos budget.** Cap simultaneous heavy VFX and cull the least-important effects first when the frame is contested. Silhouettes and faction trim must survive a full-block firefight.
+- **Orders and threat under chaos.** When the frame is contested, prioritize legibility of selection, orders, objectives, and faction identity (HUD, markers, nameplates, trim) while keeping world geometry and materials dense. Do not strip mesh or material quality as the first response to chaos.
 - **Juice with restraint.** Hitstop and screen shake exist but stay subordinate to the cold tone. This is not a spectacle brawler; the feedback should feel like precise machinery, not fireworks.
 
 ## 8. Signature Moments
@@ -272,19 +272,19 @@ Controls support fast squad tactics without direct character control.
 
 The visual thesis is the north star every asset is measured against. This section folds in the visual identity formerly split into `DESIGN.md`.
 
-> **North star:** Blade Runner's wet, reflective night meets a Bloomberg terminal. The city is chaotic and beautiful; the interface laid over it is cold, compressed, and bureaucratic. The tension between the two is the whole look.
+> **North star:** A high-fidelity cyberpunk night city under a Bloomberg terminal. Dense geometry, high-resolution characters, detailed props, real materials, physically based lighting, real proportions, and visceral gore make the district feel expensive and dangerous. The interface laid over it stays cold, compressed, and bureaucratic. The tension between the two is the whole look.
 
 ### 13.1 Rendering Philosophy
 
-Stylized low-poly-plus: clean geometry, high-quality lighting (baked GI plus dynamic neon), and heavy post-processing (rain, bloom, vignette, volumetric fog). Readability beats fidelity. Agents glow with faction trim colors; persuaded NPCs pulse soft cyan. Lighting is tactical information, not only mood: pools of light and shadow tell the player where cover and exposure are.
+High-fidelity mission presentation is the target. Dense, authored geometry; high-resolution characters; detailed props; physically based materials (metal, roughness, normals, emissive, glass); physically based lighting (image-based lighting and GI where feasible, dynamic neon and area lights, wet reflective streets); real-world proportions. Agents carry faction trim and persuaded NPCs read with cyan influence cues, but those are information layers on a realistic base, not a substitute for mesh and material quality. Lighting is both mood and tactics: pools of light and shadow tell the player where cover and exposure are. Gameplay identification (markers, nameplates, faction ID) is an overlay requirement; it is not a reason to strip geometry or materials.
 
 ### 13.2 Color Script by Alarm State
 
-The world palette is systemic, driven by alarm state, the same signal that drives the audio stems.
+Alarm state drives a systemic grade and lighting response on top of the realistic base, the same signal that drives the audio stems.
 
-- **Clear:** cold cyan telemetry and amber signage over near-black blue. Calm, corporate, indifferent.
-- **Alarm level 1 (warn):** amber creeps into signage and HUD accents; the district feels watched.
-- **Alarm level 2 (bad):** the world bleeds red emergency lighting, the bloom threshold drops, and the interface hardens into siege colors.
+- **Clear:** cold cyan telemetry and amber signage over a dark, rain-wet district. Calm, corporate, indifferent.
+- **Alarm level 1 (warn):** amber creeps into signage, emergency practicals, and HUD accents; the district feels watched.
+- **Alarm level 2 (bad):** red emergency lighting and exposure shift harden the frame; the interface moves into siege colors while the city remains material-rich.
 
 ### 13.3 Palette
 
@@ -309,18 +309,20 @@ The canonical UI palette. Scene and marker colors continue to live in `src/rende
 
 Faction and actor tints (police, tactical, guard, civilian, dead) are defined in `src/render/palette.ts` and mirrored across all accessibility palettes.
 
-### 13.4 Silhouette and Readability Law
+### 13.4 Identification Law
 
-The ten-foot rule: every actor must be identifiable by silhouette plus faction trim at block-wide zoom, in rain, during a firefight. If an asset fails this test it is redesigned, not re-lit. This law outranks fidelity.
+Every actor and objective must remain identifiable under rain, alarm, and full-block firefights through real proportions, material identity, faction trim, and UI overlays (nameplates, markers, selection). Identification is required for playability. It does not outrank fidelity: do not solve identification by collapsing the world into low-detail kits when denser assets and better lighting can carry both.
 
 ### 13.5 Material Language
 
-Four materials carry the look. Anything outside them needs a reason.
+Materials should read as real surfaces under night rain and neon, not as flat unlit fills.
 
-- Wet asphalt with neon reflections.
-- Holographic transparency for signage and objective markers.
-- Neon emissive for faction trim and advertising.
-- Matte brutalist concrete for building mass.
+- Wet asphalt with true specular and reflection response.
+- Glass, painted metal, and matte brutalist concrete for building mass.
+- Fabric, polymer, and armor on characters at hero and near-crowd LODs.
+- Holographic and emissive signage (transmissive or emissive materials) for advertising and objective markers.
+- Neon emissive for faction trim and advertising spill.
+- Blood, scorched residue, and debris materials for combat aftermath.
 
 ### 13.6 Camera
 
@@ -398,15 +400,20 @@ Accessibility is a first-class pillar, not a post-launch concession. Several fea
 
 ## 17. Quality Bar
 
-The non-negotiable bar. No system ships below it. This is the definition of done for the premium claim.
+The definition of done for the presentation claim. Visual fidelity is the primary visual ship gate. Performance is measured and managed, not used to freeze the art style at low detail.
+
+**Ship ladder:** the immediate product bar is **premium browser** (mission view reads as a finished high-end browser game). **AA-density** (richer kits, variety, mid-field characters) is a later aspiration. Industry AAA package scope is out of product scope. Ordered tracks and rung checklists live in `docs/presentation-roadmap.md`.
 
 | Dimension | Bar |
 |---|---|
-| Frame rate | 60 fps on a mid-range laptop iGPU with roughly 150 active NPCs per district |
-| Readability | Every actor passes the ten-foot silhouette-plus-trim test in rain during a firefight |
+| Visual fidelity | Hero assets and districts read as high-fidelity: dense geometry, high-res characters, detailed props, real materials and proportions |
+| Lighting | Physically based lighting with wet reflective streets and credible neon; not unlit kit lighting |
+| Gore | Real combat consequences on bodies and surfaces; framed as corporate cost, not glory |
+| Identification | Player can still pick agents, hostiles, and objectives under fire via markers, nameplates, proportions, materials, and faction ID |
+| Frame rate | Target smooth play on modern desktop GPUs. Mid-range iGPU 60 fps at roughly 150 NPCs is no longer a non-negotiable ship gate; measure and document in `docs/perf.md`, and trade density, LOD, or streaming when fidelity and playability conflict |
 | Feedback | No player action ships without immediate visual and audio feedback |
 | Determinism | Simulation stays integer-only and reproducible; the golden hash test passes |
-| First load | First playable loads and is interactive fast enough to survive a single click from a shared link |
+| First load | First playable loads and is interactive fast enough to survive a single click from a shared link; dense assets are expected to push streaming, atlases, and bundle splitting |
 | Tone | No UI element softens the corporate-control voice below the standard in Section 14 |
 
 ## 18. Technical Design (Browser)
@@ -414,8 +421,9 @@ The non-negotiable bar. No system ships below it. This is the definition of done
 | Area | Approach |
 |---|---|
 | Engine | Three.js (r171+); WebGPURenderer with automatic WebGL2 fallback |
-| Performance target | 60 fps on mid-range laptop iGPU; roughly 150 active NPCs per district |
-| Crowds | GPU-instanced skeletal animation with near and far LOD tiers; sim uses capped NPC logic and per-unit A* |
+| Presentation target | High-fidelity authored assets (GLB/PBR), dense district geometry, real materials and lighting; procedural kits are interim, not the end state |
+| Performance | Measured and managed via `?perf` and `docs/perf.md`. LOD, streaming, texture atlases, and density caps carry high-fid content; they do not define the art style as low detail |
+| Crowds | Skinned characters with near and far LOD tiers (hero or mid-res near field; simplified far field without making low-poly the brand); sim uses capped NPC logic and per-unit A* |
 | Determinism | Integer-only fixed-point simulation, command-stream replays, and state hashing |
 | Save | Local browser meta save |
 | Sessions | Self-contained missions with persistent meta-game state |
@@ -460,9 +468,10 @@ The simulation architecture stays deterministic so multiplayer can share the sam
 
 | Risk | Mitigation |
 |---|---|
-| Crowd simulation cost in browser | Aggressive LOD, capped simulated NPCs, GPU instancing from day one |
-| Violence and satire tone misread | Consistent corporate framing; stylized gore emphasizes the grotesque cost of corporate violence without becoming the reward loop |
-| Premium look slips into prototype | Enforce the Quality Bar in Section 17 and the silhouette law in Section 13.4 as ship gates |
+| Crowd and asset cost in browser | LOD, streaming, atlases, and measured density caps so high-fid content can ship without a launcher |
+| Violence and satire tone misread | Consistent corporate framing; real gore makes corporate indifference grotesque without becoming the reward loop |
+| Platform content policy for gore | Keep combat consequence grounded and operational; debrief language stays write-off and remediation, never celebration |
+| Fidelity slips into muddy overdetail | Enforce Section 17 and the identification law in Section 13.4; HUD markers and nameplates carry orders under chaos |
 | Interface warmth creep | Hold the line on Section 14: sharp, square, monospace, no marketing softness in the live UI |
 
 ## 21. Lexicon
@@ -487,5 +496,6 @@ The diegetic vocabulary. Consistent use of these terms reinforces the fiction.
 
 | Version | Change |
 |---|---|
+| 2.1 | Art direction pivot to high-fidelity presentation: dense geometry, high-res characters, detailed props, real materials, physically based lighting, real proportions, real gore. Identification law and softened frame-rate bar replace low-poly-plus and silhouette-over-fidelity. UI identity (Section 14) unchanged. |
 | 2.0 | Restructured into a full design bible: added vision, player fantasy, authorial positioning, combat feel, signature moments, deepened factions, art direction, quality bar, accessibility pillar, lexicon. Folded the `DESIGN.md` visual identity in. Applied house formatting rules. |
 | 1.1 | Prior systems-first design document. |

@@ -17,6 +17,7 @@ There is no lint/format tooling configured in this repo.
 ## Design System
 
 - `docs/game-design.md` is the canonical design bible: product vision, setting, mechanics, art direction, and the human-facing visual identity all live there. Consult it before UI/presentation work, including HUD, app screens, documentation UI, color intent, typography, spacing, or component styling.
+- Mission and world presentation: GDD Section 13 is the north star; **ship bar is premium browser (R3)**, with AA density as later aspiration (R4). Ladder and tracks: `docs/presentation-roadmap.md`. Live UI remains cold command-software per Section 14. Current build is below R3; do not claim AAA.
 - `DESIGN.md` is the machine-readable design-token export consumed by the build tooling; treat it as the source for exact token values, but the visual-identity intent behind those tokens now lives in `docs/game-design.md` (Sections 13-14). Keep the two consistent when either changes.
 - `docs/roadmap.md` is the canonical source of truth for implementation status (done, partial, or not started); `docs/game-design.md` describes design intent, not build state. Do not use the design bible to infer what is or is not implemented.
 - Token exports live at `tailwind.theme.json` and `tokens.json`; regenerate them from `DESIGN.md` with `npx -y @google/design.md export --format tailwind DESIGN.md > tailwind.theme.json` and `npx -y @google/design.md export --format dtcg DESIGN.md > tokens.json` after token changes.

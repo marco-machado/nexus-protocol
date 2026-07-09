@@ -29,7 +29,7 @@
 
 Nexus Protocol is a modern 3D browser reimagining of classic isometric squad tactics. You command up to four cybernetically augmented agents across live city districts, taking contracts for assassination, persuasion, raids, purges, defense, heists, and rival HQ assaults.
 
-The game is built around a deterministic fixed-point simulation, a Three.js presentation layer, and a campaign shell with territory control, research, augments, rival syndicates, sieges, New Game+, and local persistence.
+The game is built around a deterministic fixed-point simulation, a Three.js presentation layer, and a campaign shell with territory control, research, augments, rival syndicates, sieges, New Game+, and local persistence. Design intent for the mission view is high-fidelity cyberpunk presentation (dense geometry, high-res characters, real materials and lighting, real proportions, visceral gore) under a cold corporate command UI; see `docs/game-design.md`. The current build is an interim presentation path; implementation status is in `docs/roadmap.md`.
 
 > [!NOTE]
 > The current implementation is a local browser game. Multiplayer, accounts, cloud saves, platform packaging, and distribution work are tracked as Phase E/F draft specs and are not implemented yet.
@@ -42,7 +42,7 @@ The game is built around a deterministic fixed-point simulation, a Three.js pres
 - **Persuadertron swarm play** with civilian conversion, influence thresholds, follower orders, and flashmob tactics.
 - **City simulation** with crowds, panic propagation, police escalation, autonomous vehicles, hijacking, explosions, destructible storefront breaches, time of day, and rain.
 - **Campaign layer** with 40 territories across 8 regions, taxes, unrest, real-time income/research, rival syndicate doctrines, counterattack sieges, veteran quirks, and New Game+.
-- **Presentation polish** with WebGPU rendering, WebGL fallback, GPU-instanced skeletal crowds, generated vehicle assets, bloom, vignette, rain, procedural WebAudio, minimap, comms ticker, and colorblind-safe palettes.
+- **Presentation** with WebGPU rendering, WebGL fallback, GPU-instanced skeletal crowds, vehicle assets, bloom, vignette, rain, procedural WebAudio, minimap, comms ticker, and colorblind-safe palettes (interim look; high-fidelity district and character presentation is the design target, not yet the shipped bar).
 
 ## Getting started
 

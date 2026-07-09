@@ -1,6 +1,8 @@
 # Performance Baseline
 
-Acceptance criterion (GDD section 10, roadmap M1): 60 fps with ~150 active NPCs on a mid-range laptop iGPU, validated on an M-series MacBook Air and a mid-range Windows laptop.
+Measured baselines for the **current** (pre high-fidelity pivot) presentation stack. Historical acceptance language was 60 fps with ~150 active NPCs on a mid-range laptop iGPU, validated on an M-series MacBook Air and a mid-range Windows laptop.
+
+**Design note (2026-07-08):** `docs/game-design.md` v2.1 and constitution v2.0.0 no longer treat mid-range iGPU 60 fps / ~150 NPCs as a non-negotiable ship gate. Fidelity-first presentation may re-baseline targets, machines, and density; when that work lands, record new rows here and do not rewrite these historical measurements.
 
 ## Harness
 

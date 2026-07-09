@@ -1,31 +1,21 @@
 <!--
 SYNC IMPACT REPORT
-Version change: (unfilled template) -> 1.0.0
-Rationale: Initial ratification. The prior file was the empty constitution-template placeholder; this fills every token with concrete, project-derived principles, so the first real version is 1.0.0 (MAJOR baseline).
+Version change: 1.0.0 -> 2.0.0
+Rationale: MAJOR amendment. Principle V is redefined from absolute performance-plus-silhouette ship gates to a high-fidelity presentation gate with measured performance and an identification requirement that does not outrank fidelity. Aligns constitution with docs/game-design.md v2.1 art direction pivot.
 
-Principles defined (7):
-  1. Determinism Is The Load-Bearing Invariant
-  2. Strict One-Way Layering
-  3. You Are The Corporation (Authorial Fidelity)
-  4. Emergent Systems Over Scripting
-  5. Performance And Readability Are Ship Gates
-  6. Accessibility And Feedback Are First-Class
-  7. Pick Up And Play (Browser-First)
-
-Added sections:
-  - Technical Constraints And Standards
-  - Development Workflow And Quality Gates
-  - Governance
-
-Removed sections: none (template placeholders replaced in place).
+Principles (7):
+  1. Determinism Is The Load-Bearing Invariant (unchanged)
+  2. Strict One-Way Layering (unchanged)
+  3. You Are The Corporation (Authorial Fidelity) (unchanged)
+  4. Emergent Systems Over Scripting (unchanged)
+  5. High-Fidelity Presentation Is The Visual Ship Gate (REDEFINED; was Performance And Readability Are Ship Gates)
+  6. Accessibility And Feedback Are First-Class (unchanged)
+  7. Pick Up And Play (Browser-First) (unchanged)
 
 Templates requiring updates:
-  - .specify/templates/plan-template.md - reviewed; "Constitution Check" gate is generic and now resolves against these seven principles (no edit required).
-  - .specify/templates/spec-template.md - reviewed; no principle conflict (no edit).
-  - .specify/templates/tasks-template.md - reviewed; task categories are project-agnostic and compatible (no edit).
-  - .specify/templates/checklist-template.md - reviewed; no conflict (no edit).
+  - .specify/templates/* reviewed; none hardcode the old mid-range iGPU 60/150 or silhouette-over-fidelity bar.
 
-Follow-up TODOs: none. RATIFICATION_DATE set to the adoption date (repo constitution scaffold created 2026-07-06); adjust if an earlier formal adoption date is confirmed.
+Follow-up TODOs: keep docs/roadmap.md and docs/perf.md honest about current build vs new design intent (tracked in living product docs, not this file).
 -->
 
 # Nexus Protocol Constitution
@@ -71,11 +61,16 @@ Signature moments MUST be producible from interacting systems (crowds, panic, tr
 
 Rationale: The stories the game promises come from the simulation absorbing player decisions. Scripting produces one story; systems produce every story.
 
-### V. Performance And Readability Are Ship Gates
+### V. High-Fidelity Presentation Is The Visual Ship Gate
 
-The performance target is fixed and non-negotiable: 60 fps on a mid-range laptop iGPU with roughly 150 active NPCs per district. Individual features are negotiable against this budget; the budget is not. Additionally, the silhouette law holds: every actor MUST be identifiable by silhouette plus faction trim at block-wide zoom, in rain, during a firefight. An asset that fails this test is redesigned, not re-lit.
+World and mission presentation MUST pursue high-fidelity as defined in `docs/game-design.md` Sections 13 and 17:
 
-Rationale: A browser game that stutters or becomes unreadable under chaos has already lost, regardless of feature count. These are gates, not aspirations.
+- Dense geometry, high-resolution characters, detailed props, real materials, physically based lighting, real proportions, and real gore.
+- Identification of actors and objectives under combat remains required for playability, via proportions, material identity, faction trim, and UI overlays (nameplates, markers, selection). Identification MUST NOT be solved by requiring low-poly silhouettes or by ranking silhouette above fidelity.
+- Performance is measured and managed (`?perf`, `docs/perf.md`). The former fixed mid-range iGPU 60 fps / roughly 150 active NPC bar is NOT an absolute block on fidelity work. Features MAY trade NPC density, LOD, or streaming to preserve fidelity and playability. Browser delivery (Principle VII) still forbids installers and launchers; load-size and streaming work are expected as fidelity rises.
+- The live UI continues to obey Principle III and Section 14; the high-fidelity gate applies to the world presentation, not to warming the command-software shell.
+
+Rationale: The product promise for the mission view is a dense, material-rich city under a cold terminal. Freezing silhouette-first low detail as a ship gate blocks that promise. Playability still requires identification; browsers still require measured performance; neither licenses unlit kit geometry as the end state.
 
 ### VI. Accessibility And Feedback Are First-Class
 
@@ -83,7 +78,7 @@ Rationale: A browser game that stutters or becomes unreadable under chaos has al
 - No player action ships without immediate visual and audio feedback within roughly one frame.
 - The simulation-speed aid, textual comms that double as captions, and colorblind palettes are treated as design features, not optional extras.
 
-Rationale: Accessibility and feedback are part of the premium quality bar (Section 17), not a post-launch concession.
+Rationale: Accessibility and feedback are part of the quality bar (Section 17), not a post-launch concession.
 
 ### VII. Pick Up And Play (Browser-First)
 
@@ -104,7 +99,7 @@ Rationale: The delivery form (a browser tab) removes every excuse not to try the
 
 - **Skill mandate**: the `threejs-game-director` skill MUST be used whenever specifying, designing, or planning changes; it routes the relevant sibling skills and reference gates so design and planning work is not done ad hoc.
 - **Determinism gate**: the golden-hash replay runs in CI as a cross-platform desync check and MUST stay green through every phase, since it is also the multiplayer desync harness. `GOLDEN_FINAL_HASH` is updated only for intentional sim changes, in the same change, with rationale.
-- **Performance verification**: performance-affecting changes are validated against the `?perf` stress harness and recorded in `docs/perf.md`.
+- **Performance verification**: performance-affecting changes are validated against the `?perf` stress harness and recorded in `docs/perf.md`. Targets may be re-baselined as high-fidelity content lands; measured honesty is mandatory.
 - **Layer discipline in review**: any change touching `sim`, `app`, or `render` is checked against Principles I and II before merge.
 
 ## Governance
@@ -113,6 +108,6 @@ This constitution supersedes ad hoc convention when they conflict. All feature s
 
 - **Amendments**: proposed as a documented change to this file, including the rationale and any migration impact on `docs/game-design.md`, `docs/roadmap.md`, `DESIGN.md`, or the Spec Kit templates. Dependent templates MUST be re-checked for consistency on each amendment.
 - **Versioning**: semantic. MAJOR for a backward-incompatible principle removal or redefinition, MINOR for a new principle or materially expanded guidance, PATCH for clarifications and wording that do not change meaning.
-- **Compliance review**: reviewers verify layer discipline, determinism, the performance and readability gates, and tone before merge. The runtime engineering guidance in `AGENTS.md` remains the day-to-day working reference and MUST stay consistent with this document.
+- **Compliance review**: reviewers verify layer discipline, determinism, high-fidelity presentation intent, actor and objective identification, measured performance, and corporate UI tone before merge. The runtime engineering guidance in `AGENTS.md` remains the day-to-day working reference and MUST stay consistent with this document.
 
-**Version**: 1.0.0 | **Ratified**: 2026-07-06 | **Last Amended**: 2026-07-06
+**Version**: 2.0.0 | **Ratified**: 2026-07-06 | **Last Amended**: 2026-07-08

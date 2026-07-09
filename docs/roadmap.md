@@ -6,6 +6,20 @@ Status tokens: `[x]` done and verified in code, `[~]` partial (gap noted inline)
 
 Last validated 2026-07-07 against the working tree: `npm test` green (57/57 across 5 files), determinism golden hash `0x913f91e4` matches, `NPC_CAP = 400`, perf budgets in `docs/perf.md`. Each line below cites the file that proves it, so any claim can be re-checked with a grep.
 
+## Design intent pivot (2026-07-08)
+
+`docs/game-design.md` v2.1 and constitution v2.0.0 set the mission/world presentation target to high-fidelity materials and authored density, with the live UI still cold command-software. The constitution no longer treats mid-range iGPU 60 fps at ~150 NPCs or silhouette-over-fidelity as absolute ship gates.
+
+**Ship bar for visuals is premium browser, not industry AAA.** Full ladder, definitions of done, and ordered tracks live in **`docs/presentation-roadmap.md`** (R3 premium browser → R4 AA aspiration later).
+
+**Current implementation is below R3.** Shipped base is procedural districts, post/IBL/PBR shells, image texture hooks, limited GLBs, VAT crowds. Systems visual rows below stay `[x]` for the interim stack.
+
+- [~] Presentation ladder (see `docs/presentation-roadmap.md`)
+  - [x] R1 Slice 1: wet PBR asphalt, Standard shells, night PMREM IBL
+  - [x] R2 Slice 2: facade/asphalt/window/sign/billboard/portrait assets + loaders (night visibility still weak)
+  - [ ] R3 Premium browser: geometry kits, tuned materials, hero agents, combat surface response, props, delivery
+  - [ ] R4 AA aspiration (later): region kits, mid-field crowds, expanded catalogs, landmarks
+
 ## Status at a glance
 
 | Phase | Scope | Status |
@@ -15,6 +29,8 @@ Last validated 2026-07-07 against the working tree: `npm test` green (57/57 acro
 | B: Content depth | Weapon/equipment/augment tiers 3-5, 4 more mission types | Done |
 | C: World and campaign | 40 territories, 3 rival doctrines, sieges, acts 1-3, NG+, economy | Done |
 | D: City simulation | Vehicles, destructible mid-layer, day/night/weather, GPU crowds | Done |
+| Presentation (R3) | Premium browser mission look; see `docs/presentation-roadmap.md` | Partial (R1–R2; R3 not started) |
+| Presentation (R4) | AA aspiration density/variety | Later |
 | E: Multiplayer and accounts | Co-op, async PvP, accounts, cloud saves | Not started (groundwork only) |
 | F: Platform and release | Input remap, gamepad, touch, load budget, accessibility audit | Not started |
 
@@ -174,4 +190,4 @@ Draft spec: `docs/phase-f-platform-release/spec.md`.
 
 - Determinism is load-bearing: no floats in `SimState`, no wall-clock reads, `rand(state, n)` is the only randomness, call order matters. Update `GOLDEN_FINAL_HASH` only for intentional sim changes.
 - Layer dependency is one-way: sim never imports three.js, render never mutates sim state, all gameplay input flows through commands.
-- Perf target is fixed and non-negotiable: 60 fps on a mid-range laptop iGPU with roughly 150 active NPCs. Features negotiate against it; the target does not move.
+- Presentation ship bar is premium browser (R3 in `docs/presentation-roadmap.md`); AA is later aspiration (R4). GDD Section 13 is the north star. Perf is measured in `docs/perf.md`. Identification under combat remains required (GDD Section 13.4).
