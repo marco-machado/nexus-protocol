@@ -176,7 +176,6 @@ export interface GameScene {
   carModelRoots: Object3D[];
   tramMesh: InstancedMesh;
   tramLightsMesh: InstancedMesh;
-  tramModelRoots: Object3D[];
   fuelMeshes: Map<number, Mesh>;
   rubbleMesh: InstancedMesh;
   scorchMesh: InstancedMesh;
@@ -3145,7 +3144,6 @@ export function createGameScene(state: SimState, shadows = true): GameScene {
   tramLightsMesh.frustumCulled = false;
   tramLightsMesh.count = 0;
   scene.add(tramLightsMesh);
-  const tramModelRoots: Object3D[] = [];
 
   const fuelMeshes = new Map<number, Mesh>();
   state.vehicles.forEach((v, i) => {
@@ -3395,7 +3393,6 @@ export function createGameScene(state: SimState, shadows = true): GameScene {
     carModelRoots,
     tramMesh,
     tramLightsMesh,
-    tramModelRoots,
     fuelMeshes,
     rubbleMesh,
     scorchMesh,
@@ -3728,7 +3725,6 @@ export function syncScene(
   let poolI = 0;
   poolTint.set(0xffd9a0).multiplyScalar(lightRow.neon >= 1 ? 0.45 : 0.08);
   const generatedCarReady = gs.carModelRoots.some((r) => r.userData.generatedCarReady);
-  const generatedTramReady = gs.tramModelRoots.some((r) => r.userData.generatedTramReady);
   for (const mesh of gs.carVariantMeshes) mesh.count = 0;
   for (const mesh of gs.carVariantLights) mesh.count = 0;
   state.vehicles.forEach((v, i) => {
@@ -3775,14 +3771,6 @@ export function syncScene(
       const modelRoot = gs.carModelRoots[modelCarI++];
       if (modelRoot) {
         modelRoot.visible = generatedCarReady;
-        modelRoot.position.copy(dummy.position);
-        modelRoot.rotation.copy(dummy.rotation);
-        modelRoot.scale.copy(dummy.scale);
-      }
-    } else {
-      const modelRoot = gs.tramModelRoots[idx];
-      if (modelRoot) {
-        modelRoot.visible = generatedTramReady;
         modelRoot.position.copy(dummy.position);
         modelRoot.rotation.copy(dummy.rotation);
         modelRoot.scale.copy(dummy.scale);
@@ -3835,8 +3823,7 @@ export function syncScene(
   gs.carMesh.count = gs.carVariantMeshes[0]!.count;
   gs.carLightsMesh.count = gs.carMesh.count;
   gs.tramLightsMesh.count = gs.tramMesh.count;
-  for (let i = gs.tramMesh.count; i < gs.tramModelRoots.length; i++) gs.tramModelRoots[i]!.visible = false;
-  gs.tramMesh.visible = !generatedTramReady;
+  gs.tramMesh.visible = true;
   for (const m of gs.carVariantMeshes) m.visible = !generatedCarReady;
   for (const m of gs.carVariantLights) m.visible = true;
   for (const m of [...gs.carVariantMeshes, gs.tramMesh, ...gs.carVariantLights, gs.tramLightsMesh]) {

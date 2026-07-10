@@ -290,7 +290,7 @@ export function createCrowd(scene: Scene): Crowd {
   animAttr.setUsage(DynamicDrawUsage);
 
   // near field: Phong + rim-friendly specular so skin/gear separate under night
-  // grade (T7); far stays cheap Lambert
+  // grade (T7); far stays a cheaper static-pose Phong
   const nearMat = new MeshPhongNodeMaterial({
     specular: 0x2a2a2a,
     shininess: 22,
