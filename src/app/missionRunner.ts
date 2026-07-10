@@ -7,6 +7,7 @@ import { applyPalette, SCENE_COLORS } from '../render/palette';
 import { createPost } from '../render/post';
 import { createRain } from '../render/rain';
 import {
+  AGENT_TRIM,
   applyAlarmGrade,
   createGameScene,
   installDistrictEnvironment,
@@ -83,8 +84,8 @@ export interface MissionOptions {
 }
 
 // agent card portraits: /portraits/a{n}.png when present, else a generated
-// bust silhouette; hues match AGENT_TRIM in scene.ts (in-world stripe/visor)
-const PORTRAIT_HUES = ['#00e5ff', '#5ef2c4', '#7c9bff', '#38d4f0'];
+// bust silhouette; hues derive from AGENT_TRIM in scene.ts (in-world stripe/visor)
+const PORTRAIT_HUES = AGENT_TRIM.map((h) => `#${h.toString(16).padStart(6, '0')}`);
 const portraitSrcs: string[] = [];
 
 function buildPortraitFallback(i: number): string {
