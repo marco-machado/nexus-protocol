@@ -24,8 +24,8 @@ GDD v2.1’s high-fidelity language remains the **north star**. This roadmap seq
 |---|---|---|---|
 | R0 | Interim systems look | Procedural boxes, post, VAT crowds, limited GLBs | Shipped (Phases A–D visual rows) |
 | R1 | Material baseline | Wet PBR ground, Standard shells, night IBL | `[x]` Slice 1 |
-| R2 | Image content hooks | Facade/asphalt maps, windows, billboard, portraits | `[x]` Slice 2 (in-frame impact still partial; night crush) |
-| **R3** | **Premium browser** | Geometry kits + tuned materials + hero agents + combat read | **Ship target** — not done |
+| R2 | Image content hooks | Facade/asphalt maps, windows, billboard, portraits | `[x]` Slice 2 + T1 night visibility |
+| **R3** | **Premium browser** | Geometry kits + tuned materials + hero agents + combat read | `[x]` T1–T8 complete |
 | R4 | AA aspiration | Density, variety, near-field character/crowd art, prop library | Later — after R3 ships |
 
 ### Definition of done: R3 Premium browser
@@ -63,52 +63,52 @@ Ordered by impact. Prefer finishing vertical slices that change a full mission f
 
 Maps already load; night grade and tints crush them.
 
-- [ ] Retune ground albedo/tint and asphalt normalScale/repeat so wet grit reads at iso under dusk/night/rain
-- [ ] Retune facade instanceColor multiply so albedo panels read on building mass (not only window quads)
-- [ ] Verify on `?webgl&visualtest` and a campaign night/rain contract; capture stills under `output/` or `docs/perf.md` notes
+- [x] Retune ground albedo/tint and asphalt normalScale/repeat so wet grit reads at iso under dusk/night/rain
+- [x] Retune facade instanceColor multiply so albedo panels read on building mass (not only window quads)
+- [x] Verify on `?webgl&visualtest` and a campaign night/rain contract; capture stills under `output/` or `docs/perf.md` notes
 
 ### T2 — Building geometry kit (largest R3 jump)
 
-- [ ] Modular facade pieces: setbacks, vertical fins, ledge trims, corner posts (instanced, seed-placed on existing footprint)
-- [ ] Roof language: AC/tanks/antenna kit upgrade (authored or higher-detail proc) shared across districts
-- [ ] Keep sim map/footprints unchanged; render-only dress
-- [ ] Campaign parity: kits on real maps, not visualtest-only
+- [x] Modular facade pieces: setbacks, vertical fins, ledge trims, corner posts (instanced, seed-placed on existing footprint)
+- [x] Roof language: AC/tanks/antenna kit upgrade (authored or higher-detail proc) shared across districts
+- [x] Keep sim map/footprints unchanged; render-only dress
+- [x] Campaign parity: kits on real maps, not visualtest-only
 
 ### T3 — Ground and street dress
 
-- [ ] Keep layout canvas (or successor) for road/sidewalk readability
-- [ ] Asphalt + wet response tuned as in T1
-- [ ] Optional curb/crosswalk/manhole decal kit (instanced) for block-scale interest
+- [x] Keep layout canvas (or successor) for road/sidewalk readability
+- [x] Asphalt + wet response tuned as in T1
+- [x] Optional curb/crosswalk/manhole decal kit (instanced) for block-scale interest
 
 ### T4 — Hero agents
 
-- [ ] Treat `/models/agent-operative.glb` (or successors) as squad standard: materials, trim, LOD if needed
-- [ ] Distinct faction/gear read without breaking identification law
-- [ ] Portrait set stays in sync with in-world heroes where practical
+- [x] Treat `/models/agent-operative.glb` (or successors) as squad standard: materials, trim, LOD if needed
+- [x] Distinct faction/gear read without breaking identification law
+- [x] Portrait set stays in sync with in-world heroes where practical
 
 ### T5 — Vehicles and props
 
-- [ ] Ship missing tram (or retire dead load path); car variants PBR-consistent
-- [ ] Prop scatter: barriers, signs, dumps, street furniture (budgeted instances)
-- [ ] Billboard art remains; expand only if campaign maps mount boards
+- [x] Ship missing tram (or retire dead load path); car variants PBR-consistent
+- [x] Prop scatter: barriers, signs, dumps, street furniture (budgeted instances)
+- [x] Billboard art remains; expand only if campaign maps mount boards
 
 ### T6 — Combat surface response (premium gore)
 
-- [ ] Blood/debris/scorch decal pools on ground and walls (render-only)
-- [ ] Death poses / body treatment beyond flat far-LOD plank where cheap
-- [ ] Still framed as write-off cost, not celebration (GDD §4 / §17)
+- [x] Blood/debris/scorch decal pools on ground and walls (render-only)
+- [x] Death poses / body treatment beyond flat far-LOD plank where cheap
+- [x] Still framed as write-off cost, not celebration (GDD §4 / §17)
 
 ### T7 — Crowds (near field only for R3)
 
-- [ ] Near LOD: better materials or mid-res skin; far LOD may stay simplified
-- [ ] Do not block R3 on full crowd AAA; mid-field upgrade is R4
+- [x] Near LOD: better materials or mid-res skin; far LOD may stay simplified
+- [x] Do not block R3 on full crowd AAA; mid-field upgrade is R4
 
 ### T8 — Delivery and perf
 
-- [ ] Texture compression / size budget (prefer KTX2 or tightly compressed JPEG/WebP atlases)
-- [ ] Document R3 perf on reference machines in `docs/perf.md`
-- [ ] Investigate and fix `?perf` load hangs under heavy texture sets if still reproducible
-- [ ] Align with Phase F load targets when streaming lands; R3 must not require an installer
+- [x] Texture compression / size budget (prefer KTX2 or tightly compressed JPEG/WebP atlases)
+- [x] Document R3 perf on reference machines in `docs/perf.md`
+- [x] Investigate and fix `?perf` load hangs under heavy texture sets if still reproducible
+- [x] Align with Phase F load targets when streaming lands; R3 must not require an installer
 
 ## Work tracks (R4 AA aspiration)
 
@@ -126,7 +126,15 @@ Start only after R3 checklist is mostly green.
 | Slice | What | Status |
 |---|---|---|
 | R1 / Slice 1 | Wet Physical ground, Standard shells, night PMREM IBL | Done |
-| R2 / Slice 2 | Facade/asphalt/window/sign/billboard/portrait files + loaders | Done (visibility debt → T1) |
+| R2 / Slice 2 | Facade/asphalt/window/sign/billboard/portrait files + loaders | Done |
+| T1 | Night visibility: lifted dusk/night ground/bldg/floor tints, asphalt normalScale/repeat, facade instanceColor | Done |
+| T2 | Building geometry kit: facade setbacks/fins/ledges/posts + upgraded roof AC/antenna/tank/vent; campaign + visualtest | Done |
+| T3 | Street dress: campaign curbs/manholes/crosswalk bars (`cityDress.ts`) | Done |
+| T4 | Hero agents: GLB squad standard, per-slot trim, fall clip, portrait hues aligned | Done |
+| T5 | Vehicles/props: procedural tram ship path; car/tram Standard PBR; prop scatter | Done |
+| T6 | Combat residue: blood/debris pools + varied death poses (corporate-cost framing) | Done |
+| T7 | Near-field crowd Phong materials; far simplified | Done |
+| T8 | Portrait resize + asset budget notes; retired dead tram GLB load; R3 perf note | Done |
 | Systems look | Post, rain, alarm grade, nameplates, HUD, VAT crowds, car GLB | Done as interim base |
 
 ## Explicit non-goals

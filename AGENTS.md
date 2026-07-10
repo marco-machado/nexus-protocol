@@ -84,3 +84,17 @@ Reads `SimState` every frame and updates meshes; never mutates sim state.
 ## 3D Generator
 
 - When using Tripo for text-to-3D, image-to-3D, texturing, rigging, retargeting, stylization, conversion, downloadable GLB/FBX outputs, and no API key is found, output the prompt so the user can generate from the website instead.
+
+## Agent skills
+
+### Issue tracker
+
+GitHub Issues via `gh`; external PRs are not a triage surface. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Default vocabulary: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context layout (`CONTEXT.md` + `docs/adr/` at repo root). See `docs/agents/domain.md`.
