@@ -92,6 +92,13 @@ export const CAR_CAP = 16;
 const RUBBLE_CAP = 160;
 const FLASH_CAP = 96;
 const DECAL_CAP = 256;
+const WALL_DECAL_CAP = 192;
+const NEIGHBOR4 = [
+  [1, 0],
+  [-1, 0],
+  [0, 1],
+  [0, -1],
+] as const;
 // per-agent trim accents (match HUD portrait hues in missionRunner)
 export const AGENT_TRIM = [0x00e5ff, 0x5ef2c4, 0x7c9bff, 0x38d4f0] as const;
 
@@ -175,6 +182,10 @@ export interface GameScene {
   scorchMesh: InstancedMesh;
   bloodMesh: InstancedMesh;
   debrisMesh: InstancedMesh;
+  wallScorchMesh: InstancedMesh;
+  wallBloodMesh: InstancedMesh;
+  cellToWallScorch: Map<number, number[]>;
+  cellToWallBlood: Map<number, number[]>;
   signMesh: InstancedMesh;
   cellToSign: Map<number, number>;
   groundFloorMesh: InstancedMesh;
@@ -183,6 +194,8 @@ export interface GameScene {
   rubbleCount: number;
   bloodCount: number;
   debrisCount: number;
+  wallScorchCount: number;
+  wallBloodCount: number;
   lastSyncMs: number;
   flashMesh: InstancedMesh;
   flashes: Flash[];
@@ -3027,6 +3040,25 @@ export function createGameScene(state: SimState, shadows = true): GameScene {
   debrisMesh.count = 0;
   scene.add(debrisMesh);
 
+  // wall-face decals: vertical circles (no rotateX, +Z normal) yawed onto
+  // exposed obstacle faces by the stamp closures in syncScene
+  const wallScorchMesh = new InstancedMesh(
+    new CircleGeometry(0.5, 10),
+    new MeshBasicMaterial({ color: 0x05070a, transparent: true, opacity: 0.5, depthWrite: false }),
+    WALL_DECAL_CAP,
+  );
+  wallScorchMesh.instanceMatrix.setUsage(DynamicDrawUsage);
+  wallScorchMesh.count = 0;
+  scene.add(wallScorchMesh);
+  const wallBloodMesh = new InstancedMesh(
+    new CircleGeometry(0.5, 9),
+    new MeshBasicMaterial({ color: 0x3a1218, transparent: true, opacity: 0.55, depthWrite: false }),
+    WALL_DECAL_CAP,
+  );
+  wallBloodMesh.instanceMatrix.setUsage(DynamicDrawUsage);
+  wallBloodMesh.count = 0;
+  scene.add(wallBloodMesh);
+
   const carVariantMeshes = [0, 1, 2].map((variant) => {
     const mesh = new InstancedMesh(
       buildCarGeometry(variant),
@@ -3369,6 +3401,10 @@ export function createGameScene(state: SimState, shadows = true): GameScene {
     scorchMesh,
     bloodMesh,
     debrisMesh,
+    wallScorchMesh,
+    wallBloodMesh,
+    cellToWallScorch: new Map(),
+    cellToWallBlood: new Map(),
     signMesh,
     cellToSign,
     groundFloorMesh,
@@ -3377,6 +3413,8 @@ export function createGameScene(state: SimState, shadows = true): GameScene {
     rubbleCount: 0,
     bloodCount: 0,
     debrisCount: 0,
+    wallScorchCount: 0,
+    wallBloodCount: 0,
     lastSyncMs: performance.now(),
     flashMesh,
     flashes: [],
@@ -3469,6 +3507,79 @@ export function syncScene(
   rig?: CameraRig,
 ): void {
   const lightRow = LIGHTING[Math.max(0, Math.min(2, state.env.tod))]!;
+  // wall decals sit 0.03 off the face plane (signs stand off 0.06) so they
+  // never coplanar-fight the hull; the cell key lets a later breach of that
+  // wall cell hide its decals instead of leaving them floating in the hole
+  const stampWallScorch = (
+    cell: number,
+    px: number,
+    py: number,
+    pz: number,
+    nx: number,
+    nz: number,
+    w: number,
+    hgt: number,
+  ) => {
+    if (gs.wallScorchCount >= WALL_DECAL_CAP) return;
+    const h = ((px * 57 + pz * 131) * 2654435761) >>> 0;
+    dummy.position.set(px + nx * 0.03, py, pz + nz * 0.03);
+    dummy.rotation.set(0, Math.atan2(nx, nz), (((h >>> 11) % 21) - 10) / 80);
+    dummy.scale.set(w, hgt, 1);
+    dummy.updateMatrix();
+    gs.wallScorchMesh.setMatrixAt(gs.wallScorchCount, dummy.matrix);
+    const list = gs.cellToWallScorch.get(cell);
+    if (list) list.push(gs.wallScorchCount);
+    else gs.cellToWallScorch.set(cell, [gs.wallScorchCount]);
+    gs.wallScorchCount++;
+    gs.wallScorchMesh.count = gs.wallScorchCount;
+    gs.wallScorchMesh.instanceMatrix.needsUpdate = true;
+  };
+  const stampWallBlood = (
+    cell: number,
+    px: number,
+    py: number,
+    pz: number,
+    nx: number,
+    nz: number,
+    scale: number,
+  ) => {
+    if (gs.wallBloodCount >= WALL_DECAL_CAP) return;
+    const h = ((px * 83 + pz * 29) * 2654435761) >>> 0;
+    dummy.position.set(px + nx * 0.03, py, pz + nz * 0.03);
+    dummy.rotation.set(0, Math.atan2(nx, nz), (((h >>> 7) % 31) - 15) / 40);
+    dummy.scale.set(scale, scale, 1);
+    dummy.updateMatrix();
+    gs.wallBloodMesh.setMatrixAt(gs.wallBloodCount, dummy.matrix);
+    const list = gs.cellToWallBlood.get(cell);
+    if (list) list.push(gs.wallBloodCount);
+    else gs.cellToWallBlood.set(cell, [gs.wallBloodCount]);
+    gs.wallBloodCount++;
+    gs.wallBloodMesh.count = gs.wallBloodCount;
+    gs.wallBloodMesh.instanceMatrix.needsUpdate = true;
+  };
+  const stampWallBloodNear = (x: number, z: number, scale: number) => {
+    const cx = x | 0;
+    const cz = z | 0;
+    for (const [dx, dz] of NEIGHBOR4) {
+      const wx = cx + dx;
+      const wz = cz + dz;
+      if (wx < 0 || wz < 0 || wx >= MAP_W || wz >= MAP_W) continue;
+      if (!state.map.obstacle[wx + wz * MAP_W]) continue;
+      const px = dx !== 0 ? wx + 0.5 - dx * 0.5 : Math.min(cx + 0.92, Math.max(cx + 0.08, x));
+      const pz = dz !== 0 ? wz + 0.5 - dz * 0.5 : Math.min(cz + 0.92, Math.max(cz + 0.08, z));
+      const h = ((x * 61 + z * 97) * 2654435761) >>> 0;
+      stampWallBlood(
+        wx + wz * MAP_W,
+        px,
+        0.55 + ((h >>> 9) % 35) / 100,
+        pz,
+        -dx,
+        -dz,
+        scale * (0.55 + ((h >>> 17) % 30) / 100),
+      );
+      return;
+    }
+  };
   // consume new breaches: drop the ground-floor cell (and its storefront
   // sign), stamp a scorch decal, leave rubble
   while (gs.breachCursor < state.breaches.length) {
@@ -3501,6 +3612,38 @@ export function syncScene(
       gs.scorchMesh.count = gs.rubbleCount;
       gs.rubbleMesh.instanceMatrix.needsUpdate = true;
       gs.scorchMesh.instanceMatrix.needsUpdate = true;
+    }
+    for (const [map, mesh] of [
+      [gs.cellToWallScorch, gs.wallScorchMesh],
+      [gs.cellToWallBlood, gs.wallBloodMesh],
+    ] as const) {
+      const old = map.get(cell);
+      if (old) {
+        for (const idx of old) mesh.setMatrixAt(idx, hidden);
+        mesh.instanceMatrix.needsUpdate = true;
+        map.delete(cell);
+      }
+    }
+    const bx = cell % MAP_W;
+    const bz = (cell / MAP_W) | 0;
+    const sootHash = ((cell + 7) * 2654435761) >>> 0;
+    for (const [dx, dz] of NEIGHBOR4) {
+      const wx = bx + dx;
+      const wz = bz + dz;
+      if (wx < 0 || wz < 0 || wx >= MAP_W || wz >= MAP_W) continue;
+      if (!state.map.obstacle[wx + wz * MAP_W]) continue;
+      const px = dx !== 0 ? wx + 0.5 - dx * 0.5 : wx + 0.5;
+      const pz = dz !== 0 ? wz + 0.5 - dz * 0.5 : wz + 0.5;
+      stampWallScorch(
+        wx + wz * MAP_W,
+        px,
+        1.35 + ((sootHash >>> 15) % 30) / 100,
+        pz,
+        -dx,
+        -dz,
+        0.9,
+        1.7 + ((sootHash >>> 21) % 40) / 100,
+      );
     }
     gs.breachCursor++;
   }
@@ -3541,6 +3684,7 @@ export function syncScene(
       const z = fromFx(n.z);
       stampBlood(x, z, 0.9);
       stampDebris(x + 0.15, z - 0.1, 0.55);
+      stampWallBloodNear(x, z, 0.9);
     }
     if (ni < gs.prevNpcAlive.length) gs.prevNpcAlive[ni] = alive;
   }
@@ -3550,6 +3694,7 @@ export function syncScene(
     if (gs.prevAgentAlive[ai] === 1 && alive === 0) {
       stampBlood(fromFx(a.x), fromFx(a.z), 1.05);
       stampDebris(fromFx(a.x), fromFx(a.z), 0.7);
+      stampWallBloodNear(fromFx(a.x), fromFx(a.z), 1.05);
     }
     if (ai < gs.prevAgentAlive.length) gs.prevAgentAlive[ai] = alive;
   }
@@ -3881,6 +4026,42 @@ export function syncScene(
       // surface response: desaturated residue (not medical gore)
       if (q.aoe > 0 || ((iz * 13) | 0) % 4 === 0) stampBlood(ix, iz, q.aoe > 0 ? 1.1 : 0.4);
       if (q.aoe > 0 || ((ix * 10) | 0) % 3 === 0) stampDebris(ix, iz, q.aoe > 0 ? 0.85 : 0.4);
+      const vx = fromFx(q.dx);
+      const vz = fromFx(q.dz);
+      const len = Math.hypot(vx, vz);
+      if (len > 1e-6) {
+        // an obstacle half a cell past the impact along travel means the shot
+        // died against a hull face rather than flesh or open ground
+        const ux = vx / len;
+        const uz = vz / len;
+        const wx = (ix + ux * 0.45) | 0;
+        const wz = (iz + uz * 0.45) | 0;
+        if (
+          wx >= 0 &&
+          wz >= 0 &&
+          wx < MAP_W &&
+          wz < MAP_W &&
+          state.map.obstacle[wx + wz * MAP_W] &&
+          (q.aoe > 0 || (((ix * 23 + iz * 47) | 0) & 1) === 0)
+        ) {
+          const alongX = Math.abs(ux) >= Math.abs(uz);
+          const nx = alongX ? -Math.sign(ux) : 0;
+          const nz = alongX ? 0 : -Math.sign(uz);
+          const px = alongX ? wx + 0.5 + nx * 0.5 : Math.min(wx + 0.92, Math.max(wx + 0.08, ix));
+          const pz = alongX ? Math.min(wz + 0.92, Math.max(wz + 0.08, iz)) : wz + 0.5 + nz * 0.5;
+          const s = q.aoe > 0 ? 0.9 : 0.26;
+          stampWallScorch(
+            wx + wz * MAP_W,
+            px,
+            1.05 + (((px * 31 + pz * 71) | 0) % 5) / 10,
+            pz,
+            nx,
+            nz,
+            s,
+            s,
+          );
+        }
+      }
     };
     let j = 0;
     for (const p of state.projectiles) {
