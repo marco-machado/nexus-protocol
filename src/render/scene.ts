@@ -3885,12 +3885,13 @@ export function syncScene(
       return;
     }
     rig.downed = false;
-    rig.bodyMat.color.copy(a.stunT > 0 ? SCENE_COLORS.dead : SCENE_COLORS.agent);
-    // palette-aware faction rim (or the WebGL flat-emissive fallback)
-    if (rig.rimColor) rig.rimColor.value.copy(SCENE_COLORS.agent);
-    else rig.bodyMat.emissive.copy(SCENE_COLORS.agent).multiplyScalar(0.3);
     // per-agent trim keeps squad ID readable; still cyan-family for faction law
     const trim = new Color(rig.trimHex);
+    rig.bodyMat.color.copy(a.stunT > 0 ? SCENE_COLORS.dead : SCENE_COLORS.agent);
+    // palette-aware faction rim (or the WebGL flat-emissive fallback), pulled
+    // toward the slot trim so GLB heroes read individually at squad zoom
+    if (rig.rimColor) rig.rimColor.value.copy(SCENE_COLORS.agent).lerp(trim, 0.6);
+    else rig.bodyMat.emissive.copy(SCENE_COLORS.agent).lerp(trim, 0.6).multiplyScalar(0.3);
     rig.visorMat.color.copy(trim).lerp(white, 0.35).multiplyScalar(1.65);
     rig.stripeMat.color.copy(trim).multiplyScalar(2.0);
     const op = a.cloakT > 0 ? 0.3 : 1;
@@ -3900,6 +3901,7 @@ export function syncScene(
     rig.stripeMat.opacity = op;
     for (const m of rig.modelMats) {
       m.color.copy(a.stunT > 0 ? SCENE_COLORS.dead : agentModelBase);
+      if (a.stunT <= 0) m.color.lerp(trim, 0.12);
       m.opacity = op;
     }
     const ringMat = ring.material as MeshBasicMaterial;
