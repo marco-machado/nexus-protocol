@@ -24,6 +24,7 @@ import {
   InstancedMesh,
   LatheGeometry,
   LinearSRGBColorSpace,
+  LoopOnce,
   Matrix4,
   Mesh,
   MeshBasicMaterial,
@@ -82,6 +83,7 @@ import {
 import type { CameraRig } from './camera';
 import type { AlarmGrade } from './alarmScript';
 import { SCENE_COLORS } from './palette';
+import { createPropScatter, createStreetDress } from './cityDress';
 
 const PROJ_CAP = 512;
 const SHADOW_MAP = 2048;
@@ -89,6 +91,9 @@ const SMOKE_CAP = 96;
 export const CAR_CAP = 16;
 const RUBBLE_CAP = 160;
 const FLASH_CAP = 96;
+const DECAL_CAP = 256;
+// per-agent trim accents (match HUD portrait hues in missionRunner)
+export const AGENT_TRIM = [0x00e5ff, 0x5ef2c4, 0x7c9bff, 0x38d4f0] as const;
 
 // transient combat flash (muzzle or impact), aged out render-side
 interface Flash {
@@ -133,12 +138,14 @@ export interface AgentRig {
   actIdle: AnimationAction | null;
   // the only gait: agents never run, fast movement (stim) speeds the walk up
   actWalk: AnimationAction | null;
+  actFall: AnimationAction | null;
   activeAction: AnimationAction | null;
   // native ground speed (world units/sec) the walk clip was authored at,
   // measured from baked root motion; playback is time-scaled against the
   // actual sim velocity so feet grip the ground instead of gliding
   walkClipSpeed: number;
   procMeshes: Mesh[];
+  trimHex: number;
   heading: number;
   phase: number;
   lastX: number;
@@ -166,17 +173,23 @@ export interface GameScene {
   fuelMeshes: Map<number, Mesh>;
   rubbleMesh: InstancedMesh;
   scorchMesh: InstancedMesh;
+  bloodMesh: InstancedMesh;
+  debrisMesh: InstancedMesh;
   signMesh: InstancedMesh;
   cellToSign: Map<number, number>;
   groundFloorMesh: InstancedMesh;
   cellToGround: Map<number, number>;
   breachCursor: number;
   rubbleCount: number;
+  bloodCount: number;
+  debrisCount: number;
   lastSyncMs: number;
   flashMesh: InstancedMesh;
   flashes: Flash[];
   prevProj: ProjSnap[];
   prevProjTick: number;
+  prevNpcAlive: Uint8Array;
+  prevAgentAlive: Uint8Array;
   // facing derived from actual displacement: the sim's dirX/dirZ is steering
   // intent (carLeg pre-stores the next turn), not the direction of travel
   vehHeadings: Float32Array;
@@ -261,11 +274,13 @@ export function vehicleRenderDiagnostics(gs: GameScene): Record<string, number> 
 // amb/groundAmb feed a hemisphere light (sky above, bounce below); intensities
 // are retuned up ~1.1-1.2x to recover midtones under Neutral tone mapping.
 // bldg/floor are the base tints the per-building jitter multiplies, so facades
-// read as sunlit concrete at day instead of the night navy at every hour
+// read as sunlit concrete at day instead of the night navy at every hour.
+// dusk/night ground/bldg/floor sit in a mid-dark band so asphalt grit and
+// facade albedo maps still read under night grade (T1 visibility fix)
 const LIGHTING = [
   { amb: 0xbfd0e0, groundAmb: 0x5a5348, ambI: 1.2, dir: 0xfff2d8, dirI: 1.8, pos: [50, 90, 30], bg: 0x8fa6bd, fog: 0.0035, neon: 0.35, ground: 0x46536a, shadowI: 0.85, bldg: 0x66707f, floor: 0x525c69 },
-  { amb: 0xc9a68a, groundAmb: 0x33241d, ambI: 0.95, dir: 0xff9a5a, dirI: 1.2, pos: [60, 40, 25], bg: 0x1a1016, fog: 0.0055, neon: 1, ground: 0x1c1a26, shadowI: 0.6, bldg: 0x3d3a4c, floor: 0x322e3d },
-  { amb: 0x8fa8d8, groundAmb: 0x18202e, ambI: 1.15, dir: 0xa9c2f0, dirI: 1.3, pos: [40, 70, 25], bg: 0x05070d, fog: 0.0062, neon: 1, ground: 0x233049, shadowI: 0.55, bldg: 0x222f45, floor: 0x1d2939 },
+  { amb: 0xc9a68a, groundAmb: 0x33241d, ambI: 0.95, dir: 0xff9a5a, dirI: 1.2, pos: [60, 40, 25], bg: 0x1a1016, fog: 0.0055, neon: 1, ground: 0x2e2a3a, shadowI: 0.6, bldg: 0x52506a, floor: 0x454055 },
+  { amb: 0x8fa8d8, groundAmb: 0x18202e, ambI: 1.15, dir: 0xa9c2f0, dirI: 1.3, pos: [40, 70, 25], bg: 0x05070d, fog: 0.0062, neon: 1, ground: 0x3a4d68, shadowI: 0.55, bldg: 0x3a4c66, floor: 0x334558 },
 ] as const;
 
 // wetness and IBL strength by time-of-day / rain for district PBR surfaces
@@ -433,7 +448,9 @@ function applyFacadeMaps(mat: MeshStandardMaterial): void {
 function applyAsphaltMaps(mat: MeshPhysicalMaterial | MeshStandardMaterial, repeat: number): void {
   loadMap('/textures/asphalt-normal.jpg', { repeat }, (t) => {
     mat.normalMap = t;
-    if ('normalScale' in mat) mat.normalScale.set(0.65, 0.65);
+    // iso orthographic view grazes the plane; scale past 1.0 so wet grit
+    // still reads after night fog and clearcoat
+    if ('normalScale' in mat) mat.normalScale.set(1.15, 1.15);
     mat.needsUpdate = true;
   });
   loadMap('/textures/asphalt-roughness.jpg', { repeat }, (t) => {
@@ -499,8 +516,6 @@ const GENERATED_CAR_URL = '/models/cyberpunk-security-car.glb';
 const GENERATED_CAR_LENGTH = 2.9;
 const GENERATED_CAR_YAW = -Math.PI / 2;
 const GENERATED_CAR_LIGHT_VARIANT = 0;
-const GENERATED_TRAM_URL = '/models/cyberpunk-tram.glb';
-const GENERATED_TRAM_LENGTH = 6.0;
 const GENERATED_AGENT_URL = '/models/agent-operative.glb';
 const GENERATED_AGENT_HEIGHT = 1.9;
 const GENERATED_AGENT_YAW = -Math.PI / 2;
@@ -814,50 +829,6 @@ function buildTramLightsGeometry(): BufferGeometry {
   ]).scale(TRAM_SCALE, TRAM_SCALE, TRAM_SCALE);
 }
 
-// optional user-generated tram GLB (research.md D1): loaded like the car
-// model with the procedural mesh as the always-available fallback
-function loadGeneratedTramModel(scene: Scene, roots: Object3D[]): void {
-  const loader = new GLTFLoader();
-  loader.load(
-    GENERATED_TRAM_URL,
-    (gltf) => {
-      const source = gltf.scene;
-      const bounds = new Box3().setFromObject(source);
-      const size = new Vector3();
-      const center = new Vector3();
-      bounds.getSize(size);
-      bounds.getCenter(center);
-      source.position.set(-center.x, -bounds.min.y, -center.z);
-      const normalizer = new Object3D();
-      // the long axis maps to +z (vehicle heading); assume the source is
-      // modeled along its longest horizontal axis
-      const alongX = size.x >= size.z;
-      const long = Math.max(0.001, alongX ? size.x : size.z);
-      normalizer.rotation.y = alongX ? -Math.PI / 2 : 0;
-      normalizer.scale.setScalar(GENERATED_TRAM_LENGTH / long);
-      normalizer.add(source);
-      normalizer.traverse((obj) => {
-        const mesh = obj as Mesh;
-        if (mesh.isMesh) {
-          mesh.castShadow = true;
-          mesh.receiveShadow = true;
-        }
-      });
-      for (const root of roots) {
-        const clone = normalizer.clone(true);
-        clone.visible = true;
-        root.add(clone);
-        root.userData.generatedTramReady = true;
-      }
-    },
-    undefined,
-    () => {
-      for (const root of roots) root.userData.generatedTramFailed = true;
-    },
-  );
-  for (const root of roots) scene.add(root);
-}
-
 function loadGeneratedCarModel(scene: Scene, roots: Object3D[], lightsMesh: InstancedMesh): void {
   const loader = new GLTFLoader();
   loader.load(
@@ -939,15 +910,16 @@ function agentModelEmissive(rimUniform: AgentRimUniform, map: Texture | null): u
   return map ? rim.add(tslTexture(map).rgb.mul(0.32)) : rim.add(tslColor(0x0a3540));
 }
 
-function createAgentRig(scene: Scene): AgentRig {
+function createAgentRig(scene: Scene, slot = 0): AgentRig {
   const { segs, joints } = buildRig();
+  const trimHex = AGENT_TRIM[slot % AGENT_TRIM.length]!;
   // agents get a subtle specular pop the Lambert crowd doesn't have, plus a
   // view-dependent faction rim so silhouettes separate from the dark grade
   const bodyMat = new MeshPhongNodeMaterial({
     color: SCENE_COLORS.agent.clone(),
     emissive: 0x0a3540,
-    specular: 0x222222,
-    shininess: 30,
+    specular: 0x333333,
+    shininess: 36,
     transparent: true,
   });
   const rimUniform = createRimUniform();
@@ -959,13 +931,13 @@ function createAgentRig(scene: Scene): AgentRig {
   // faint cool self-light keeps the authored gear (pack, pads, antenna, gun)
   // from sinking into the night grade where the silhouette work is invisible
   const gearMat = new MeshPhongMaterial({
-    color: 0x232c3d,
+    color: new Color(0x232c3d).lerp(new Color(trimHex), 0.08),
     emissive: 0x121a28,
-    specular: 0x1a1a1a,
-    shininess: 24,
+    specular: 0x2a2a2a,
+    shininess: 28,
     transparent: true,
   });
-  const visorMat = new MeshBasicMaterial({ color: 0xc4fbff, transparent: true });
+  const visorMat = new MeshBasicMaterial({ color: new Color(trimHex).lerp(new Color(0xffffff), 0.35), transparent: true });
   const visor = new Mesh(new BoxGeometry(0.18, 0.07, 0.05), visorMat);
   visor.position.set(0, 0.15, 0.11);
   joints.head.add(visor);
@@ -979,7 +951,7 @@ function createAgentRig(scene: Scene): AgentRig {
   antenna.position.set(0.1, 0.5, -0.17);
   joints.torso.add(antenna);
   const stripeMat = new MeshBasicMaterial({ transparent: true });
-  stripeMat.color.copy(SCENE_COLORS.agent).multiplyScalar(2.2);
+  stripeMat.color.set(trimHex).multiplyScalar(2.0);
   const stripe = new Mesh(new BoxGeometry(0.3, 0.05, 0.02), stripeMat);
   stripe.position.set(0, 0.3, 0.13);
   joints.torso.add(stripe);
@@ -1009,9 +981,11 @@ function createAgentRig(scene: Scene): AgentRig {
     mixer: null,
     actIdle: null,
     actWalk: null,
+    actFall: null,
     activeAction: null,
     walkClipSpeed: 0,
     procMeshes: [...segs, visor, rim, pack, antenna, stripe, padL, padR, gun],
+    trimHex,
     heading: 0,
     phase: 0,
     lastX: 0,
@@ -1080,6 +1054,7 @@ function loadGeneratedAgentModel(rigs: AgentRig[]): void {
       const findClip = (re: RegExp) => clips.find((c) => re.test(c.name)) ?? null;
       const walkClip = findClip(/walk/i) ?? clips[0] ?? null;
       const idleClip = findClip(/idle|breath|stand/i);
+      const fallClip = findClip(/fall|death|down/i);
       const bounds = new Box3().setFromObject(source);
       const size = new Vector3();
       const center = new Vector3();
@@ -1102,9 +1077,9 @@ function loadGeneratedAgentModel(rigs: AgentRig[]): void {
           const src = mesh.material as MeshStandardMaterial;
           const mat = new MeshPhongNodeMaterial({
             map: src.map ?? null,
-            color: 0xdde4f0,
-            specular: 0x222222,
-            shininess: 30,
+            color: 0xe4ebf5,
+            specular: 0x333333,
+            shininess: 36,
             transparent: true,
           });
           if (rig.rimColor) {
@@ -1121,6 +1096,12 @@ function loadGeneratedAgentModel(rigs: AgentRig[]): void {
           rig.mixer = new AnimationMixer(clone);
           rig.actWalk = walkClip ? rig.mixer.clipAction(walkClip) : null;
           rig.actIdle = idleClip ? rig.mixer.clipAction(idleClip) : null;
+          if (fallClip) {
+            const fall = rig.mixer.clipAction(fallClip);
+            fall.setLoop(LoopOnce, 1);
+            fall.clampWhenFinished = true;
+            rig.actFall = fall;
+          }
           const worldScale = GENERATED_AGENT_HEIGHT / Math.max(0.001, size.y);
           rig.walkClipSpeed = walkClip ? (clipGroundSpeed.get(walkClip) ?? 0) * worldScale : 0;
         }
@@ -1408,42 +1389,66 @@ function createFacadeWindows(state: SimState, scene: Scene, neonI: number, wet: 
   const amber = new Color(0xffa04e);
   const cool = new Color(0xa8d8ff);
   for (const b of state.map.buildings) {
-    const alongX = b.w >= b.d;
-    const len = alongX ? b.w : b.d;
-    for (let y = 3.5; y < b.h - 0.4; y++) {
-      for (let e = 0; e < 2; e++) {
-        if (alongX) {
-          dummy.position.set(b.x + b.w / 2, y, e === 0 ? b.z : b.z + b.d);
-          dummy.scale.set(len * 0.9, 0.28, 0.05);
-        } else {
-          dummy.position.set(e === 0 ? b.x : b.x + b.w, y, b.z + b.d / 2);
-          dummy.scale.set(0.05, 0.28, len * 0.9);
-        }
-        dummy.updateMatrix();
-        bands.push(dummy.matrix.clone());
-        if (next(10) < 3) {
-          const panes = 2 + next(3);
-          for (let p = 0; p < panes; p++) {
-            const off = (next(80) / 100 - 0.4) * len * 0.9;
-            if (alongX) {
-              dummy.position.set(b.x + b.w / 2 + off, y, e === 0 ? b.z : b.z + b.d);
-              dummy.scale.set(0.35, 0.24, 0.07);
-            } else {
-              dummy.position.set(e === 0 ? b.x : b.x + b.w, y, b.z + b.d / 2 + off);
-              dummy.scale.set(0.07, 0.24, 0.35);
+    const step = massStep({ x: b.x, z: b.z, w: b.w, d: b.d, h: b.h, y0: 3 });
+    const bandsSpec: { x0: number; z0: number; w: number; d: number; yLo: number; yHi: number }[] = [
+      { x0: b.x, z0: b.z, w: b.w, d: b.d, yLo: 3.5, yHi: 3 + step.podH - 0.3 },
+    ];
+    if (step.stepped) {
+      const ix = (b.w - step.tw) / 2;
+      const iz = (b.d - step.td) / 2;
+      bandsSpec.push({
+        x0: b.x + ix,
+        z0: b.z + iz,
+        w: step.tw,
+        d: step.td,
+        yLo: step.towerY0 + 0.4,
+        yHi: b.h - 0.4,
+      });
+    }
+    for (const band of bandsSpec) {
+      const alongX = band.w >= band.d;
+      const len = alongX ? band.w : band.d;
+      for (let y = band.yLo; y < band.yHi; y++) {
+        for (let e = 0; e < 2; e++) {
+          if (alongX) {
+            dummy.position.set(band.x0 + band.w / 2, y, e === 0 ? band.z0 : band.z0 + band.d);
+            dummy.scale.set(len * 0.9, 0.28, 0.05);
+          } else {
+            dummy.position.set(e === 0 ? band.x0 : band.x0 + band.w, y, band.z0 + band.d / 2);
+            dummy.scale.set(0.05, 0.28, len * 0.9);
+          }
+          dummy.updateMatrix();
+          bands.push(dummy.matrix.clone());
+          if (next(10) < 3) {
+            const panes = 2 + next(3);
+            for (let p = 0; p < panes; p++) {
+              const off = (next(80) / 100 - 0.4) * len * 0.9;
+              if (alongX) {
+                dummy.position.set(
+                  band.x0 + band.w / 2 + off,
+                  y,
+                  e === 0 ? band.z0 : band.z0 + band.d,
+                );
+                dummy.scale.set(0.35, 0.24, 0.07);
+              } else {
+                dummy.position.set(
+                  e === 0 ? band.x0 : band.x0 + band.w,
+                  y,
+                  band.z0 + band.d / 2 + off,
+                );
+                dummy.scale.set(0.07, 0.24, 0.35);
+              }
+              dummy.updateMatrix();
+              const roll = next(10);
+              const c =
+                roll < 2
+                  ? new Color(NEON_COLORS[next(NEON_COLORS.length)]!)
+                  : roll < 7
+                    ? warm.clone().lerp(amber, next(100) / 100)
+                    : cool.clone();
+              c.multiplyScalar((0.75 + next(80) / 100) * 1.15 * neonI);
+              lit.push({ m: dummy.matrix.clone(), c });
             }
-            dummy.updateMatrix();
-            // interiors skew warm with real hue/brightness variance so lit
-            // panes read as inhabited rooms against the cyan/magenta trim
-            const roll = next(10);
-            const c =
-              roll < 2
-                ? new Color(NEON_COLORS[next(NEON_COLORS.length)]!)
-                : roll < 7
-                  ? warm.clone().lerp(amber, next(100) / 100)
-                  : cool.clone();
-            c.multiplyScalar((0.75 + next(80) / 100) * 1.15 * neonI);
-            lit.push({ m: dummy.matrix.clone(), c });
           }
         }
       }
@@ -1473,58 +1478,365 @@ function createFacadeWindows(state: SimState, scene: Scene, neonI: number, wet: 
   scene.add(litMesh);
 }
 
-function createRoofClutter(state: SimState, scene: Scene, shadows: boolean): void {
-  const next = seededNext({ rng: ((state.mapSeed | 0) ^ 0x700f) || 1 });
+/** Render-only building footprint for modular facade/roof kits (sim map stays box AABBs). */
+interface KitFootprint {
+  x: number;
+  z: number;
+  w: number;
+  d: number;
+  h: number;
+  /** Bottom of dressable mass (3 for campaign upper shells, 0 for full-height visualtest hulls). */
+  y0: number;
+}
+
+interface MassStep {
+  stepped: boolean;
+  podH: number;
+  towerH: number;
+  inset: number;
+  tw: number;
+  td: number;
+  towerY0: number;
+}
+
+/** Deterministic podium/shaft split so hull mesh and facade kit agree without shared RNG. */
+function massStep(b: KitFootprint): MassStep {
+  const massH = Math.max(0.5, b.h - b.y0);
+  const h =
+    (((b.x * 73856093) ^ (b.z * 19349663) ^ ((b.w * 17 + b.d) * 83492791) ^ (b.h * 39916801)) >>>
+      0);
+  const stepped = massH >= 6 && b.w >= 3.2 && b.d >= 3.2;
+  const podFrac = stepped ? 0.48 + (h % 14) / 100 : 1;
+  const podH = massH * podFrac;
+  const towerH = Math.max(0.4, massH - podH);
+  const inset = stepped ? 0.75 + ((h >>> 8) % 35) / 100 : 0;
+  const tw = Math.max(1.6, b.w - inset * 2);
+  const td = Math.max(1.6, b.d - inset * 2);
+  return { stepped, podH, towerH, inset, tw, td, towerY0: b.y0 + podH };
+}
+
+function mapBuildingFootprints(state: SimState): KitFootprint[] {
+  return state.map.buildings.map((b) => ({
+    x: b.x,
+    z: b.z,
+    w: b.w,
+    d: b.d,
+    h: b.h,
+    y0: 3,
+  }));
+}
+
+function pushKitBox(
+  out: Matrix4[],
+  x: number,
+  y: number,
+  z: number,
+  sx: number,
+  sy: number,
+  sz: number,
+  ry = 0,
+): void {
+  dummy.position.set(x, y, z);
+  dummy.rotation.set(0, ry, 0);
+  dummy.scale.set(sx, sy, sz);
+  dummy.updateMatrix();
+  out.push(dummy.matrix.clone());
+}
+
+/**
+ * Modular facade kit on existing footprints: setback crowns, vertical fins,
+ * ledge trims, corner posts. Instanced, seed-placed; no sim obstacle change.
+ */
+function createFacadeKit(
+  footprints: KitFootprint[],
+  scene: Scene,
+  wet: WetProfile,
+  light: (typeof LIGHTING)[number],
+  shadows: boolean,
+  seed: number,
+): void {
+  if (footprints.length === 0) return;
+  const next = seededNext({ rng: (seed ^ 0xb1d6) || 1 });
+  const setbacks: Matrix4[] = [];
+  const trims: Matrix4[] = [];
+  const posts: Matrix4[] = [];
+  const tintNext = seededNext({ rng: (seed ^ 0x71a7) || 1 });
+  const setbackColors: Color[] = [];
+  const trimColors: Color[] = [];
+  const postColors: Color[] = [];
+  const bldgBase = new Color(light.bldg);
+  const trimBase = new Color(light.bldg).lerp(new Color(0x1a2030), 0.35);
+  const postBase = new Color(light.bldg).multiplyScalar(0.88);
+
+  for (const b of footprints) {
+    const cx = b.x + b.w / 2;
+    const cz = b.z + b.d / 2;
+    const { stepped, podH, towerH, tw, td, towerY0 } = massStep(b);
+    const setTint = bldgBase.clone().multiplyScalar(1.02 + tintNext(10) / 100);
+    const trimTint = new Color(0xc8d4e8).lerp(trimBase, 0.35).multiplyScalar(0.9 + tintNext(12) / 100);
+    const postTint = postBase.clone().multiplyScalar(0.95 + tintNext(12) / 100);
+
+    if (stepped) {
+      // shaft mass (podium is the hull mesh; this is the setback volume)
+      pushKitBox(setbacks, cx, towerY0 + towerH / 2, cz, tw, towerH, td);
+      setbackColors.push(setTint);
+      // mechanical penthouse on the shaft
+      if (towerH >= 2.5) {
+        const ph = 1.1 + next(14) / 10;
+        const pi = 0.35 + next(20) / 100;
+        pushKitBox(
+          setbacks,
+          cx,
+          b.h + ph / 2,
+          cz,
+          Math.max(1.2, tw - pi * 2),
+          ph,
+          Math.max(1.2, td - pi * 2),
+        );
+        setbackColors.push(setTint.clone().multiplyScalar(0.92));
+      }
+    }
+
+    // corner posts on podium, thick enough to read at block zoom
+    const postW = 0.38;
+    const postH = podH * 0.98;
+    const postY = b.y0 + postH / 2;
+    const ox = b.w / 2 + 0.02;
+    const oz = b.d / 2 + 0.02;
+    for (const [px, pz] of [
+      [cx - ox, cz - oz],
+      [cx + ox, cz - oz],
+      [cx - ox, cz + oz],
+      [cx + ox, cz + oz],
+    ] as const) {
+      pushKitBox(posts, px, postY, pz, postW, postH, postW);
+      postColors.push(postTint);
+    }
+    if (stepped) {
+      const tox = tw / 2 + 0.02;
+      const toz = td / 2 + 0.02;
+      const tPostH = towerH * 0.95;
+      const tPostY = towerY0 + tPostH / 2;
+      for (const [px, pz] of [
+        [cx - tox, cz - toz],
+        [cx + tox, cz - toz],
+        [cx - tox, cz + toz],
+        [cx + tox, cz + toz],
+      ] as const) {
+        pushKitBox(posts, px, tPostY, pz, 0.28, tPostH, 0.28);
+        postColors.push(postTint);
+      }
+    }
+
+    // vertical fins: deep blades that break facade planes at iso range
+    const finDepth = 0.32;
+    const finThick = 0.18;
+    const placeFins = (
+      edge: number,
+      alongX: boolean,
+      faceSign: number,
+      halfW: number,
+      halfD: number,
+      y0: number,
+      h: number,
+    ) => {
+      if (edge < 2.2 || h < 2) return;
+      const spacing = 1.1 + next(30) / 100;
+      const n = Math.min(10, Math.max(2, Math.floor((edge - 0.6) / spacing)));
+      const finH = h * (0.78 + next(14) / 100);
+      const finY = y0 + h * 0.5;
+      for (let i = 0; i < n; i++) {
+        const t = ((i + 1) / (n + 1) - 0.5) * (edge - 0.4);
+        if (alongX) {
+          pushKitBox(
+            trims,
+            cx + t,
+            finY,
+            cz + faceSign * (halfD + finDepth * 0.45),
+            finThick,
+            finH,
+            finDepth,
+          );
+        } else {
+          pushKitBox(
+            trims,
+            cx + faceSign * (halfW + finDepth * 0.45),
+            finY,
+            cz + t,
+            finDepth,
+            finH,
+            finThick,
+          );
+        }
+        trimColors.push(trimTint);
+      }
+    };
+    placeFins(b.w, true, -1, b.w / 2, b.d / 2, b.y0, podH);
+    placeFins(b.w, true, 1, b.w / 2, b.d / 2, b.y0, podH);
+    placeFins(b.d, false, -1, b.w / 2, b.d / 2, b.y0, podH);
+    placeFins(b.d, false, 1, b.w / 2, b.d / 2, b.y0, podH);
+    if (stepped) {
+      placeFins(tw, true, -1, tw / 2, td / 2, towerY0, towerH);
+      placeFins(tw, true, 1, tw / 2, td / 2, towerY0, towerH);
+      placeFins(td, false, -1, tw / 2, td / 2, towerY0, towerH);
+      placeFins(td, false, 1, tw / 2, td / 2, towerY0, towerH);
+    }
+
+    // chunky ledge belts (mid + setback shelf + crown)
+    const ledgeH = 0.28;
+    const ledgeOut = 0.38;
+    const ledgeLevels: { y: number; hw: number; hd: number }[] = [
+      { y: b.y0 + podH * 0.42, hw: b.w / 2, hd: b.d / 2 },
+      { y: b.y0 + podH - 0.06, hw: b.w / 2, hd: b.d / 2 },
+    ];
+    if (stepped) {
+      ledgeLevels.push({ y: towerY0 + towerH * 0.55, hw: tw / 2, hd: td / 2 });
+      ledgeLevels.push({ y: b.h - 0.1, hw: tw / 2, hd: td / 2 });
+    } else {
+      ledgeLevels.push({ y: b.h - 0.1, hw: b.w / 2, hd: b.d / 2 });
+    }
+    for (const lv of ledgeLevels) {
+      pushKitBox(trims, cx, lv.y, cz - lv.hd - ledgeOut * 0.35, lv.hw * 2 + ledgeOut, ledgeH, ledgeOut);
+      pushKitBox(trims, cx, lv.y, cz + lv.hd + ledgeOut * 0.35, lv.hw * 2 + ledgeOut, ledgeH, ledgeOut);
+      pushKitBox(trims, cx - lv.hw - ledgeOut * 0.35, lv.y, cz, ledgeOut, ledgeH, lv.hd * 2 + ledgeOut);
+      pushKitBox(trims, cx + lv.hw + ledgeOut * 0.35, lv.y, cz, ledgeOut, ledgeH, lv.hd * 2 + ledgeOut);
+      for (let k = 0; k < 4; k++) trimColors.push(trimTint);
+    }
+  }
+
+  dummy.rotation.set(0, 0, 0);
+  dummy.scale.set(1, 1, 1);
+
+  const addInstanced = (
+    matrices: Matrix4[],
+    colors: Color[],
+    mat: MeshStandardMaterial,
+    cast: boolean,
+  ) => {
+    if (matrices.length === 0) return;
+    const mesh = new InstancedMesh(new BoxGeometry(1, 1, 1), mat, matrices.length);
+    matrices.forEach((m, i) => {
+      mesh.setMatrixAt(i, m);
+      mesh.setColorAt(i, colors[i]!);
+    });
+    mesh.instanceMatrix.needsUpdate = true;
+    if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+    if (shadows && cast) mesh.castShadow = true;
+    scene.add(mesh);
+  };
+
+  const setbackMat = concreteMaterial(wet, 1.05);
+  const trimMat = new MeshStandardMaterial({
+    color: 0xffffff,
+    roughness: Math.min(1, wet.concreteRoughness + 0.04),
+    metalness: Math.min(0.45, wet.concreteMetalness + 0.22),
+    envMapIntensity: wet.concreteEnv * 1.1,
+  });
+  applyFacadeMaps(trimMat);
+  const postMat = new MeshStandardMaterial({
+    color: 0xffffff,
+    roughness: wet.concreteRoughness,
+    metalness: Math.min(0.35, wet.concreteMetalness + 0.12),
+    envMapIntensity: wet.concreteEnv,
+  });
+  applyFacadeMaps(postMat);
+
+  addInstanced(setbacks, setbackColors, setbackMat, true);
+  addInstanced(trims, trimColors, trimMat, false);
+  addInstanced(posts, postColors, postMat, true);
+}
+
+/** Higher-detail roof kit: AC, antenna+dish, water tank, vent stacks. Shared across districts. */
+function createRoofClutter(
+  footprints: KitFootprint[],
+  scene: Scene,
+  shadows: boolean,
+  seed: number,
+): void {
+  if (footprints.length === 0) return;
+  const next = seededNext({ rng: (seed ^ 0x700f) || 1 });
   const geos = [
-    // AC unit: housing + fan drum
+    // AC unit: housing + intake grille + fan drum + side vent + coolant pipe
     mergeGeometries([
-      new BoxGeometry(0.7, 0.4, 0.7).translate(0, 0.2, 0),
-      new CylinderGeometry(0.22, 0.22, 0.06, 8).translate(0, 0.43, 0),
+      new BoxGeometry(0.95, 0.48, 0.78).translate(0, 0.24, 0),
+      new BoxGeometry(0.88, 0.12, 0.08).translate(0, 0.42, 0.38),
+      new BoxGeometry(0.08, 0.28, 0.55).translate(0.48, 0.22, 0),
+      new CylinderGeometry(0.2, 0.2, 0.07, 10).translate(-0.12, 0.52, -0.05),
+      new CylinderGeometry(0.06, 0.06, 0.35, 6).translate(0.35, 0.55, 0.2),
+      new BoxGeometry(0.35, 0.06, 0.06).translate(0.18, 0.55, 0.2),
     ]),
-    // antenna mast + tip
+    // antenna mast + crossbar + dish + base plate
     mergeGeometries([
-      new CylinderGeometry(0.02, 0.03, 1.6, 5).translate(0, 0.8, 0),
-      new BoxGeometry(0.06, 0.06, 0.06).translate(0, 1.63, 0),
+      new BoxGeometry(0.28, 0.06, 0.28).translate(0, 0.03, 0),
+      new CylinderGeometry(0.025, 0.035, 1.85, 6).translate(0, 0.95, 0),
+      new BoxGeometry(0.55, 0.03, 0.03).translate(0, 1.55, 0),
+      new BoxGeometry(0.03, 0.03, 0.35).translate(0.2, 1.55, 0),
+      new SphereGeometry(0.16, 8, 6, 0, Math.PI * 2, 0, Math.PI * 0.55)
+        .rotateX(-Math.PI / 2)
+        .translate(0.22, 1.55, 0.12),
+      new BoxGeometry(0.08, 0.08, 0.08).translate(0, 1.88, 0),
     ]),
-    // water tank: domed lathe on three legs
+    // water tank: platform + domed vessel + ladder rails
     mergeGeometries([
+      new BoxGeometry(0.85, 0.08, 0.85).translate(0, 0.04, 0),
       new LatheGeometry(
         [
-          new Vector2(0.02, 0.15),
-          new Vector2(0.35, 0.15),
-          new Vector2(0.35, 0.6),
-          new Vector2(0.28, 0.72),
-          new Vector2(0.12, 0.78),
-          new Vector2(0.02, 0.79),
+          new Vector2(0.02, 0.12),
+          new Vector2(0.38, 0.12),
+          new Vector2(0.4, 0.22),
+          new Vector2(0.38, 0.72),
+          new Vector2(0.28, 0.88),
+          new Vector2(0.1, 0.95),
+          new Vector2(0.02, 0.96),
         ],
-        12,
+        14,
       ),
-      new BoxGeometry(0.06, 0.18, 0.06).translate(0.25, 0.09, 0),
-      new BoxGeometry(0.06, 0.18, 0.06).translate(-0.125, 0.09, 0.216),
-      new BoxGeometry(0.06, 0.18, 0.06).translate(-0.125, 0.09, -0.216),
+      new BoxGeometry(0.05, 0.7, 0.05).translate(0.42, 0.4, 0.3),
+      new BoxGeometry(0.05, 0.7, 0.05).translate(0.42, 0.4, -0.3),
+      new BoxGeometry(0.05, 0.05, 0.6).translate(0.42, 0.55, 0),
+      new BoxGeometry(0.05, 0.05, 0.6).translate(0.42, 0.75, 0),
+    ]),
+    // vent stack cluster
+    mergeGeometries([
+      new CylinderGeometry(0.12, 0.14, 0.9, 8).translate(-0.18, 0.45, 0),
+      new CylinderGeometry(0.1, 0.12, 1.15, 8).translate(0.14, 0.58, 0.08),
+      new CylinderGeometry(0.08, 0.09, 0.7, 7).translate(0.05, 0.35, -0.2),
+      new BoxGeometry(0.55, 0.08, 0.45).translate(0, 0.04, 0),
+      new TorusGeometry(0.14, 0.025, 6, 10).rotateX(Math.PI / 2).translate(-0.18, 0.92, 0),
     ]),
   ];
   const mats = [
-    new MeshStandardMaterial({ color: 0x39404d, roughness: 0.7, metalness: 0.45, envMapIntensity: 0.55 }),
-    new MeshStandardMaterial({ color: 0x4a5262, roughness: 0.65, metalness: 0.5, envMapIntensity: 0.6 }),
-    new MeshStandardMaterial({ color: 0x2c333f, roughness: 0.75, metalness: 0.25, envMapIntensity: 0.4 }),
+    new MeshStandardMaterial({ color: 0x3c4452, roughness: 0.62, metalness: 0.55, envMapIntensity: 0.65 }),
+    new MeshStandardMaterial({ color: 0x525a6a, roughness: 0.48, metalness: 0.7, envMapIntensity: 0.75 }),
+    new MeshStandardMaterial({ color: 0x2e3542, roughness: 0.72, metalness: 0.3, envMapIntensity: 0.5 }),
+    new MeshStandardMaterial({ color: 0x454d5c, roughness: 0.55, metalness: 0.6, envMapIntensity: 0.7 }),
   ];
-  const placed: Matrix4[][] = [[], [], []];
-  for (const b of state.map.buildings) {
-    const items = next(4);
+  const placed: Matrix4[][] = [[], [], [], []];
+  for (const b of footprints) {
+    const area = b.w * b.d;
+    // density scales with roof area; large towers get a full HVAC cluster
+    const items = Math.min(7, 1 + next(3) + (area > 40 ? 2 : 0) + (area > 70 ? 1 : 0));
+    const margin = 0.65;
+    const spanX = Math.max(0.2, b.w - margin * 2);
+    const spanZ = Math.max(0.2, b.d - margin * 2);
     for (let i = 0; i < items; i++) {
-      const kind = next(3);
-      dummy.position.set(
-        b.x + 0.8 + next(Math.max(1, (b.w - 1.6) * 10)) / 10,
-        b.h,
-        b.z + 0.8 + next(Math.max(1, (b.d - 1.6) * 10)) / 10,
-      );
+      const kind = next(4);
+      // oversized so rooftop language reads at block zoom, not only squad zoom
+      const scale = 1.35 + next(55) / 100;
+      const rx = spanX <= 0.3 ? b.w / 2 : margin + next(Math.max(1, (spanX * 10) | 0)) / 10;
+      const rz = spanZ <= 0.3 ? b.d / 2 : margin + next(Math.max(1, (spanZ * 10) | 0)) / 10;
+      // sit on top of penthouse when stepped
+      const step = massStep(b);
+      const roofY = step.stepped && step.towerH >= 2.5 ? b.h + 1.2 : b.h;
+      dummy.position.set(b.x + rx, roofY, b.z + rz);
       dummy.rotation.set(0, (next(8) * Math.PI) / 4, 0);
+      dummy.scale.set(scale, scale, scale);
       dummy.updateMatrix();
       placed[kind]!.push(dummy.matrix.clone());
     }
   }
   dummy.rotation.set(0, 0, 0);
+  dummy.scale.set(1, 1, 1);
   placed.forEach((matrices, kind) => {
     if (matrices.length === 0) return;
     const mesh = new InstancedMesh(geos[kind]!, mats[kind]!, matrices.length);
@@ -1610,12 +1922,12 @@ function createOutskirts(
   wet: WetProfile,
 ): void {
   const apronMat = new MeshStandardMaterial({
-    color: new Color(light.ground).multiplyScalar(0.82),
+    color: new Color(light.ground).multiplyScalar(0.9),
     roughness: Math.min(1, wet.groundRoughness + 0.12),
     metalness: wet.groundMetalness,
     envMapIntensity: wet.groundEnv * 0.75,
   });
-  applyAsphaltMaps(apronMat, Math.max(12, (MAP_W * 14) / 8));
+  applyAsphaltMaps(apronMat, Math.max(24, (MAP_W * 14) / 5));
   const apron = new Mesh(new PlaneGeometry(MAP_W * 14, MAP_W * 14), apronMat);
   apron.rotation.x = -Math.PI / 2;
   apron.position.set(MAP_W / 2, -0.08, MAP_W / 2);
@@ -1625,8 +1937,8 @@ function createOutskirts(
   const near: { m: Matrix4; c: Color }[] = [];
   const far: { m: Matrix4; c: Color }[] = [];
   const accents: { m: Matrix4; c: Color }[] = [];
-  const nearBase = new Color(light.bldg).multiplyScalar(0.9);
-  const farBase = new Color(light.bldg).lerp(new Color(light.bg), 0.35);
+  const nearBase = new Color(light.bldg).multiplyScalar(0.95);
+  const farBase = new Color(light.bldg).lerp(new Color(light.bg), 0.3);
   const accent = new Color();
   const c = MAP_W / 2;
   // 14 towers per side edge band + a denser far ring; polar placement keeps
@@ -1647,7 +1959,7 @@ function createOutskirts(
       dummy.scale.set(w, h, 4 + next(ring === 0 ? 7 : 14));
       dummy.updateMatrix();
       const tint = new Color(ring === 0 ? nearBase : farBase).multiplyScalar(
-        0.82 + next(30) / 100,
+        0.92 + next(24) / 100,
       );
       (ring === 0 ? near : far).push({ m: dummy.matrix.clone(), c: tint });
       // lit crowns and stray window slabs sell inhabited towers at night
@@ -1945,23 +2257,34 @@ function createVisualTestDistrict(
             ? { x: b.z, z: b.x }
             : { x: b.z, z: MAP_W - b.x };
     const alongZ = b.side < 2;
-    dummy.position.set(center.x, b.h / 2, center.z);
+    const ww = alongZ ? b.d : b.w;
+    const dd = alongZ ? b.w : b.d;
+    const step = massStep({
+      x: center.x - ww / 2,
+      z: center.z - dd / 2,
+      w: ww,
+      d: dd,
+      h: b.h,
+      y0: 0,
+    });
+    // podium only; shaft comes from createFacadeKit setbacks
+    dummy.position.set(center.x, step.podH / 2, center.z);
     dummy.rotation.set(0, 0, 0);
-    dummy.scale.set(alongZ ? b.d : b.w, b.h, alongZ ? b.w : b.d);
+    dummy.scale.set(ww, step.podH, dd);
     dummy.updateMatrix();
     hullMesh.setMatrixAt(i, dummy.matrix);
-    tint.copy(base).multiplyScalar(0.82 + next(30) / 100);
+    tint.copy(base).multiplyScalar(0.92 + next(24) / 100);
     hullMesh.setColorAt(i, tint);
     const plazaYaw =
       b.side === 0 ? Math.PI / 2 : b.side === 1 ? -Math.PI / 2 : b.side === 2 ? 0 : Math.PI;
-    const halfX = (alongZ ? b.d : b.w) / 2 + 0.04;
-    const halfZ = (alongZ ? b.w : b.d) / 2 + 0.04;
+    const halfX = ww / 2 + 0.04;
+    const halfZ = dd / 2 + 0.04;
     const faces: { ox: number; oz: number; yaw: number; fw: number }[] = [
       {
         ox: b.side === 0 ? halfX : b.side === 1 ? -halfX : 0,
         oz: b.side === 2 ? halfZ : b.side === 3 ? -halfZ : 0,
         yaw: plazaYaw,
-        fw: b.w,
+        fw: alongZ ? b.w : b.d,
       },
     ];
     if (alongZ) {
@@ -1976,9 +2299,9 @@ function createVisualTestDistrict(
       );
     }
     for (const f of faces) {
-      dummy.position.set(center.x + f.ox, b.h * 0.46, center.z + f.oz);
+      dummy.position.set(center.x + f.ox, step.podH * 0.46, center.z + f.oz);
       dummy.rotation.set(0, f.yaw, 0);
-      dummy.scale.set(f.fw * 0.86, b.h * 0.74, 1);
+      dummy.scale.set(f.fw * 0.86, step.podH * 0.74, 1);
       dummy.updateMatrix();
       windowMesh.setMatrixAt(wi, dummy.matrix);
       tint.setScalar((0.5 + next(40) / 100) * light.neon);
@@ -1996,6 +2319,31 @@ function createVisualTestDistrict(
   if (shadows) hullMesh.castShadow = true;
   scene.add(hullMesh);
   scene.add(windowMesh);
+
+  // same modular kit as campaign maps, converted to world-space footprints
+  const kitFootprints: KitFootprint[] = hulls.map((b) => {
+    const center =
+      b.side === 0
+        ? { x: b.x, z: b.z }
+        : b.side === 1
+          ? { x: MAP_W - b.x, z: b.z }
+          : b.side === 2
+            ? { x: b.z, z: b.x }
+            : { x: b.z, z: MAP_W - b.x };
+    const alongZ = b.side < 2;
+    const ww = alongZ ? b.d : b.w;
+    const dd = alongZ ? b.w : b.d;
+    return {
+      x: center.x - ww / 2,
+      z: center.z - dd / 2,
+      w: ww,
+      d: dd,
+      h: b.h,
+      y0: 0,
+    };
+  });
+  createFacadeKit(kitFootprints, scene, wet, light, shadows, (state.mapSeed | 0) ^ 0xd157);
+  createRoofClutter(kitFootprints, scene, shadows, (state.mapSeed | 0) ^ 0xd157);
 
   const spill: PoolSource[] = [];
   const streaks: StreakSource[] = [];
@@ -2496,7 +2844,8 @@ export function createGameScene(state: SimState, shadows = true): GameScene {
   scene.fog = fog;
 
   const groundColor = new Color(light.ground);
-  if (rain) groundColor.multiplyScalar(0.8);
+  // soft rain darken only: hard 0.8 crush re-hides asphalt grit at night
+  if (rain) groundColor.multiplyScalar(0.92);
   // wet PBR asphalt: canvas map keeps street readability; clearcoat + env
   // give real wet specular (dusk/night/rain). Staging square is always soaked.
   const wet = wetProfile(state.env.tod, rain, !!state.map.visualTest);
@@ -2509,8 +2858,8 @@ export function createGameScene(state: SimState, shadows = true): GameScene {
     clearcoatRoughness: wet.groundClearcoatRoughness,
     envMapIntensity: wet.groundEnv,
   });
-  // tiling asphalt microdetail under the street-layout albedo
-  applyAsphaltMaps(groundMat, Math.max(8, MAP_W / 6));
+  // denser tiling so microdetail survives iso orthographic distance
+  applyAsphaltMaps(groundMat, Math.max(16, MAP_W / 4));
   const ground = new Mesh(new PlaneGeometry(MAP_W, MAP_W), groundMat);
   ground.rotation.x = -Math.PI / 2;
   ground.position.set(MAP_W / 2, 0, MAP_W / 2);
@@ -2524,8 +2873,9 @@ export function createGameScene(state: SimState, shadows = true): GameScene {
   // material color stays white so the per-instance value jitter (baked into
   // instanceColor, which multiplies it) owns the base hue
   const tintNext = seededNext({ rng: ((state.mapSeed | 0) ^ 0x71a7) || 1 });
+  // keep the dark tail above ~0.95 so facade albedo panels stay readable
   const jitter = (base: number): Color =>
-    new Color(base).multiplyScalar(0.88 + tintNext(24) / 100);
+    new Color(base).multiplyScalar(0.95 + tintNext(20) / 100);
   // Math.max(1, ...) like signMesh: a zero-instance allocation leaves a
   // zero-length instanceMatrix array, and the WebGPU shadow pass still binds
   // it (declared as one mat4), tripping a zero-binding-size validation error
@@ -2556,6 +2906,7 @@ export function createGameScene(state: SimState, shadows = true): GameScene {
   if (groundFloorMesh.instanceColor) groundFloorMesh.instanceColor.needsUpdate = true;
   scene.add(groundFloorMesh);
 
+  // hull mesh is podium-only when massStep says so; facade kit adds the shaft
   const buildings = new InstancedMesh(
     new BoxGeometry(1, 1, 1),
     concreteMaterial(wet),
@@ -2563,8 +2914,11 @@ export function createGameScene(state: SimState, shadows = true): GameScene {
   );
   buildings.count = state.map.buildings.length;
   state.map.buildings.forEach((b, i) => {
-    dummy.position.set(b.x + b.w / 2, 3 + (b.h - 3) / 2, b.z + b.d / 2);
-    dummy.scale.set(b.w, b.h - 3, b.d);
+    const fp: KitFootprint = { x: b.x, z: b.z, w: b.w, d: b.d, h: b.h, y0: 3 };
+    const step = massStep(fp);
+    const podH = step.podH;
+    dummy.position.set(b.x + b.w / 2, 3 + podH / 2, b.z + b.d / 2);
+    dummy.scale.set(b.w, Math.max(0.5, podH), b.d);
     dummy.updateMatrix();
     buildings.setMatrixAt(i, dummy.matrix);
     buildings.setColorAt(i, jitter(light.bldg));
@@ -2574,7 +2928,9 @@ export function createGameScene(state: SimState, shadows = true): GameScene {
   if (buildings.instanceColor) buildings.instanceColor.needsUpdate = true;
   scene.add(buildings);
   createFacadeWindows(state, scene, light.neon, wet);
-  createRoofClutter(state, scene, shadows);
+  const kitFootprints = mapBuildingFootprints(state);
+  createFacadeKit(kitFootprints, scene, wet, light, shadows, state.mapSeed | 0);
+  createRoofClutter(kitFootprints, scene, shadows, state.mapSeed | 0);
   const { signMesh, cellToSign, spillSources } = createStorefrontSigns(state, scene, light.neon);
   const { mesh: strips, spillSources: stripSpill } = createNeonStrips(state);
   if (light.neon < 1 && strips.instanceColor) {
@@ -2625,6 +2981,10 @@ export function createGameScene(state: SimState, shadows = true): GameScene {
   }
   createOutskirts(state, scene, light, wet);
   if (state.map.visualTest) createVisualTestCurbs(scene, light.neon);
+  else {
+    createStreetDress(state, scene, wet, light.neon);
+    createPropScatter(state, scene, light.neon);
+  }
 
   const rubbleMesh = new InstancedMesh(
     buildRubbleGeometry(),
@@ -2644,10 +3004,38 @@ export function createGameScene(state: SimState, shadows = true): GameScene {
   scorchMesh.count = 0;
   scene.add(scorchMesh);
 
+  // corporate-cost blood/debris pools (desaturated, not medical gore)
+  const bloodMesh = new InstancedMesh(
+    new CircleGeometry(0.55, 10).rotateX(-Math.PI / 2),
+    new MeshBasicMaterial({
+      color: 0x3a1218,
+      transparent: true,
+      opacity: 0.62,
+      depthWrite: false,
+    }),
+    DECAL_CAP,
+  );
+  bloodMesh.instanceMatrix.setUsage(DynamicDrawUsage);
+  bloodMesh.count = 0;
+  scene.add(bloodMesh);
+  const debrisMesh = new InstancedMesh(
+    buildRubbleGeometry(),
+    new MeshLambertMaterial({ color: 0x1a1e28 }),
+    DECAL_CAP,
+  );
+  debrisMesh.instanceMatrix.setUsage(DynamicDrawUsage);
+  debrisMesh.count = 0;
+  scene.add(debrisMesh);
+
   const carVariantMeshes = [0, 1, 2].map((variant) => {
     const mesh = new InstancedMesh(
       buildCarGeometry(variant),
-      new MeshPhongMaterial({ vertexColors: true, shininess: 34, specular: 0x20252f }),
+      new MeshStandardMaterial({
+        vertexColors: true,
+        roughness: 0.42,
+        metalness: 0.48,
+        envMapIntensity: wet.groundEnv * 0.55,
+      }),
       CAR_CAP,
     );
     mesh.instanceMatrix.setUsage(DynamicDrawUsage);
@@ -2700,9 +3088,15 @@ export function createGameScene(state: SimState, shadows = true): GameScene {
   carPoolMesh.count = 0;
   scene.add(carPoolMesh);
 
+  // procedural tram is the ship path (missing GLB load path retired in T5)
   const tramMesh = new InstancedMesh(
     buildTramGeometry(),
-    new MeshPhongMaterial({ vertexColors: true, shininess: 28, specular: 0x1b2d2e }),
+    new MeshStandardMaterial({
+      vertexColors: true,
+      roughness: 0.38,
+      metalness: 0.55,
+      envMapIntensity: wet.groundEnv * 0.6,
+    }),
     2,
   );
   tramMesh.instanceMatrix.setUsage(DynamicDrawUsage);
@@ -2719,12 +3113,7 @@ export function createGameScene(state: SimState, shadows = true): GameScene {
   tramLightsMesh.frustumCulled = false;
   tramLightsMesh.count = 0;
   scene.add(tramLightsMesh);
-  const tramModelRoots = Array.from({ length: 2 }, () => {
-    const root = new Object3D();
-    root.visible = false;
-    return root;
-  });
-  loadGeneratedTramModel(scene, tramModelRoots);
+  const tramModelRoots: Object3D[] = [];
 
   const fuelMeshes = new Map<number, Mesh>();
   state.vehicles.forEach((v, i) => {
@@ -2809,7 +3198,7 @@ export function createGameScene(state: SimState, shadows = true): GameScene {
   const ringMeshes: Mesh[] = [];
   const blobMeshes: Mesh[] = [];
   for (let i = 0; i < state.agents.length; i++) {
-    agentRigs.push(createAgentRig(scene));
+    agentRigs.push(createAgentRig(scene, i));
     // thin pulsing band instead of the old thick torus: the chunky ring read
     // as prototype next to the terminal HUD (thickness lives in the halo)
     const ring = new Mesh(
@@ -2978,17 +3367,23 @@ export function createGameScene(state: SimState, shadows = true): GameScene {
     fuelMeshes,
     rubbleMesh,
     scorchMesh,
+    bloodMesh,
+    debrisMesh,
     signMesh,
     cellToSign,
     groundFloorMesh,
     cellToGround,
     breachCursor: 0,
     rubbleCount: 0,
+    bloodCount: 0,
+    debrisCount: 0,
     lastSyncMs: performance.now(),
     flashMesh,
     flashes: [],
     prevProj: [],
     prevProjTick: state.tick,
+    prevNpcAlive: new Uint8Array(state.npcs.map((n) => (n.state === ST_DEAD ? 0 : 1))),
+    prevAgentAlive: new Uint8Array(state.agents.map((a) => (a.alive ? 1 : 0))),
     vehHeadings: new Float32Array(state.vehicles.length),
     vehLastX: new Float64Array(state.vehicles.length),
     vehLastZ: new Float64Array(state.vehicles.length),
@@ -3111,6 +3506,53 @@ export function syncScene(
   }
   dummy.rotation.set(0, 0, 0);
   dummy.scale.set(1, 1, 1);
+
+  const stampBlood = (x: number, z: number, scale: number) => {
+    if (gs.bloodCount >= DECAL_CAP) return;
+    const h = ((x * 73 + z * 91) * 2654435761) >>> 0;
+    dummy.position.set(x, 0.018, z);
+    dummy.rotation.set(0, (h >>> 27) / 4, 0);
+    dummy.scale.setScalar(scale * (0.75 + ((h >>> 5) % 40) / 100));
+    dummy.updateMatrix();
+    gs.bloodMesh.setMatrixAt(gs.bloodCount, dummy.matrix);
+    gs.bloodCount++;
+    gs.bloodMesh.count = gs.bloodCount;
+    gs.bloodMesh.instanceMatrix.needsUpdate = true;
+  };
+  const stampDebris = (x: number, z: number, scale: number) => {
+    if (gs.debrisCount >= DECAL_CAP) return;
+    const h = ((x * 41 + z * 17) * 2654435761) >>> 0;
+    dummy.position.set(x, 0.03, z);
+    dummy.rotation.set(0, (h >>> 20) / 5, (((h >>> 9) % 20) - 10) / 150);
+    dummy.scale.setScalar(scale * (0.45 + ((h >>> 13) % 40) / 100));
+    dummy.updateMatrix();
+    gs.debrisMesh.setMatrixAt(gs.debrisCount, dummy.matrix);
+    gs.debrisCount++;
+    gs.debrisMesh.count = gs.debrisCount;
+    gs.debrisMesh.instanceMatrix.needsUpdate = true;
+  };
+
+  // combat surface response: stamp when NPCs/agents die (write-off cost, not celebration)
+  for (let ni = 0; ni < state.npcs.length; ni++) {
+    const n = state.npcs[ni]!;
+    const alive = n.state === ST_DEAD ? 0 : 1;
+    if (gs.prevNpcAlive[ni] === 1 && alive === 0) {
+      const x = fromFx(n.x);
+      const z = fromFx(n.z);
+      stampBlood(x, z, 0.9);
+      stampDebris(x + 0.15, z - 0.1, 0.55);
+    }
+    if (ni < gs.prevNpcAlive.length) gs.prevNpcAlive[ni] = alive;
+  }
+  for (let ai = 0; ai < state.agents.length; ai++) {
+    const a = state.agents[ai]!;
+    const alive = a.alive ? 1 : 0;
+    if (gs.prevAgentAlive[ai] === 1 && alive === 0) {
+      stampBlood(fromFx(a.x), fromFx(a.z), 1.05);
+      stampDebris(fromFx(a.x), fromFx(a.z), 0.7);
+    }
+    if (ai < gs.prevAgentAlive.length) gs.prevAgentAlive[ai] = alive;
+  }
 
   const nowMs = performance.now();
   const dtSec = Math.min(0.1, Math.max(0.001, (nowMs - gs.lastSyncMs) / 1000));
@@ -3267,9 +3709,18 @@ export function syncScene(
       blob.visible = false;
       if (!rig.downed) {
         rig.downed = true;
-        if (!rig.modelReady) pose(rig.joints, CLIP_IDLE, 0);
-        root.rotation.set(0, rig.heading, Math.PI / 2);
-        root.position.y = 0.3;
+        if (rig.modelReady && rig.mixer && rig.actFall) {
+          rig.activeAction?.fadeOut(0.08);
+          rig.actFall.reset().fadeIn(0.05).play();
+          rig.activeAction = rig.actFall;
+          rig.mixer.update(0.016);
+          root.rotation.set(0, rig.heading, 0);
+          root.position.y = 0;
+        } else {
+          if (!rig.modelReady) pose(rig.joints, CLIP_IDLE, 0);
+          root.rotation.set(0, rig.heading, Math.PI / 2);
+          root.position.y = 0.3;
+        }
         if (rig.rimColor) rig.rimColor.value.copy(SCENE_COLORS.dead).multiplyScalar(0.25);
         else rig.bodyMat.emissive.set(0x05080c);
         rig.bodyMat.color.copy(SCENE_COLORS.dead);
@@ -3283,6 +3734,8 @@ export function syncScene(
           m.color.copy(SCENE_COLORS.dead);
           m.opacity = 1;
         }
+      } else if (rig.modelReady && rig.mixer && rig.actFall) {
+        rig.mixer.update(dtSec);
       }
       return;
     }
@@ -3291,9 +3744,10 @@ export function syncScene(
     // palette-aware faction rim (or the WebGL flat-emissive fallback)
     if (rig.rimColor) rig.rimColor.value.copy(SCENE_COLORS.agent);
     else rig.bodyMat.emissive.copy(SCENE_COLORS.agent).multiplyScalar(0.3);
-    // pushed past the bloom threshold so visor and faction stripe glow
-    rig.visorMat.color.copy(SCENE_COLORS.agent).lerp(white, 0.4).multiplyScalar(1.7);
-    rig.stripeMat.color.copy(SCENE_COLORS.agent).multiplyScalar(2.2);
+    // per-agent trim keeps squad ID readable; still cyan-family for faction law
+    const trim = new Color(rig.trimHex);
+    rig.visorMat.color.copy(trim).lerp(white, 0.35).multiplyScalar(1.65);
+    rig.stripeMat.color.copy(trim).multiplyScalar(2.0);
     const op = a.cloakT > 0 ? 0.3 : 1;
     rig.bodyMat.opacity = op;
     rig.gearMat.opacity = op;
@@ -3410,11 +3864,13 @@ export function syncScene(
     const addFlash = (f: Flash) => {
       if (gs.flashes.length < FLASH_CAP) gs.flashes.push(f);
     };
-    const impact = (q: ProjSnap) =>
+    const impact = (q: ProjSnap) => {
+      const ix = fromFx(q.x) + fromFx(q.dx) * PROJ_SUBSTEPS * 0.5;
+      const iz = fromFx(q.z) + fromFx(q.dz) * PROJ_SUBSTEPS * 0.5;
       addFlash({
-        x: fromFx(q.x) + fromFx(q.dx) * PROJ_SUBSTEPS * 0.5,
+        x: ix,
         y: 1.1,
-        z: fromFx(q.z) + fromFx(q.dz) * PROJ_SUBSTEPS * 0.5,
+        z: iz,
         age: 0,
         dur: q.aoe > 0 ? 0.3 : 0.16,
         size: q.aoe > 0 ? 1.9 : 0.55,
@@ -3422,6 +3878,10 @@ export function syncScene(
         g: q.aoe > 0 ? 0.75 : 0.9,
         b: 0.35,
       });
+      // surface response: desaturated residue (not medical gore)
+      if (q.aoe > 0 || ((iz * 13) | 0) % 4 === 0) stampBlood(ix, iz, q.aoe > 0 ? 1.1 : 0.4);
+      if (q.aoe > 0 || ((ix * 10) | 0) % 3 === 0) stampDebris(ix, iz, q.aoe > 0 ? 0.85 : 0.4);
+    };
     let j = 0;
     for (const p of state.projectiles) {
       let matched = false;

@@ -83,7 +83,7 @@ export interface MissionOptions {
 }
 
 // agent card portraits: /portraits/a{n}.png when present, else a generated
-// bust silhouette; probed once per page and self-heals on the next rebuild
+// bust silhouette; hues match AGENT_TRIM in scene.ts (in-world stripe/visor)
 const PORTRAIT_HUES = ['#00e5ff', '#5ef2c4', '#7c9bff', '#38d4f0'];
 const portraitSrcs: string[] = [];
 

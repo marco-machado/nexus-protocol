@@ -10,14 +10,14 @@ import {
   InstancedMesh,
   Matrix3,
   Mesh,
-  MeshLambertMaterial,
+  MeshPhongMaterial,
   NearestFilter,
   Object3D,
   RGBAFormat,
   Scene,
   Vector3,
 } from 'three';
-import { MeshLambertNodeMaterial } from 'three/webgpu';
+import { MeshPhongNodeMaterial } from 'three/webgpu';
 import {
   cos,
   instancedDynamicBufferAttribute,
@@ -289,7 +289,13 @@ export function createCrowd(scene: Scene): Crowd {
   trsAttr.setUsage(DynamicDrawUsage);
   animAttr.setUsage(DynamicDrawUsage);
 
-  const nearMat = new MeshLambertNodeMaterial();
+  // near field: Phong + rim-friendly specular so skin/gear separate under night
+  // grade (T7); far stays cheap Lambert
+  const nearMat = new MeshPhongNodeMaterial({
+    specular: 0x2a2a2a,
+    shininess: 22,
+    emissive: 0x05080c,
+  });
   const trs = instancedDynamicBufferAttribute<'vec4'>(trsAttr, 'vec4');
   const anim = instancedDynamicBufferAttribute<'vec3'>(animAttr, 'vec3');
   const f0 = anim.z.floor();
@@ -325,7 +331,11 @@ export function createCrowd(scene: Scene): Crowd {
   // instances cast correctly; if a backend regresses, flip this off first
   nearMesh.castShadow = true;
   nearMesh.receiveShadow = true;
-  const farMesh = new InstancedMesh(geometry, new MeshLambertMaterial(), NPC_CAP);
+  const farMesh = new InstancedMesh(
+    geometry,
+    new MeshPhongMaterial({ specular: 0x111111, shininess: 8, emissive: 0x030508 }),
+    NPC_CAP,
+  );
   farMesh.instanceMatrix.setUsage(DynamicDrawUsage);
   farMesh.frustumCulled = false;
   farMesh.count = 0;
@@ -394,9 +404,15 @@ export function createCrowd(scene: Scene): Crowd {
 
       if (dead || farTier[i] === 1) {
         if (dead) {
-          dummy.position.set(x, 0.32, z);
-          dummy.rotation.set(0, 0, Math.PI / 2);
-          dummy.scale.set(1, 1, 1);
+          // varied write-off poses: yaw hash + slight pitch, not a flat plank clone
+          const h = ((i * 2654435761) >>> 0);
+          dummy.position.set(x, 0.28 + ((h >>> 8) % 8) / 100, z);
+          dummy.rotation.set(
+            ((h >>> 4) % 12) / 80,
+            headings[i]! + ((h >>> 16) % 20) / 10,
+            Math.PI / 2 + (((h >>> 12) % 10) - 5) / 40,
+          );
+          dummy.scale.set(1, 0.92 + ((h >>> 20) % 12) / 100, 1);
         } else {
           dummy.position.set(x, 0, z);
           dummy.rotation.set(0, headings[i]!, 0);
