@@ -18,4 +18,6 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build
-      - run: npm test
+      # Serial files keep the wall-clock flashmob probe (tests/flashmobDensity.test.ts)
+      # from contending with parallel test workers on 2-core runners; see docs/perf.md.
+      - run: npm test -- --fileParallelism=false
