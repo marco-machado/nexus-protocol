@@ -12,7 +12,7 @@ Last validated 2026-07-07 against the working tree: `npm test` green (57/57 acro
 
 **Ship bar for visuals is premium browser, not industry AAA.** Full ladder, definitions of done, and ordered tracks live in **`docs/presentation-roadmap.md`** (R3 premium browser → R4 AA aspiration later).
 
-**Current implementation meets the R3 premium browser bar** on the procedural-kit stack: facade/roof kits, street dress, hero GLB agents, combat surface response (ground and wall decals), prop scatter, measured delivery. Remaining caveat: the mid-range Windows perf row is still pending a manual run. Systems visual rows below stay `[x]`.
+**R3 premium browser is ship-closed at the DoD level.** The T1–T8 checklist landed first; a human pass against the seven R3 DoD lines then failed four of them (city mass, ground, combat, set dressing), and the max-polish set P1–P5 flipped every fail: the second human DoD pass (2026-07-11) judged all seven lines green. The decision record lives on the wayfinder map, GitHub issue #2, and its child tickets; stills under `output/wayfinder-p1/` through `output/wayfinder-p6/`. Remaining caveat: the mid-range Windows perf row is still pending a manual run. Systems visual rows below stay `[x]`.
 
 - [x] Presentation ladder (see `docs/presentation-roadmap.md`)
   - [x] R1 Slice 1: wet PBR asphalt, Standard shells, night PMREM IBL
@@ -21,6 +21,7 @@ Last validated 2026-07-07 against the working tree: `npm test` green (57/57 acro
   - [x] T2 building geometry kit: facade setbacks/fins/ledges/posts + roof AC/antenna/tank/vent (campaign + visualtest)
   - [x] T3–T8 R3 tracks complete (street dress, heroes, props, combat residue, near crowds, delivery) — see `docs/presentation-roadmap.md`
   - [x] R3 Premium browser: geometry kits, tuned materials, hero agents, combat surface response, props, delivery
+  - [x] R3 DoD ship-close: max polish P1–P5 plus second human DoD pass 7/7 green (wayfinder map, issue #2, 2026-07-11)
   - [ ] R4 AA aspiration (later): region kits, mid-field crowds, expanded catalogs, landmarks
 
 ## Status at a glance
@@ -32,7 +33,7 @@ Last validated 2026-07-07 against the working tree: `npm test` green (57/57 acro
 | B: Content depth | Weapon/equipment/augment tiers 3-5, 4 more mission types | Done |
 | C: World and campaign | 40 territories, 3 rival doctrines, sieges, acts 1-3, NG+, economy | Done |
 | D: City simulation | Vehicles, destructible mid-layer, day/night/weather, GPU crowds | Done |
-| Presentation (R3) | Premium browser mission look; see `docs/presentation-roadmap.md` | Done (T1–T8); R4 AA later |
+| Presentation (R3) | Premium browser mission look; see `docs/presentation-roadmap.md` | Done (DoD 7/7, 2026-07-11; wayfinder map issue #2); R4 AA later |
 | Presentation (R4) | AA aspiration density/variety | Later |
 | E: Multiplayer and accounts | Co-op, async PvP, accounts, cloud saves | Not started (groundwork only) |
 | F: Platform and release | Input remap, gamepad, touch, load budget, accessibility audit | Not started |
