@@ -83,7 +83,12 @@ import {
 import type { CameraRig } from './camera';
 import type { AlarmGrade } from './alarmScript';
 import { SCENE_COLORS } from './palette';
-import { createPropScatter, createStreetDress } from './cityDress';
+import {
+  createParkedVehicleDress,
+  createPropScatter,
+  createSignageBoards,
+  createStreetDress,
+} from './cityDress';
 
 const PROJ_CAP = 512;
 const SHADOW_MAP = 2048;
@@ -3473,6 +3478,8 @@ export function createGameScene(state: SimState, shadows = true): GameScene {
   else {
     createStreetDress(state, scene, wet, light.neon);
     createPropScatter(state, scene, light.neon);
+    createParkedVehicleDress(state, scene, wet);
+    createSignageBoards(state, scene, light.neon);
   }
 
   const rubbleMesh = new InstancedMesh(
