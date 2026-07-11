@@ -91,7 +91,7 @@ const SMOKE_CAP = 96;
 export const CAR_CAP = 16;
 const RUBBLE_CAP = 160;
 const FLASH_CAP = 96;
-const DECAL_CAP = 256;
+const DECAL_CAP = 384;
 const WALL_DECAL_CAP = 192;
 const NEIGHBOR4 = [
   [1, 0],
@@ -3199,6 +3199,90 @@ function buildRubbleGeometry(): BufferGeometry {
   ]);
 }
 
+// decal alpha maps: shape carries the read at iso distance, so blood gets an
+// irregular splatter silhouette and scorch a soft-edged burn falloff instead
+// of both being hard-edged discs distinguishable only by hue
+function buildSplatterTexture(): CanvasTexture {
+  const size = 128;
+  const canvas = document.createElement('canvas');
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext('2d')!;
+  ctx.fillStyle = '#000';
+  ctx.fillRect(0, 0, size, size);
+  ctx.fillStyle = '#fff';
+  let seed = 0x9e3779b9;
+  const next = () => {
+    seed ^= seed << 13;
+    seed ^= seed >>> 17;
+    seed ^= seed << 5;
+    seed >>>= 0;
+    return seed / 0xffffffff;
+  };
+  const c = size / 2;
+  ctx.beginPath();
+  const lobes = 14;
+  for (let i = 0; i <= lobes; i++) {
+    const ang = (i / lobes) * Math.PI * 2;
+    const r = size * (0.2 + next() * 0.14);
+    const x = c + Math.cos(ang) * r;
+    const y = c + Math.sin(ang) * r;
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.quadraticCurveTo(c + Math.cos(ang - 0.22) * r * 1.25, c + Math.sin(ang - 0.22) * r * 1.25, x, y);
+  }
+  ctx.closePath();
+  ctx.fill();
+  for (let i = 0; i < 22; i++) {
+    const ang = next() * Math.PI * 2;
+    const dist = size * (0.26 + next() * 0.2);
+    const r = size * (0.012 + next() * 0.035);
+    ctx.beginPath();
+    ctx.arc(c + Math.cos(ang) * dist, c + Math.sin(ang) * dist, r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  const tex = new CanvasTexture(canvas);
+  tex.needsUpdate = true;
+  return tex;
+}
+
+function buildScorchTexture(): CanvasTexture {
+  const size = 128;
+  const canvas = document.createElement('canvas');
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext('2d')!;
+  ctx.fillStyle = '#000';
+  ctx.fillRect(0, 0, size, size);
+  const c = size / 2;
+  const grad = ctx.createRadialGradient(c, c, 0, c, c, c);
+  grad.addColorStop(0, 'rgba(255,255,255,1)');
+  grad.addColorStop(0.45, 'rgba(255,255,255,0.85)');
+  grad.addColorStop(0.75, 'rgba(255,255,255,0.35)');
+  grad.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, size, size);
+  let seed = 0x243f6a88;
+  const next = () => {
+    seed ^= seed << 13;
+    seed ^= seed >>> 17;
+    seed ^= seed << 5;
+    seed >>>= 0;
+    return seed / 0xffffffff;
+  };
+  ctx.fillStyle = 'rgba(0,0,0,0.55)';
+  for (let i = 0; i < 34; i++) {
+    const ang = next() * Math.PI * 2;
+    const dist = next() * size * 0.42;
+    const r = size * (0.015 + next() * 0.04);
+    ctx.beginPath();
+    ctx.arc(c + Math.cos(ang) * dist, c + Math.sin(ang) * dist, r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  const tex = new CanvasTexture(canvas);
+  tex.needsUpdate = true;
+  return tex;
+}
+
 const DEP_EACH = 8;
 
 // index order: turret, trap, charge, medbay, drone (default)
@@ -3397,30 +3481,45 @@ export function createGameScene(state: SimState, shadows = true): GameScene {
     RUBBLE_CAP,
   );
   rubbleMesh.instanceMatrix.setUsage(DynamicDrawUsage);
+  // decal/rubble instance matrices scatter across the map but the geometry
+  // bounding sphere stays at the origin, so frustum culling would drop every
+  // stamp once the camera pans away (same trap as the car meshes)
+  rubbleMesh.frustumCulled = false;
   rubbleMesh.count = 0;
   scene.add(rubbleMesh);
 
+  const splatterTex = buildSplatterTexture();
+  const scorchTex = buildScorchTexture();
   const scorchMesh = new InstancedMesh(
-    new CircleGeometry(0.8, 12).rotateX(-Math.PI / 2),
-    new MeshBasicMaterial({ color: 0x05070a, transparent: true, opacity: 0.55, depthWrite: false }),
+    new CircleGeometry(0.95, 12).rotateX(-Math.PI / 2),
+    new MeshBasicMaterial({
+      color: 0x05070a,
+      alphaMap: scorchTex,
+      transparent: true,
+      opacity: 0.78,
+      depthWrite: false,
+    }),
     RUBBLE_CAP,
   );
   scorchMesh.instanceMatrix.setUsage(DynamicDrawUsage);
+  scorchMesh.frustumCulled = false;
   scorchMesh.count = 0;
   scene.add(scorchMesh);
 
   // corporate-cost blood/debris pools (desaturated, not medical gore)
   const bloodMesh = new InstancedMesh(
-    new CircleGeometry(0.55, 10).rotateX(-Math.PI / 2),
+    new CircleGeometry(0.62, 10).rotateX(-Math.PI / 2),
     new MeshBasicMaterial({
-      color: 0x3a1218,
+      color: 0x6b2028,
+      alphaMap: splatterTex,
       transparent: true,
-      opacity: 0.62,
+      opacity: 0.9,
       depthWrite: false,
     }),
     DECAL_CAP,
   );
   bloodMesh.instanceMatrix.setUsage(DynamicDrawUsage);
+  bloodMesh.frustumCulled = false;
   bloodMesh.count = 0;
   scene.add(bloodMesh);
   const debrisMesh = new InstancedMesh(
@@ -3429,6 +3528,7 @@ export function createGameScene(state: SimState, shadows = true): GameScene {
     DECAL_CAP,
   );
   debrisMesh.instanceMatrix.setUsage(DynamicDrawUsage);
+  debrisMesh.frustumCulled = false;
   debrisMesh.count = 0;
   scene.add(debrisMesh);
 
@@ -3436,18 +3536,32 @@ export function createGameScene(state: SimState, shadows = true): GameScene {
   // exposed obstacle faces by the stamp closures in syncScene
   const wallScorchMesh = new InstancedMesh(
     new CircleGeometry(0.5, 10),
-    new MeshBasicMaterial({ color: 0x05070a, transparent: true, opacity: 0.5, depthWrite: false }),
+    new MeshBasicMaterial({
+      color: 0x05070a,
+      alphaMap: scorchTex,
+      transparent: true,
+      opacity: 0.72,
+      depthWrite: false,
+    }),
     WALL_DECAL_CAP,
   );
   wallScorchMesh.instanceMatrix.setUsage(DynamicDrawUsage);
+  wallScorchMesh.frustumCulled = false;
   wallScorchMesh.count = 0;
   scene.add(wallScorchMesh);
   const wallBloodMesh = new InstancedMesh(
     new CircleGeometry(0.5, 9),
-    new MeshBasicMaterial({ color: 0x3a1218, transparent: true, opacity: 0.55, depthWrite: false }),
+    new MeshBasicMaterial({
+      color: 0x6b2028,
+      alphaMap: splatterTex,
+      transparent: true,
+      opacity: 0.8,
+      depthWrite: false,
+    }),
     WALL_DECAL_CAP,
   );
   wallBloodMesh.instanceMatrix.setUsage(DynamicDrawUsage);
+  wallBloodMesh.frustumCulled = false;
   wallBloodMesh.count = 0;
   scene.add(wallBloodMesh);
 
@@ -4065,16 +4179,27 @@ export function syncScene(
     gs.debrisMesh.instanceMatrix.needsUpdate = true;
   };
 
-  // combat surface response: stamp when NPCs/agents die (write-off cost, not celebration)
+  // combat surface response: stamp when NPCs/agents die (write-off cost, not
+  // celebration) — a main pool plus hashed satellite splats so a body leaves
+  // an obvious mark at iso distance rather than a single small disc
+  const stampDeathResidue = (x: number, z: number, scale: number) => {
+    const h = ((x * 67 + z * 113) * 2654435761) >>> 0;
+    const ang = ((h >>> 8) % 628) / 100;
+    stampBlood(x, z, scale * 1.35);
+    stampBlood(x + Math.cos(ang) * 0.6 * scale, z + Math.sin(ang) * 0.6 * scale, scale * 0.5);
+    stampBlood(
+      x - Math.cos(ang + 0.9) * 0.45 * scale,
+      z - Math.sin(ang + 0.9) * 0.45 * scale,
+      scale * 0.38,
+    );
+    stampDebris(x + Math.cos(ang + 2.1) * 0.3, z + Math.sin(ang + 2.1) * 0.3, scale * 0.55);
+    stampWallBloodNear(x, z, scale);
+  };
   for (let ni = 0; ni < state.npcs.length; ni++) {
     const n = state.npcs[ni]!;
     const alive = n.state === ST_DEAD ? 0 : 1;
     if (gs.prevNpcAlive[ni] === 1 && alive === 0) {
-      const x = fromFx(n.x);
-      const z = fromFx(n.z);
-      stampBlood(x, z, 0.9);
-      stampDebris(x + 0.15, z - 0.1, 0.55);
-      stampWallBloodNear(x, z, 0.9);
+      stampDeathResidue(fromFx(n.x), fromFx(n.z), 0.9);
     }
     if (ni < gs.prevNpcAlive.length) gs.prevNpcAlive[ni] = alive;
   }
@@ -4082,9 +4207,7 @@ export function syncScene(
     const a = state.agents[ai]!;
     const alive = a.alive ? 1 : 0;
     if (gs.prevAgentAlive[ai] === 1 && alive === 0) {
-      stampBlood(fromFx(a.x), fromFx(a.z), 1.05);
-      stampDebris(fromFx(a.x), fromFx(a.z), 0.7);
-      stampWallBloodNear(fromFx(a.x), fromFx(a.z), 1.05);
+      stampDeathResidue(fromFx(a.x), fromFx(a.z), 1.1);
     }
     if (ai < gs.prevAgentAlive.length) gs.prevAgentAlive[ai] = alive;
   }
