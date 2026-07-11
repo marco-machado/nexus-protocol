@@ -126,9 +126,9 @@ function buildBenchGeo(): BufferGeometry {
 }
 
 /**
- * Campaign street dress: raised curb strips, manhole covers, and light
- * crosswalk bars on top of the layout canvas (T3). Skipped on visualtest
- * (that scene has its own authored square curbs).
+ * Campaign street dress: raised curb strips, manhole covers, storm-drain
+ * grates, and light crosswalk bars on top of the layout canvas (T3). Skipped
+ * on visualtest (that scene has its own authored square curbs).
  */
 export function createStreetDress(
   state: SimState,
@@ -154,7 +154,7 @@ export function createStreetDress(
 
   for (let k = 0; k * BLOCK < MAP_W; k++) {
     const c = k * BLOCK + STREET / 2;
-    for (let t = STREET + 2; t < MAP_W - 2; t += 7 + next(5)) {
+    for (let t = STREET + 2; t < MAP_W - 2; t += 5 + next(4)) {
       for (const [x, z] of [
         [c, t],
         [t, c],
@@ -166,16 +166,16 @@ export function createStreetDress(
         // streetBlocked marks building parcels; manholes sit on open streets
         if (state.map.streetBlocked[cellIdx(ix, iz)]) continue;
         pushBox(manholes, x, 0.015, z, 0.55, 1, 0.55, (next(8) * Math.PI) / 4);
-        if (manholes.length >= 48) break;
+        if (manholes.length >= 96) break;
       }
-      if (manholes.length >= 48) break;
+      if (manholes.length >= 96) break;
     }
-    if (manholes.length >= 48) break;
+    if (manholes.length >= 96) break;
   }
 
   for (let kx = 1; kx * BLOCK < MAP_W; kx++) {
     for (let kz = 1; kz * BLOCK < MAP_W; kz++) {
-      if (next(100) < 35) continue;
+      if (next(100) < 15) continue;
       const x0 = kx * BLOCK;
       const z0 = kz * BLOCK;
       for (let bar = 0; bar < 4; bar++) {
@@ -185,9 +185,50 @@ export function createStreetDress(
         pushBox(crosses, x0 - 0.9, 0.02, z0 + o, 0.7, 0.04, 0.28);
         pushBox(crosses, x0 + STREET + 0.9, 0.02, z0 + o, 0.7, 0.04, 0.28);
       }
-      if (crosses.length >= 200) break;
+      if (crosses.length >= 320) break;
     }
-    if (crosses.length >= 200) break;
+    if (crosses.length >= 320) break;
+  }
+
+  // lane dashes as geometry sharing the crosswalk mesh: the canvas-painted
+  // dashes get crushed by the night tint multiply, these keep their own
+  // material like the crosswalk bars that do read at block zoom
+  for (let k = 0; k * BLOCK < MAP_W; k++) {
+    const c = k * BLOCK + STREET / 2;
+    for (let t = 1.5; t < MAP_W - 1; t += 3) {
+      const ti = t | 0;
+      if (!state.map.obstacle[cellIdx(ti, c)])
+        pushBox(crosses, t, 0.015, c, 1.0, 0.03, 0.14);
+      if (!state.map.obstacle[cellIdx(c, ti)])
+        pushBox(crosses, c, 0.015, t, 0.14, 0.03, 1.0);
+    }
+  }
+
+  // storm-drain grates on the asphalt just off the curb line
+  const drains: Matrix4[] = [];
+  for (const b of state.map.buildings) {
+    if (next(100) < 40) continue;
+    const face = next(4);
+    const alongX = face < 2;
+    const len = alongX ? b.w : b.d;
+    const off = 1 + next(Math.max(1, len - 2));
+    let x = b.x + b.w / 2;
+    let z = b.z + b.d / 2;
+    if (face === 0) {
+      x = b.x + off;
+      z = b.z - 1.35;
+    } else if (face === 1) {
+      x = b.x + off;
+      z = b.z + b.d + 1.35;
+    } else if (face === 2) {
+      x = b.x - 1.35;
+      z = b.z + off;
+    } else {
+      x = b.x + b.w + 1.35;
+      z = b.z + off;
+    }
+    pushBox(drains, x, 0.02, z, alongX ? 0.9 : 0.3, 0.04, alongX ? 0.3 : 0.9);
+    if (drains.length >= 40) break;
   }
 
   dummy.rotation.set(0, 0, 0);
@@ -212,9 +253,17 @@ export function createStreetDress(
     envMapIntensity: wet.concreteEnv * 0.65,
   });
 
+  const drainMat = new MeshStandardMaterial({
+    color: 0x2c333e,
+    roughness: 0.45,
+    metalness: 0.75,
+    envMapIntensity: wet.concreteEnv * 1.1,
+  });
+
   addInstanced(scene, curbs, new BoxGeometry(1, 1, 1), curbMat);
   addInstanced(scene, manholes, new CircleGeometry(0.5, 12).rotateX(-Math.PI / 2), manholeMat);
   addInstanced(scene, crosses, new BoxGeometry(1, 1, 1), crossMat);
+  addInstanced(scene, drains, new BoxGeometry(1, 1, 1), drainMat);
 }
 
 /**

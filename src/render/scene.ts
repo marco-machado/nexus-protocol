@@ -292,7 +292,7 @@ export function vehicleRenderDiagnostics(gs: GameScene): Record<string, number> 
 const LIGHTING = [
   { amb: 0xbfd0e0, groundAmb: 0x5a5348, ambI: 1.2, dir: 0xfff2d8, dirI: 1.8, pos: [50, 90, 30], bg: 0x8fa6bd, fog: 0.0035, neon: 0.35, ground: 0x46536a, shadowI: 0.85, bldg: 0x66707f, floor: 0x525c69 },
   { amb: 0xc9a68a, groundAmb: 0x33241d, ambI: 0.95, dir: 0xff9a5a, dirI: 1.2, pos: [60, 40, 25], bg: 0x1a1016, fog: 0.0055, neon: 1, ground: 0x2e2a3a, shadowI: 0.6, bldg: 0x52506a, floor: 0x454055 },
-  { amb: 0x8fa8d8, groundAmb: 0x18202e, ambI: 1.15, dir: 0xa9c2f0, dirI: 1.3, pos: [40, 70, 25], bg: 0x05070d, fog: 0.0062, neon: 1, ground: 0x3a4d68, shadowI: 0.55, bldg: 0x3a4c66, floor: 0x334558 },
+  { amb: 0x8fa8d8, groundAmb: 0x18202e, ambI: 1.15, dir: 0xa9c2f0, dirI: 1.3, pos: [40, 70, 25], bg: 0x05070d, fog: 0.0062, neon: 1, ground: 0x475e86, shadowI: 0.55, bldg: 0x3a4c66, floor: 0x334558 },
 ] as const;
 
 // wetness and IBL strength by time-of-day / rain for district PBR surfaces
@@ -309,6 +309,9 @@ type WetProfile = {
   envIntensity: number;
 };
 
+// groundClearcoatRoughness is the open-asphalt value: the layout-aligned wet
+// mask multiplies it down to near-mirror inside puddles and gutters, so the
+// scalar reads as a broad damp sheen rather than a uniform sharp glaze
 function wetProfile(tod: number, rain: boolean, visualTest: boolean): WetProfile {
   const dusky = tod >= 1;
   const soaked = rain || visualTest;
@@ -316,8 +319,8 @@ function wetProfile(tod: number, rain: boolean, visualTest: boolean): WetProfile
     return {
       groundRoughness: dusky ? 0.22 : 0.32,
       groundClearcoat: dusky ? 0.72 : 0.5,
-      groundClearcoatRoughness: 0.12,
-      groundEnv: dusky ? 1.35 : 0.85,
+      groundClearcoatRoughness: 0.3,
+      groundEnv: dusky ? 1.6 : 0.85,
       groundMetalness: 0.06,
       concreteRoughness: 0.78,
       concreteMetalness: 0.08,
@@ -330,7 +333,7 @@ function wetProfile(tod: number, rain: boolean, visualTest: boolean): WetProfile
     return {
       groundRoughness: 0.38,
       groundClearcoat: 0.38,
-      groundClearcoatRoughness: 0.2,
+      groundClearcoatRoughness: 0.35,
       groundEnv: 1.05,
       groundMetalness: 0.04,
       concreteRoughness: 0.86,
@@ -343,7 +346,7 @@ function wetProfile(tod: number, rain: boolean, visualTest: boolean): WetProfile
   return {
     groundRoughness: 0.62,
     groundClearcoat: 0.08,
-    groundClearcoatRoughness: 0.45,
+    groundClearcoatRoughness: 0.55,
     groundEnv: 0.4,
     groundMetalness: 0.02,
     concreteRoughness: 0.92,
@@ -462,7 +465,7 @@ function applyAsphaltMaps(mat: MeshPhysicalMaterial | MeshStandardMaterial, repe
     mat.normalMap = t;
     // iso orthographic view grazes the plane; scale past 1.0 so wet grit
     // still reads after night fog and clearcoat
-    if ('normalScale' in mat) mat.normalScale.set(1.15, 1.15);
+    if ('normalScale' in mat) mat.normalScale.set(1.3, 1.3);
     mat.needsUpdate = true;
   });
   loadMap('/textures/asphalt-roughness.jpg', { repeat }, (t) => {
@@ -1192,6 +1195,87 @@ function seededNext(seedRef: { rng: number }): (n: number) => number {
   };
 }
 
+type WetSpot = { x: number; z: number; rx: number; rz: number; rot: number; deep: boolean };
+
+// puddle spots shared by the albedo stain pass and the clearcoat wet mask so
+// each dark patch and its mirror sheen land on the same stretch of asphalt
+function groundWetSpots(state: SimState): WetSpot[] {
+  const next = seededNext({ rng: ((state.mapSeed | 0) ^ 0x9dd7) || 1 });
+  const spots: WetSpot[] = [];
+  const push = (x: number, z: number) => {
+    spots.push({
+      x,
+      z,
+      rx: 0.9 + next(150) / 100,
+      rz: 0.5 + next(80) / 100,
+      rot: (next(16) * Math.PI) / 8,
+      deep: next(10) < 4,
+    });
+  };
+  if (state.map.visualTest) {
+    // ring road spans 36..62 around the 42..55 plaza; keep spots on the
+    // drivable bands on either side of the plaza
+    for (let i = 0; i < 24; i++) {
+      const t = 37 + next(230) / 10;
+      const lane = 37 + next(38) / 10;
+      const off = next(2) === 0 ? lane : 98 - lane;
+      if (next(2) === 0) push(t, off);
+      else push(off, t);
+    }
+    return spots;
+  }
+  for (let i = 0; i < 64; i++) {
+    const band = next(6) * BLOCK;
+    const off = band + 0.7 + next(24) / 10;
+    const t = 2 + next((MAP_W - 4) * 10) / 10;
+    if (next(2) === 0) push(t, off);
+    else push(off, t);
+  }
+  return spots;
+}
+
+// clearcoatRoughness multiplier canvas: white keeps the broad damp sheen,
+// gutters pull tighter, puddle cores go near-mirror so neon reflections
+// break up the flat night glaze
+function buildWetMaskTexture(state: SimState): CanvasTexture {
+  const px = 1024;
+  const canvas = document.createElement('canvas');
+  canvas.width = px;
+  canvas.height = px;
+  const ctx = canvas.getContext('2d')!;
+  const s = px / MAP_W;
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, px, px);
+  ctx.strokeStyle = 'rgba(96,96,96,0.8)';
+  if (state.map.visualTest) {
+    ctx.lineWidth = s * 0.5;
+    ctx.strokeRect(36 * s, 36 * s, 26 * s, 26 * s);
+    ctx.strokeRect(42 * s, 42 * s, 13 * s, 13 * s);
+  } else {
+    ctx.lineWidth = s * 0.4;
+    for (const b of state.map.buildings)
+      ctx.strokeRect((b.x - 1) * s, (b.z - 1) * s, (b.w + 2) * s, (b.d + 2) * s);
+  }
+  for (const p of groundWetSpots(state)) {
+    ctx.save();
+    ctx.translate(p.x * s, p.z * s);
+    ctx.rotate(p.rot);
+    ctx.scale(p.rx, p.rz);
+    const core = p.deep ? 10 : 44;
+    const g = ctx.createRadialGradient(0, 0, 0, 0, 0, s);
+    g.addColorStop(0, `rgb(${core},${core},${core})`);
+    g.addColorStop(0.65, `rgb(${core + 60},${core + 60},${core + 60})`);
+    g.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(-s, -s, 2 * s, 2 * s);
+    ctx.restore();
+  }
+  const tex = new CanvasTexture(canvas);
+  tex.colorSpace = LinearSRGBColorSpace;
+  tex.anisotropy = 8;
+  return tex;
+}
+
 function buildGroundTexture(state: SimState): CanvasTexture {
   const px = 2048;
   const canvas = document.createElement('canvas');
@@ -1203,11 +1287,13 @@ function buildGroundTexture(state: SimState): CanvasTexture {
     const roadMin = 34;
     const roadMax = 62;
     const roadOuter = roadMax + 2;
-    ctx.fillStyle = '#343a44';
+    ctx.fillStyle = '#3a414c';
     ctx.fillRect(0, 0, px, px);
-    ctx.fillStyle = '#202631';
+    // lifted from the original #202631: the night tint multiply crushed the
+    // ring to near-black, hiding wear and wet detail (P2 ground DoD fail)
+    ctx.fillStyle = '#2b3240';
     ctx.fillRect(roadMin * s, roadMin * s, (roadOuter - roadMin) * s, (roadOuter - roadMin) * s);
-    ctx.fillStyle = '#555f70';
+    ctx.fillStyle = '#5f6a7d';
     ctx.fillRect(roadMin * s, roadMin * s, (roadOuter - roadMin) * s, 2 * s);
     ctx.fillRect(roadMin * s, roadMax * s, (roadOuter - roadMin) * s, 2 * s);
     ctx.fillRect(roadMin * s, roadMin * s, 2 * s, (roadOuter - roadMin) * s);
@@ -1305,6 +1391,44 @@ function buildGroundTexture(state: SimState): CanvasTexture {
     hazard(62, 34);
     hazard(34, 62);
     hazard(62, 62);
+    // wheel tracks, oil drips, gutter grime, and standing-water stains so the
+    // staging ring reads driven-on instead of freshly painted; tracks are
+    // light tire polish, not grime — dark marks vanish on the night road
+    const vnext = seededNext({ rng: 0x51ab });
+    ctx.fillStyle = 'rgba(150,170,200,0.09)';
+    const laneCenters = [37.5, 40.5, 56.75, 60.25];
+    for (const c of [36.95, 38.05, 39.95, 41.05, 56.2, 57.3, 59.7, 60.8]) {
+      ctx.fillRect(36 * s, (c - 0.16) * s, 26 * s, 0.32 * s);
+      ctx.fillRect((c - 0.16) * s, 36 * s, 0.32 * s, 26 * s);
+    }
+    for (let i = 0; i < 14; i++) {
+      const c = laneCenters[vnext(laneCenters.length)]!;
+      const t = 37 + vnext(230) / 10;
+      const x = vnext(2) === 0 ? t : c;
+      const z = x === t ? c : t;
+      const r = (0.35 + vnext(45) / 100) * s;
+      const g = ctx.createRadialGradient(x * s, z * s, 0, x * s, z * s, r);
+      g.addColorStop(0, 'rgba(8,9,12,0.55)');
+      g.addColorStop(1, 'rgba(8,9,12,0)');
+      ctx.fillStyle = g;
+      ctx.fillRect(x * s - r, z * s - r, 2 * r, 2 * r);
+    }
+    ctx.strokeStyle = 'rgba(10,12,16,0.4)';
+    ctx.lineWidth = s * 0.34;
+    ctx.strokeRect(36.2 * s, 36.2 * s, 25.6 * s, 25.6 * s);
+    ctx.strokeRect(41.8 * s, 41.8 * s, 13.4 * s, 13.4 * s);
+    for (const p of groundWetSpots(state)) {
+      ctx.save();
+      ctx.translate(p.x * s, p.z * s);
+      ctx.rotate(p.rot);
+      ctx.scale(p.rx, p.rz);
+      const g = ctx.createRadialGradient(0, 0, 0, 0, 0, s);
+      g.addColorStop(0, p.deep ? 'rgba(5,7,11,0.5)' : 'rgba(9,11,16,0.3)');
+      g.addColorStop(1, 'rgba(9,11,16,0)');
+      ctx.fillStyle = g;
+      ctx.fillRect(-s, -s, 2 * s, 2 * s);
+      ctx.restore();
+    }
     const tex = new CanvasTexture(canvas);
     tex.colorSpace = SRGBColorSpace;
     tex.anisotropy = 8;
@@ -1333,9 +1457,78 @@ function buildGroundTexture(state: SimState): CanvasTexture {
     ctx.fillStyle = `rgb(${v},${v},${v})`;
     ctx.fillRect(next(px), next(px), 2, 2);
   }
+  // broad value mottle so open asphalt is not one flat tone at block zoom
+  for (let i = 0; i < 48; i++) {
+    const mx = next(px);
+    const mz = next(px);
+    const r = (3 + next(60) / 10) * s;
+    const lift = next(2) === 0;
+    const g = ctx.createRadialGradient(mx, mz, 0, mx, mz, r);
+    g.addColorStop(0, lift ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.08)');
+    g.addColorStop(1, lift ? 'rgba(255,255,255,0)' : 'rgba(0,0,0,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(mx - r, mz - r, 2 * r, 2 * r);
+  }
+  // tire-polish wheel tracks down both lanes of every street band
+  ctx.fillStyle = 'rgba(28,28,28,0.3)';
+  for (let k = 0; k * BLOCK < MAP_W; k++) {
+    const b0 = k * BLOCK;
+    for (const off of [0.45, 1.55, 2.45, 3.55]) {
+      ctx.fillRect((b0 + off - 0.16) * s, 0, 0.32 * s, px);
+      ctx.fillRect(0, (b0 + off - 0.16) * s, px, 0.32 * s);
+    }
+  }
+  // re-paved patch rectangles with a darker sealed rim
+  for (let i = 0; i < 22; i++) {
+    const band = next(6) * BLOCK;
+    const off = band + 0.4 + next(20) / 10;
+    const t = 2 + next(MAP_W - 8);
+    const w = 1.2 + next(20) / 10;
+    const h = 0.8 + next(12) / 10;
+    const horiz = next(2) === 0;
+    const [x, z, rw, rh] = horiz ? [t, off, w, h] : [off, t, h, w];
+    ctx.fillStyle = next(2) === 0 ? 'rgba(20,20,20,0.22)' : 'rgba(200,200,200,0.1)';
+    ctx.fillRect(x * s, z * s, rw * s, rh * s);
+    ctx.strokeStyle = 'rgba(12,12,12,0.35)';
+    ctx.lineWidth = Math.max(1, s * 0.07);
+    ctx.strokeRect(x * s, z * s, rw * s, rh * s);
+  }
+  // oil drip stains pooled along lane centers
+  for (let i = 0; i < 30; i++) {
+    const band = next(6) * BLOCK;
+    const off = band + (next(2) === 0 ? 1 : 3) + (next(10) - 5) / 10;
+    const t = 2 + next(MAP_W - 4);
+    const horiz = next(2) === 0;
+    const ox = (horiz ? t : off) * s;
+    const oz = (horiz ? off : t) * s;
+    const r = (0.35 + next(50) / 100) * s;
+    const g = ctx.createRadialGradient(ox, oz, 0, ox, oz, r);
+    g.addColorStop(0, 'rgba(10,10,12,0.5)');
+    g.addColorStop(1, 'rgba(10,10,12,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(ox - r, oz - r, 2 * r, 2 * r);
+  }
   ctx.fillStyle = '#c2c2c2';
   for (const b of state.map.buildings)
     ctx.fillRect((b.x - 1) * s, (b.z - 1) * s, (b.w + 2) * s, (b.d + 2) * s);
+  // expansion joints across the aprons so sidewalks read as poured slabs;
+  // the plinth fill below repaints the building interior over these lines
+  ctx.strokeStyle = 'rgba(110,110,110,0.55)';
+  ctx.lineWidth = Math.max(1, s * 0.06);
+  for (const b of state.map.buildings) {
+    for (let jx = b.x + 0.5; jx < b.x + b.w + 1; jx += 1.5) {
+      ctx.beginPath();
+      ctx.moveTo(jx * s, (b.z - 1) * s);
+      ctx.lineTo(jx * s, (b.z + b.d + 1) * s);
+      ctx.stroke();
+    }
+    for (let jz = b.z + 0.5; jz < b.z + b.d + 1; jz += 1.5) {
+      ctx.beginPath();
+      ctx.moveTo((b.x - 1) * s, jz * s);
+      ctx.lineTo((b.x + b.w + 1) * s, jz * s);
+      ctx.stroke();
+    }
+  }
   // curb line where sidewalk meets asphalt
   ctx.strokeStyle = '#ececec';
   ctx.lineWidth = Math.max(1, s * 0.12);
@@ -1384,6 +1577,24 @@ function buildGroundTexture(state: SimState): CanvasTexture {
         ctx.fillRect(x0 + STREET * s + s * 0.5, z0 + o, s * 0.9, s * 0.45);
       }
     }
+  }
+  // gutter grime on the asphalt side of every curb line
+  ctx.strokeStyle = 'rgba(24,26,30,0.4)';
+  ctx.lineWidth = Math.max(1, s * 0.34);
+  for (const b of state.map.buildings)
+    ctx.strokeRect((b.x - 1.2) * s, (b.z - 1.2) * s, (b.w + 2.4) * s, (b.d + 2.4) * s);
+  // standing-water stains matched to the clearcoat wet mask
+  for (const p of groundWetSpots(state)) {
+    ctx.save();
+    ctx.translate(p.x * s, p.z * s);
+    ctx.rotate(p.rot);
+    ctx.scale(p.rx, p.rz);
+    const g = ctx.createRadialGradient(0, 0, 0, 0, 0, s);
+    g.addColorStop(0, p.deep ? 'rgba(14,15,18,0.42)' : 'rgba(20,21,24,0.26)');
+    g.addColorStop(1, 'rgba(20,21,24,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(-s, -s, 2 * s, 2 * s);
+    ctx.restore();
   }
   const tex = new CanvasTexture(canvas);
   tex.colorSpace = SRGBColorSpace;
@@ -2109,11 +2320,13 @@ function createOutskirts(
   light: (typeof LIGHTING)[number],
   wet: WetProfile,
 ): void {
+  // keep the apron dimmer and rougher than the playfield: it has no layout
+  // canvas, so any sheen reads as a flat glowing slab at map edges
   const apronMat = new MeshStandardMaterial({
-    color: new Color(light.ground).multiplyScalar(0.9),
-    roughness: Math.min(1, wet.groundRoughness + 0.12),
+    color: new Color(light.ground).multiplyScalar(0.7),
+    roughness: Math.min(1, wet.groundRoughness + 0.3),
     metalness: wet.groundMetalness,
-    envMapIntensity: wet.groundEnv * 0.75,
+    envMapIntensity: wet.groundEnv * 0.4,
   });
   applyAsphaltMaps(apronMat, Math.max(24, (MAP_W * 14) / 5));
   const apron = new Mesh(new PlaneGeometry(MAP_W * 14, MAP_W * 14), apronMat);
@@ -3047,6 +3260,7 @@ export function createGameScene(state: SimState, shadows = true): GameScene {
     metalness: wet.groundMetalness,
     clearcoat: wet.groundClearcoat,
     clearcoatRoughness: wet.groundClearcoatRoughness,
+    clearcoatRoughnessMap: buildWetMaskTexture(state),
     envMapIntensity: wet.groundEnv,
   });
   // denser tiling so microdetail survives iso orthographic distance
