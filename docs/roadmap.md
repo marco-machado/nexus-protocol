@@ -12,15 +12,15 @@ Last validated 2026-07-07 against the working tree: `npm test` green (57/57 acro
 
 **Ship bar for visuals is premium browser, not industry AAA.** Full ladder, definitions of done, and ordered tracks live in **`docs/presentation-roadmap.md`** (R3 premium browser → R4 AA aspiration later).
 
-**Current implementation is below R3.** Shipped base is procedural districts, post/IBL/PBR shells, image texture hooks, limited GLBs, VAT crowds. Systems visual rows below stay `[x]` for the interim stack.
+**Current implementation meets the R3 premium browser bar** on the procedural-kit stack: facade/roof kits, street dress, hero GLB agents, combat surface response (ground and wall decals), prop scatter, measured delivery. Remaining caveat: the mid-range Windows perf row is still pending a manual run. Systems visual rows below stay `[x]`.
 
-- [~] Presentation ladder (see `docs/presentation-roadmap.md`)
+- [x] Presentation ladder (see `docs/presentation-roadmap.md`)
   - [x] R1 Slice 1: wet PBR asphalt, Standard shells, night PMREM IBL
   - [x] R2 Slice 2: facade/asphalt/window/sign/billboard/portrait assets + loaders
   - [x] T1 night visibility: dusk/night ground/facade tints + asphalt grit retune (see `docs/presentation-roadmap.md`)
   - [x] T2 building geometry kit: facade setbacks/fins/ledges/posts + roof AC/antenna/tank/vent (campaign + visualtest)
   - [x] T3–T8 R3 tracks complete (street dress, heroes, props, combat residue, near crowds, delivery) — see `docs/presentation-roadmap.md`
-  - [ ] R3 Premium browser: geometry kits, tuned materials, hero agents, combat surface response, props, delivery
+  - [x] R3 Premium browser: geometry kits, tuned materials, hero agents, combat surface response, props, delivery
   - [ ] R4 AA aspiration (later): region kits, mid-field crowds, expanded catalogs, landmarks
 
 ## Status at a glance

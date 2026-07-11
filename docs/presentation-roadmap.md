@@ -4,7 +4,7 @@ Canonical track for **mission/world visual quality**. Design intent still lives 
 
 Status tokens match the main roadmap: `[x]` done, `[~]` partial, `[ ]` not started.
 
-Last updated 2026-07-08.
+Last updated 2026-07-10.
 
 ## Why this framing
 
@@ -132,7 +132,7 @@ Start only after R3 checklist is mostly green.
 | T3 | Street dress: campaign curbs/manholes/crosswalk bars (`cityDress.ts`) | Done |
 | T4 | Hero agents: GLB squad standard, per-slot trim, fall clip, portrait hues aligned | Done |
 | T5 | Vehicles/props: procedural tram ship path; car/tram Standard PBR; prop scatter | Done |
-| T6 | Combat residue: blood/debris pools + varied death poses (corporate-cost framing) | Done |
+| T6 | Combat residue: blood/debris pools + varied death poses + wall scorch/blood (breach soot, impact pocks, death spatter) (corporate-cost framing) | Done |
 | T7 | Near-field crowd Phong materials; far simplified | Done |
 | T8 | Portrait resize + asset budget notes; retired dead tram GLB load; R3 perf note | Done |
 | Systems look | Post, rain, alarm grade, nameplates, HUD, VAT crowds, car GLB | Done as interim base |

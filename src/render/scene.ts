@@ -1518,10 +1518,13 @@ function massStep(b: KitFootprint): MassStep {
     (((b.x * 73856093) ^ (b.z * 19349663) ^ ((b.w * 17 + b.d) * 83492791) ^ (b.h * 39916801)) >>>
       0);
   const stepped = massH >= 6 && b.w >= 3.2 && b.d >= 3.2;
-  const podFrac = stepped ? 0.48 + (h % 14) / 100 : 1;
+  // Keep the podium subordinate to the authored shaft family. The earlier
+  // near-half-height podiums dominated the block-zoom silhouette and made every
+  // family collapse back into the same rectangular stack.
+  const podFrac = stepped ? 0.3 + (h % 13) / 100 : 1;
   const podH = massH * podFrac;
   const towerH = Math.max(0.4, massH - podH);
-  const inset = stepped ? 0.75 + ((h >>> 8) % 35) / 100 : 0;
+  const inset = stepped ? 0.95 + ((h >>> 8) % 45) / 100 : 0;
   const tw = Math.max(1.6, b.w - inset * 2);
   const td = Math.max(1.6, b.d - inset * 2);
   return { stepped, podH, towerH, inset, tw, td, towerY0: b.y0 + podH };
@@ -1547,9 +1550,11 @@ function pushKitBox(
   sy: number,
   sz: number,
   ry = 0,
+  rx = 0,
+  rz = 0,
 ): void {
   dummy.position.set(x, y, z);
-  dummy.rotation.set(0, ry, 0);
+  dummy.rotation.set(rx, ry, rz);
   dummy.scale.set(sx, sy, sz);
   dummy.updateMatrix();
   out.push(dummy.matrix.clone());
@@ -1570,10 +1575,12 @@ function createFacadeKit(
   if (footprints.length === 0) return;
   const next = seededNext({ rng: (seed ^ 0xb1d6) || 1 });
   const setbacks: Matrix4[] = [];
+  const annexes: Matrix4[] = [];
   const trims: Matrix4[] = [];
   const posts: Matrix4[] = [];
   const tintNext = seededNext({ rng: (seed ^ 0x71a7) || 1 });
   const setbackColors: Color[] = [];
+  const annexColors: Color[] = [];
   const trimColors: Color[] = [];
   const postColors: Color[] = [];
   const bldgBase = new Color(light.bldg);
@@ -1584,14 +1591,94 @@ function createFacadeKit(
     const cx = b.x + b.w / 2;
     const cz = b.z + b.d / 2;
     const { stepped, podH, towerH, tw, td, towerY0 } = massStep(b);
-    const setTint = bldgBase.clone().multiplyScalar(1.02 + tintNext(10) / 100);
+    const family = Math.abs((b.x * 11 + b.z * 7 + b.w * 5 + b.d * 3 + seed) | 0) % 4;
+    const setTint = bldgBase.clone().multiplyScalar(1.2 + tintNext(12) / 100);
     const trimTint = new Color(0xc8d4e8).lerp(trimBase, 0.35).multiplyScalar(0.9 + tintNext(12) / 100);
-    const postTint = postBase.clone().multiplyScalar(0.95 + tintNext(12) / 100);
+    const postTint = postBase.clone().multiplyScalar(1.08 + tintNext(12) / 100);
 
     if (stepped) {
-      // shaft mass (podium is the hull mesh; this is the setback volume)
-      pushKitBox(setbacks, cx, towerY0 + towerH / 2, cz, tw, towerH, td);
-      setbackColors.push(setTint);
+      // Four large-form families. These own the silhouette; trim and rooftop
+      // dressing only reinforce them. Every volume remains inside the original
+      // simulation footprint.
+      if (family === 0) {
+        // Offset shaft with a deep service shoulder.
+        const dx = Math.min(tw * 0.16, 0.72) * (((b.x + seed) & 1) ? 1 : -1);
+        pushKitBox(setbacks, cx + dx, towerY0 + towerH / 2, cz, tw * 0.72, towerH, td * 0.82);
+        setbackColors.push(setTint);
+        pushKitBox(
+          annexes,
+          cx - dx * 1.65,
+          towerY0 + towerH * 0.33,
+          cz,
+          tw * 0.3,
+          towerH * 0.66,
+          td * 0.58,
+        );
+        annexColors.push(setTint.clone().multiplyScalar(0.8));
+      } else if (family === 1 && tw >= 3.6) {
+        // Twin slabs with a legible air gap and elevated connector.
+        const gap = Math.min(1.15, tw * 0.24);
+        const slabW = (tw - gap) / 2;
+        for (const sx of [-1, 1] as const) {
+          pushKitBox(
+            setbacks,
+            cx + sx * (gap / 2 + slabW / 2),
+            towerY0 + towerH / 2,
+            cz,
+            slabW,
+            towerH,
+            td * (sx > 0 ? 0.82 : 0.68),
+          );
+          setbackColors.push(setTint.clone().multiplyScalar(sx > 0 ? 1 : 0.84));
+        }
+        pushKitBox(
+          trims,
+          cx,
+          towerY0 + towerH * 0.68,
+          cz,
+          tw * 0.74,
+          0.62,
+          Math.max(0.72, td * 0.42),
+        );
+        trimColors.push(trimTint.clone().multiplyScalar(0.72));
+      } else if (family === 2) {
+        // Three terraces progressively bias toward one corner.
+        const dirX = ((b.x + seed) & 1) ? 1 : -1;
+        for (let tier = 0; tier < 3; tier++) {
+          const tierY0 = towerY0 + (towerH * tier) / 3;
+          const tierH = towerH / 3 + 0.06;
+          const tierW = tw * (1 - tier * 0.16);
+          const tierD = td * (1 - tier * 0.13);
+          pushKitBox(
+            setbacks,
+            cx + dirX * tier * tw * 0.055,
+            tierY0 + tierH / 2,
+            cz - dirX * tier * td * 0.035,
+            tierW,
+            tierH,
+            tierD,
+          );
+          setbackColors.push(setTint.clone().multiplyScalar(1 - tier * 0.08));
+        }
+      } else {
+        // Narrow monolith with a visibly carved side bay, expressed as two
+        // unequal vertical masses rather than a texture recess.
+        const majorW = tw * 0.68;
+        const sideW = tw * 0.2;
+        const sx = ((b.z + seed) & 1) ? 1 : -1;
+        pushKitBox(setbacks, cx - sx * tw * 0.11, towerY0 + towerH / 2, cz, majorW, towerH, td);
+        setbackColors.push(setTint);
+        pushKitBox(
+          annexes,
+          cx + sx * (tw / 2 - sideW / 2),
+          towerY0 + towerH * 0.29,
+          cz,
+          sideW,
+          towerH * 0.58,
+          td * 0.72,
+        );
+        annexColors.push(setTint.clone().multiplyScalar(0.7));
+      }
       // mechanical penthouse on the shaft
       if (towerH >= 2.5) {
         const ph = 1.1 + next(14) / 10;
@@ -1607,6 +1694,22 @@ function createFacadeKit(
         );
         setbackColors.push(setTint.clone().multiplyScalar(0.92));
       }
+
+      // One biased service bay per tower makes the mass asymmetrical at block
+      // zoom. It stays inside the sim footprint: only the upper render shell
+      // steps back, so this bay reclaims part of the podium envelope.
+      const alongX = ((b.x * 31 + b.z * 17 + seed) & 1) === 0;
+      const bayH = Math.min(podH * 0.62, 4.6 + next(18) / 10);
+      const bayW = alongX ? Math.min(2.2, b.w * 0.28) : b.w * 0.58;
+      const bayD = alongX ? b.d * 0.58 : Math.min(2.2, b.d * 0.28);
+      const bayX = alongX
+        ? cx + (((b.x + seed) & 1) ? 1 : -1) * (b.w / 2 - bayW / 2 - 0.12)
+        : cx;
+      const bayZ = alongX
+        ? cz
+        : cz + (((b.z + seed) & 1) ? 1 : -1) * (b.d / 2 - bayD / 2 - 0.12);
+      pushKitBox(annexes, bayX, towerY0 + bayH / 2 - 0.08, bayZ, bayW, bayH, bayD);
+      annexColors.push(setTint.clone().multiplyScalar(0.82));
     }
 
     // corner posts on podium, thick enough to read at block zoom
@@ -1637,6 +1740,48 @@ function createFacadeKit(
       ] as const) {
         pushKitBox(posts, px, tPostY, pz, 0.28, tPostH, 0.28);
         postColors.push(postTint);
+      }
+
+      // Paired full-height buttresses frame the shaft as structure rather than
+      // decoration. Their depth is deliberately chunky enough to read through
+      // rain and the night grade.
+      const buttressW = 0.48;
+      const buttressD = 0.72;
+      const faceZ = ((b.x + b.z + seed) & 1) ? -1 : 1;
+      for (const sx of [-1, 1] as const) {
+        pushKitBox(
+          posts,
+          cx + sx * Math.max(0.45, tw * 0.34),
+          towerY0 + towerH * 0.47,
+          cz + faceZ * (td / 2 + buttressD * 0.34),
+          buttressW,
+          towerH * 0.94,
+          buttressD,
+        );
+        postColors.push(postTint.clone().multiplyScalar(0.78));
+      }
+
+      if (family === 3) {
+        // Sloped exoskeleton braces create a strong A-frame read. They are
+        // broad structural members, not decorative facade fins.
+        const braceH = towerH * 0.82;
+        const braceLen = Math.hypot(braceH, tw * 0.38);
+        const tilt = Math.atan2(tw * 0.38, braceH);
+        for (const sx of [-1, 1] as const) {
+          pushKitBox(
+            posts,
+            cx + sx * tw * 0.31,
+            towerY0 + braceH / 2,
+            cz + td * 0.5 + 0.26,
+            0.42,
+            braceLen,
+            0.46,
+            0,
+            0,
+            sx * tilt,
+          );
+          postColors.push(postTint.clone().multiplyScalar(0.72));
+        }
       }
     }
 
@@ -1738,6 +1883,7 @@ function createFacadeKit(
   };
 
   const setbackMat = concreteMaterial(wet, 1.05);
+  const annexMat = concreteMaterial(wet, 0.92);
   const trimMat = new MeshStandardMaterial({
     color: 0xffffff,
     roughness: Math.min(1, wet.concreteRoughness + 0.04),
@@ -1754,6 +1900,7 @@ function createFacadeKit(
   applyFacadeMaps(postMat);
 
   addInstanced(setbacks, setbackColors, setbackMat, true);
+  addInstanced(annexes, annexColors, annexMat, true);
   addInstanced(trims, trimColors, trimMat, false);
   addInstanced(posts, postColors, postMat, true);
 }
@@ -1824,6 +1971,7 @@ function createRoofClutter(
     new MeshStandardMaterial({ color: 0x454d5c, roughness: 0.55, metalness: 0.6, envMapIntensity: 0.7 }),
   ];
   const placed: Matrix4[][] = [[], [], [], []];
+  const crowns: Matrix4[] = [];
   for (const b of footprints) {
     const area = b.w * b.d;
     // density scales with roof area; large towers get a full HVAC cluster
@@ -1846,6 +1994,18 @@ function createRoofClutter(
       dummy.updateMatrix();
       placed[kind]!.push(dummy.matrix.clone());
     }
+    const step = massStep(b);
+    if (step.stepped && step.towerH >= 3.4) {
+      // A low truncated pyramid breaks the universal flat-roof silhouette.
+      // Four sides keep it cheap; the broad base reads as a mechanical crown,
+      // not a decorative cone, at the isometric camera's block zoom.
+      const crownH = Math.min(2.1, 0.85 + step.towerH * 0.11);
+      dummy.position.set(b.x + b.w / 2, b.h + 1.2 + crownH / 2, b.z + b.d / 2);
+      dummy.rotation.set(0, Math.PI / 4, 0);
+      dummy.scale.set(Math.max(1.4, step.tw * 0.34), crownH, Math.max(1.4, step.td * 0.34));
+      dummy.updateMatrix();
+      crowns.push(dummy.matrix.clone());
+    }
   }
   dummy.rotation.set(0, 0, 0);
   dummy.scale.set(1, 1, 1);
@@ -1857,6 +2017,22 @@ function createRoofClutter(
     if (shadows) mesh.castShadow = true;
     scene.add(mesh);
   });
+  if (crowns.length > 0) {
+    const crownMesh = new InstancedMesh(
+      new CylinderGeometry(1, 1.38, 1, 4, 1, false),
+      new MeshStandardMaterial({
+        color: 0x303a49,
+        roughness: 0.48,
+        metalness: 0.58,
+        envMapIntensity: 0.78,
+      }),
+      crowns.length,
+    );
+    crowns.forEach((m, i) => crownMesh.setMatrixAt(i, m));
+    crownMesh.instanceMatrix.needsUpdate = true;
+    if (shadows) crownMesh.castShadow = true;
+    scene.add(crownMesh);
+  }
 }
 
 function createStorefrontSigns(
@@ -2236,10 +2412,13 @@ function createVisualTestDistrict(
   const next = seededNext({ rng: ((state.mapSeed | 0) ^ 0xd157) || 1 });
   const hulls: DistrictHull[] = [];
   for (let side = 0; side < 4; side++) {
-    for (let t = 24; t < 73; t += 8 + next(5)) {
-      const w = 5 + next(5);
-      const d = 5 + next(5);
-      hulls.push({ x: 26 + next(3), z: t, w, d, h: 7 + next(12), side });
+    for (let t = 23; t < 74; t += 10 + next(5)) {
+      // Fewer, larger perimeter masses make the authored families legible at
+      // the actual tactical camera instead of dissolving into a picket fence
+      // of small repeated towers.
+      const w = 7 + next(5);
+      const d = 7 + next(5);
+      hulls.push({ x: 25 + next(3), z: t, w, d, h: 12 + next(13), side });
     }
   }
   const hullMesh = new InstancedMesh(

@@ -33,6 +33,8 @@ The VAT crowd rows were measured 2026-07-05 after the Phase D skeletal-crowd pas
 
 `tests/flashmobDensity.test.ts` (committed, runs in `npm test`) measures the worst-case pathfinding load flagged in the roadmap M2 note: 322 persuaded NPCs converging on one corner cell through per-unit A*. Result on Apple Silicon: worst tick 5.24 ms, p99 4.05 ms, mean 0.39 ms against the 50 ms budget, 9.5 findPath calls/tick, 107 expansions/call, zero MAX_EXPAND aborts, full convergence (median distance 0 cells after 600 ticks). Verdict: per-unit A* holds at flashmob density; the flow-field rewrite stays unbuilt. The test asserts worst < 25 ms, mean < 5 ms, zero aborts, and convergence, so it doubles as a regression tripwire.
 
+The worst-tick assertion is wall-clock and load-sensitive: under concurrent host CPU load the probe can breach the 25 ms bound (observed 35 ms while parallel tooling saturated the cores) while mean/p99 stay in budget. Re-run the file in isolation before treating a failure as a regression.
+
 ## Notes
 
 - T1 night visibility (2026-07-08): render-only retune in `src/render/scene.ts` — dusk/night `LIGHTING.ground/bldg/floor` lifted into a mid-dark band, rain ground darken softened to 0.92, asphalt `normalScale` 1.15 with denser playfield/apron tiling, facade/hull/outskirts `instanceColor` multiplies raised so albedo panels read. Eye-check targets: `?webgl&visualtest` (night soaked staging) and `?perf&tod=2&rain=1`. No draw-call or geometry change; no new fps row required.
