@@ -11,6 +11,7 @@ This file provides guidance when working with code in this repository.
 - Run a single test file: `npx vitest run tests/determinism.test.ts`
 - Visual test map: start `npm run dev`, then open `http://127.0.0.1:5173/?webgl&visualtest` for the cars/agents-only square-road staging scene.
 - Perf stress scene: open `/?perf` (invulnerable squad, dense crowd, `?npcs=`/`?tod=`/`?rain=` overrides); `docs/perf.md` records the measured budgets.
+- Debug scene: open `/?debug` for a real generated district map with just the 4 (invulnerable) agents, no NPCs/vehicles/civilians.
 
 There is no lint/format tooling configured in this repo.
 

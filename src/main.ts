@@ -69,6 +69,26 @@ async function main(): Promise<void> {
     return;
   }
 
+  if (params.has('debug')) {
+    const specs = Array.from({ length: 4 }, () => {
+      const spec = defaultSpec();
+      spec.maxHp = 100000;
+      spec.weapons = [{ wid: 0, ammo: 100000 }];
+      return spec;
+    });
+    void runMission(
+      renderer,
+      0xd00d,
+      0,
+      specs,
+      hud,
+      'DEBUG: map and agents',
+      { debug: true, tod: 2, weather: 0 },
+      { civCount: 0 },
+    );
+    return;
+  }
+
   const game = new Game(renderer, new Screens(screenEl), hud);
   game.start();
 }

@@ -47,6 +47,7 @@ export interface MissionParams {
   tod?: number;
   weather?: number;
   visualTest?: boolean;
+  debug?: boolean;
 }
 
 function enemyWid(idx: number, doctrine: number, tier: number, elite: boolean): number {
@@ -215,6 +216,28 @@ function setupVisualTestMission(s: SimState, specs: AgentSpec[]): SimState {
   return s;
 }
 
+function setupDebugMission(s: SimState, specs: AgentSpec[]): SimState {
+  const spawnCell = nearestWalkable(s.map, cellIdx(MAP_W >> 1, MAP_H - 3));
+  const sx = spawnCell % MAP_W;
+  const sz = (spawnCell / MAP_W) | 0;
+  // Keep the exfil far from the squad so this sandbox never auto-completes: a
+  // type-0 (assassinate) mission with no targets is vacuously "objective done",
+  // so an exfil the squad sits on would latch STATUS_WON and freeze the sim.
+  const exfilCell = nearestWalkable(s.map, cellIdx(MAP_W >> 1, 3));
+  s.mission.exfilX = ((exfilCell % MAP_W) << 16) + (1 << 15);
+  s.mission.exfilZ = (((exfilCell / MAP_W) | 0) << 16) + (1 << 15);
+  s.mission.exfilR = 1 << 16;
+
+  const squad = specs.length > 0 ? specs : [defaultSpec()];
+  for (let i = 0; i < squad.length; i++) {
+    const cell = nearestWalkable(s.map, cellIdx(Math.min(MAP_W - 1, sx - 1 + i), Math.max(0, sz - 1)));
+    const cx = cell % MAP_W;
+    const cz = (cell / MAP_W) | 0;
+    s.agents.push(createAgent(i, (cx << 16) + (1 << 15), (cz << 16) + (1 << 15), squad[i]!));
+  }
+  return s;
+}
+
 function spawnEnemySquads(
   s: SimState,
   ax: number,
@@ -264,6 +287,7 @@ export function createMission(
   s.env.tod = params.tod ?? 0;
   s.env.rain = params.weather ?? 0;
   if (params.visualTest) return setupVisualTestMission(s, specs);
+  if (params.debug) return setupDebugMission(s, specs);
 
   const spawnCell = nearestWalkable(s.map, cellIdx(MAP_W >> 1, MAP_H - 3));
   const sx = spawnCell % MAP_W;
