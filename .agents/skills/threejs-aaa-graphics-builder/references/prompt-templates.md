@@ -17,6 +17,7 @@ Target art direction:
 Required pass:
 - Score current screenshots with `threejs-aaa-graphics-builder/references/visual-scorecard.md`.
 - Add or improve the graphics architecture from `references/implementation-blueprint.md`.
+- Add the technical art brief from `references/technical-art.md`: material kit, shader/VFX purpose, instancing/LOD/culling, imported asset cleanup, renderer budget, mobile tradeoffs.
 - Build material library, procedural texture/decal helpers, model factories, world prop kit, VFX system, lighting/render pipeline, and diagnostics.
 - Use `threejs-3d-generator` for high-value hero/player, character, creature, vehicle, building, weapon, pickup, boss, rigging, animation, texture, or conversion needs when procedural code is not enough.
 - Use `threejs-image-generator` for 2D concepts, T-pose/A-pose references, texture references, decals, logos, icons, GUI art, skies, backgrounds, or image-to-3D inputs.
@@ -32,7 +33,7 @@ Do not count as completion:
 Verification:
 - Capture active gameplay desktop and mobile screenshots.
 - Report visual score before/after.
-- Report draw calls, triangles, geometries, textures, and material count when available.
+- Report draw calls, triangles, geometries, textures, material count, DPR cap, shadow/post settings, and instancing/LOD/culling decisions when available.
 - Run build, browser, console/page error, nonblank canvas, interaction, and responsive checks.
 - Continue until every scorecard category is at least 2, or report exactly why the target was not reached.
 
@@ -94,6 +95,32 @@ Verification:
 - Check console/page errors and nonblank canvas pixels.
 - Compare renderer calls/triangles/textures before and after when practical.
 - Play the core loop and confirm effects do not hide gameplay information.
+
+---
+
+# Technical Art Pass Prompt
+
+Use `threejs-aaa-graphics-builder` for a technical-art pass on this Three.js game.
+
+Current visual/performance risk:
+- 
+
+Target art direction:
+- 
+
+Required pass:
+- Load `references/technical-art.md`.
+- Write a technical art brief: hero surfaces, support surfaces, material kit, VFX language, lighting stack, render budget, asset strategy, mobile constraint.
+- Convert art direction into renderable systems: materials, decals/trim, shaders, VFX, LOD, instancing, culling, imported asset cleanup.
+- Make threats, rewards, player state, and objectives readable by shape/motion/value, not color alone.
+- Keep API/generated asset calls out of browser runtime.
+
+Verification:
+- Capture active desktop and mobile screenshots.
+- Report renderer diagnostics: calls, triangles, geometries, textures, material count when available, DPR cap, shadow/post settings.
+- Report imported/generated asset diagnostics when relevant: file size, bounds, scale, orientation, collision proxy, triangles/materials/textures/clips when available.
+- Report VFX readability: trigger, duration, player-facing meaning, and reduced-motion concern if applicable.
+- State what was optimized, what was intentionally left rich, and remaining performance risks.
 
 ---
 
@@ -184,3 +211,26 @@ Verification:
 - Report renderer diagnostics.
 - Confirm no console/page errors and no obvious collision/occlusion issues.
 - If the world is still dominated by stretched boxes, continue the prop-kit pass.
+
+---
+
+# Fresh-Eyes Scorecard Review Prompt
+
+Use for the independent review pass required by `references/visual-scorecard.md` for premium/AAA/showcase claims. Give the reviewer ONLY the inputs below — no build history, no prior scores, no description of the work performed.
+
+Inputs:
+- The COMPLETE screenshot capture set — every captured state, desktop and mobile, never a hand-picked subset: <paths>
+- Scorecard rubric: `threejs-aaa-graphics-builder/references/visual-scorecard.md`
+- Calibration anchors: `threejs-aaa-graphics-builder/assets/scorecard-anchors/`
+- Inspector metrics JSON: <paths>
+
+Task:
+- Score all ten scorecard categories from the screenshots alone, using the 0-3 anchors and calibration images.
+- Cross-check scores against the metrics (colorEntropyBits, edgeDensity, luminance.contrast, dominantColorShare, renderBudget) and flag any score the numbers contradict.
+- List every automatic failure you can see in the screenshots.
+- Do not give benefit of the doubt: if a surface could be a 1 or a 2, score it 1 and say what visible change would earn the 2.
+
+Report:
+- Ten category scores with one-sentence visual evidence each.
+- Automatic failures observed.
+- The three highest-impact changes to raise the lowest scores.

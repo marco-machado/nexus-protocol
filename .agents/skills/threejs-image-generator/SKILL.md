@@ -1,6 +1,6 @@
 ---
 name: threejs-image-generator
-description: "Generate and edit 2D image assets for Three.js games using the OpenAI Codex CLI's built-in image generation tool. Use for concept sheets, image-to-3D inputs, texture references, sky/background plates, decals, logos, icons, GUI art, title/menu art, thumbnails, marketing stills, and source images that feed threejs-3d-generator. Also use for direct image editing when the user provides an image path."
+description: "Generate and edit 2D image assets for Three.js games using Google's Gemini image API. Use for concept sheets, image-to-3D inputs, texture references, sky/background plates, decals, logos, icons, GUI art, title/menu art, thumbnails, marketing stills, and source images that feed threejs-3d-generator. Also use for direct image editing when the user provides an image path."
 ---
 
 # Three.js Image Generator
@@ -9,7 +9,9 @@ description: "Generate and edit 2D image assets for Three.js games using the Ope
 
 Create game-useful 2D assets and references for Three.js projects. This skill is the image-generation layer for the Three.js game system: it produces concepts, textures, decals, UI art, and 2D inputs that can be handed to `threejs-3d-generator` for image-to-3D model creation.
 
-Provider: OpenAI Codex CLI's built-in image_gen tool, invoked via `codex exec`.
+Provider: Google's Gemini image API.
+
+Resolve `<this-skill-dir>` in the commands below in this order: `~/.claude/skills/threejs-image-generator`, `~/.codex/skills/threejs-image-generator`, `~/.agents/skills/threejs-image-generator`, or repo `skills/threejs-image-generator`.
 
 ## When To Use
 
@@ -23,33 +25,41 @@ Use this skill before procedural-only fallback when a Three.js game needs:
 
 For premium/AAA/showcase graphics work, generate at least one relevant image for high-value 2D surfaces or image-to-3D inputs unless the credential probe or a real generation attempt shows a blocker.
 
-## Authentication
+## API Key
 
-Never store API keys in skill files or browser/game code. Codex CLI authenticates itself (ChatGPT login or a configured API key) — no separate key handling is needed here. Before declaring image generation unavailable in a `threejs-game-director` or `threejs-aaa-graphics-builder` workflow, confirm Codex is logged in and paste its literal output:
+Never store API keys in skill files or browser/game code, and never paste a key value into a report. The script reads `--api-key` or `GEMINI_API_KEY`.
+
+Step 0, before declaring the key unavailable: run this skill's own probe and paste its literal output into the report.
 
 ```bash
-codex login status
+uv run <this-skill-dir>/scripts/generate_image.py probe   # prints GEMINI_API_KEY=SET|MISSING
 ```
 
-Expect something like `Logged in using ChatGPT` (or an API-key-based login). If this reports not logged in, stop and report the blocker rather than guessing.
+`GEMINI_API_KEY=MISSING` is only a valid skip/blocker reason when this output is shown. Keys defined only in a shell profile can be absent from the process env; if the plain probe prints MISSING unexpectedly, wrap it: `zsh -lc 'source ~/.zprofile 2>/dev/null || true; source ~/.zshrc 2>/dev/null || true; uv run <this-skill-dir>/scripts/generate_image.py probe'`. When the director skill is loaded, prefer `threejs-game-director/scripts/probe_asset_credentials.sh`, which probes all three asset keys at once.
 
 ## Tool Script
 
-Run from the user's current project directory so output lands in the game project. Codex CLI is a single global binary, so the same command works regardless of which agent is driving it:
+Run from the user's current project directory so output lands in the game project:
 
 ```bash
-codex exec -s workspace-write "Generate an image: your image description. Save it as assets/concepts/output.png in the current directory."
+uv run <this-skill-dir>/scripts/generate_image.py --prompt "your image description" --filename assets/concepts/output.png --resolution 2K
 ```
 
-Edit an existing image (attach the source with `-i/--image`):
+Edit an existing image:
 
 ```bash
-codex exec -s workspace-write -i assets/concepts/ship.png "Edit this image: turn it into a battle-worn red racing livery with clearer material zones. Save the result as assets/concepts/ship-red-livery.png."
+uv run <this-skill-dir>/scripts/generate_image.py \
+  --input-image assets/concepts/ship.png \
+  --prompt "turn this into a battle-worn red racing livery with clearer material zones" \
+  --filename assets/concepts/ship-red-livery.png \
+  --resolution 2K
 ```
 
-Resolution: there is no `--resolution` flag — state the desired size/aspect directly in the prompt text (e.g. "at 1024x1024" for quick concepts/icons, "1536x1024 landscape" for a default production reference, larger explicit dimensions for hero splash/title art or high-detail texture references). Codex's image tool produces the closest size its underlying model supports; confirm the actual output dimensions from the saved file rather than assuming they match the request.
+Resolution mapping:
 
-`codex exec` refuses to run outside a git repository unless `--skip-git-repo-check` is added; game projects are normally git repos, so this only matters when generating into a scratch/non-repo directory.
+- `1K`: quick concepts, icons, draft sheets.
+- `2K`: default production reference for image-to-3D, textures, backgrounds, UI panels. This is also the script default when `--resolution` is omitted.
+- `4K`: hero splash/title art, high-detail texture references, large sky/background plates.
 
 ## Prompt Patterns
 
@@ -96,7 +106,7 @@ Create a wide game background plate of [environment]. Layered depth, readable ho
 
 Report:
 
-- `codex login status` output or command blocker.
+- Credential probe output or command blocker.
 - Prompt and purpose.
 - Output path.
 - Resolution.

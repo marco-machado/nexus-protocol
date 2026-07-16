@@ -20,6 +20,13 @@ BASE_REQUIRED = [
     "qa/release",
 ]
 
+# Required by default; skip with --no-design for debug/perf/QA-only reports.
+DESIGN_REQUIRED = [
+    "game design brief",
+    "core loop",
+    "level/encounter plan",
+]
+
 PHYSICS_MARKERS = [
     "physics engine",
     "timestep",
@@ -37,6 +44,8 @@ PREMIUM_SCORECARD = [
     "vfx/motion",
     "ui/hud",
     "performance evidence",
+    "measured evidence",
+    "fresh-eyes review",
     "average",
     "automatic failures",
 ]
@@ -52,6 +61,16 @@ PREMIUM_ASSET_SOURCING = [
     "hero/player",
     "world/sky/background",
     "materials/textures/decals",
+]
+
+PREMIUM_TECHNICAL_ART = [
+    "technical art",
+    "render budget",
+    "vfx readability",
+]
+
+PREMIUM_VISUAL_HARNESS = [
+    "visual test harness",
 ]
 
 PREMIUM_AUDIO = [
@@ -100,6 +119,17 @@ def normalize(text: str) -> str:
     text = text.replace("reference loading ledger", "reference ledger")
     text = text.replace("asset sourcing ledger", "external asset sourcing")
     text = text.replace("external asset ledger", "external asset sourcing")
+    text = text.replace("gameplay brief", "game design brief")
+    text = text.replace("design brief", "game design brief")
+    text = text.replace("playable loop", "core loop")
+    text = text.replace("level plan", "level/encounter plan")
+    text = text.replace("encounter plan", "level/encounter plan")
+    text = text.replace("level and encounter plan", "level/encounter plan")
+    text = text.replace("technical-art", "technical art")
+    text = text.replace("technical art budget", "technical art render budget")
+    text = text.replace("render-budget", "render budget")
+    text = text.replace("visual harness", "visual test harness")
+    text = text.replace("screenshot baseline", "visual test harness")
     text = text.replace("threejs-3d-generator", "3d generator")
     text = text.replace("threejs-image-generator", "image generator")
     text = text.replace("threejs-audio-generator", "audio generator")
@@ -118,11 +148,25 @@ def normalize(text: str) -> str:
     text = text.replace("qa and release", "qa/release")
     text = text.replace("qa release", "qa/release")
     text = text.replace("page errors", "page error")
+    text = text.replace("fresh eyes review", "fresh-eyes review")
+    text = text.replace("fresh-eyes scorecard review", "fresh-eyes review")
+    text = text.replace("independent reviewer scores", "fresh-eyes review")
+    text = text.replace("adversarial self-review", "fresh-eyes review")
+    text = text.replace("measured visual evidence", "measured evidence")
+    text = text.replace("inspector metrics", "measured evidence")
     return re.sub(r"\s+", " ", text)
 
 
+def marker_pattern(marker: str) -> re.Pattern[str]:
+    """Match markers on word boundaries so short markers like 'ui' cannot be
+    satisfied incidentally by substrings of unrelated words (e.g. 'build')."""
+    prefix = r"\b" if re.match(r"\w", marker) else ""
+    suffix = r"\b" if re.search(r"\w$", marker) else ""
+    return re.compile(prefix + re.escape(marker) + suffix)
+
+
 def missing_markers(text: str, markers: list[str]) -> list[str]:
-    return [marker for marker in markers if marker not in text]
+    return [marker for marker in markers if not marker_pattern(marker).search(text)]
 
 
 def has_external_output_evidence(text: str) -> bool:
@@ -163,6 +207,11 @@ def main() -> int:
         action="store_true",
         help="Require generated/integrated audio evidence or a real blocker.",
     )
+    parser.add_argument(
+        "--no-design",
+        action="store_true",
+        help="Skip game-design markers (design brief, core loop, level/encounter plan) for debug/perf/QA-only reports.",
+    )
     args = parser.parse_args()
 
     report_path = Path(args.report)
@@ -172,10 +221,14 @@ def main() -> int:
 
     text = normalize(report_path.read_text(encoding="utf-8"))
     missing = missing_markers(text, BASE_REQUIRED)
+    if not args.no_design:
+        missing.extend(missing_markers(text, DESIGN_REQUIRED))
 
     if args.premium:
         missing.extend(missing_markers(text, PREMIUM_SCORECARD))
         missing.extend(missing_markers(text, PREMIUM_ASSET_SOURCING))
+        missing.extend(missing_markers(text, PREMIUM_TECHNICAL_ART))
+        missing.extend(missing_markers(text, PREMIUM_VISUAL_HARNESS))
         missing.extend(missing_markers(text, VERIFICATION_MARKERS))
         if not has_external_output_evidence(text) and not has_external_blocker(text):
             missing.append("real external asset evidence or blocker")
