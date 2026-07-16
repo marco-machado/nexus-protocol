@@ -10,7 +10,11 @@ Last validated 2026-07-07 against the working tree: `npm test` green (57/57 acro
 
 `docs/game-design.md` v2.1 and constitution v2.0.0 set the mission/world presentation target to high-fidelity materials and authored density, with the live UI still cold command-software. The constitution no longer treats mid-range iGPU 60 fps at ~150 NPCs or silhouette-over-fidelity as absolute ship gates.
 
-**Ship bar for visuals is premium browser, not industry AAA.** Full ladder, definitions of done, and ordered tracks live in **`docs/presentation-roadmap.md`** (R3 premium browser → R4 AA aspiration later).
+**Ship bar for visuals was premium browser at this pivot; superseded by the 2026-07-16 pivot above (browser AAA, R5).** Full ladder, definitions of done, and ordered tracks live in **`docs/presentation-roadmap.md`**.
+
+## Design intent pivot (2026-07-16)
+
+`docs/game-design.md` v3.0 and constitution 2.1.0 (`AGENTS.md`) raise the ship bar to **browser AAA** (R5 in `docs/presentation-roadmap.md`): the mission frame, feel, audio, and interface read as AAA game quality from a shareable link, gated by measured checks, never industry AAA package scope. The full approved decision record is `docs/game-design-aaa-draft.md` (suggestions 1 to 48). The systems and meta tracks are registered in the "AAA upgrade" section below; the visual tracks live on the presentation ladder (R4/R5).
 
 **R3 premium browser is ship-closed at the DoD level.** The T1–T8 checklist landed first; a human pass against the seven R3 DoD lines then failed four of them (city mass, ground, combat, set dressing), and the max-polish set P1–P5 flipped every fail: the second human DoD pass (2026-07-11) judged all seven lines green. The decision record lives on the wayfinder map, GitHub issue #2, and its child tickets; stills under `output/wayfinder-p1/` through `output/wayfinder-p6/`. Remaining caveat: the mid-range Windows perf row is still pending a manual run. Systems visual rows below stay `[x]`.
 
@@ -22,7 +26,8 @@ Last validated 2026-07-07 against the working tree: `npm test` green (57/57 acro
   - [x] T3–T8 R3 tracks complete (street dress, heroes, props, combat residue, near crowds, delivery) — see `docs/presentation-roadmap.md`
   - [x] R3 Premium browser: geometry kits, tuned materials, hero agents, combat surface response, props, delivery
   - [x] R3 DoD ship-close: max polish P1–P5 plus second human DoD pass 7/7 green (wayfinder map, issue #2, 2026-07-11)
-  - [ ] R4 AA aspiration (later): region kits, mid-field crowds, expanded catalogs, landmarks
+  - [ ] R4 AA density: region kits, mid-field crowds, expanded catalogs, landmarks (absorbed into the R5 tracks)
+  - [ ] R5 Browser AAA (ship bar): region identity, wet-city stack, architecture grammars, one image pipeline, uniform hero chassis, destruction payoff, hybrid audio, measured gates (`docs/presentation-roadmap.md`)
 
 ## Status at a glance
 
@@ -34,7 +39,8 @@ Last validated 2026-07-07 against the working tree: `npm test` green (57/57 acro
 | C: World and campaign | 40 territories, 3 rival doctrines, sieges, acts 1-3, NG+, economy | Done |
 | D: City simulation | Vehicles, destructible mid-layer, day/night/weather, GPU crowds | Done |
 | Presentation (R3) | Premium browser mission look; see `docs/presentation-roadmap.md` | Done (DoD 7/7, 2026-07-11; wayfinder map issue #2); R4 AA later |
-| Presentation (R4) | AA aspiration density/variety | Later |
+| Presentation (R4/R5) | AA density, then browser AAA ship bar; see `docs/presentation-roadmap.md` | Not started |
+| AAA upgrade (GDD v3.0) | R3F migration, contract expansion, uniform assets, region identity, intent cursor and camera, R&D board, narrative layer | Not started (approved 2026-07-16) |
 | E: Multiplayer and accounts | Co-op, async PvP, accounts, cloud saves | Not started (groundwork only) |
 | F: Platform and release | Input remap, gamepad, touch, load budget, accessibility audit | Not started |
 
@@ -151,6 +157,58 @@ Single remaining item before Phase A closes: the manual perf run on a mid-range 
 - [x] Determinism preserved through the phase: golden hash re-pinned per intentional sim change, self-equality replays cover vehicle commands and night-rain stealth
 - [x] Premium graphics pass: out-of-bounds skyline ring, neon sign-spill discs, pooled muzzle/impact flashes (`docs/perf.md` notes)
 
+## AAA upgrade (GDD v3.0)
+
+Approved 2026-07-16; decision record `docs/game-design-aaa-draft.md` (suggestions 1 to 48, referenced below as "draft N"). Systems and meta tracks only; the visual tracks live on the presentation ladder (R4/R5 in `docs/presentation-roadmap.md`). Several tracks intentionally change sim behavior (new commands, new mission types, quirk retirement), so golden-hash re-pins with rationale are expected per constitution Principle I.
+
+### Framework (draft 4, 5)
+- [ ] R3F stage 1: React owns the meta screens (replaces `innerHTML` templates in `src/app/screens.ts`)
+- [ ] R3F stage 2: canvas wrap of the existing renderer; the fixed-tick accumulator in `src/app/missionRunner.ts` keeps loop ownership
+- [ ] R3F stage 3: scene lifecycle componentization (mission setup/teardown, palette, settings reactivity); per-frame systems stay imperative
+
+### Contracts (draft 9 to 13, 26 to 29)
+- [ ] Objective-card standard: visible objective, live success condition, enumerated failure modes, telegraphed warnings
+- [ ] Refit the 7 existing types to the standard (type-specific failure modes per GDD 9.2)
+- [ ] Six new contract types: Sabotage, Convoy Interception, Escort, Asset Recovery, Blackout, Counter-Broadcast
+- [ ] Distinct interaction verbs per objective (breach, hack-and-hold, persuade, carry, place, drive)
+- [ ] Compounding objectives and optional clauses with riders
+- [ ] Doctrine matrix enforced per contract type (at least three of four doctrines viable); intel states district reads
+- [ ] Stim-forward contract modifiers in mission generation
+- [ ] Debrief as performance review (approach metrics, riders, HR-language counterfactual)
+
+### Agents as assets (draft 14 to 16)
+- [ ] Uniform operative chassis, male and female variants; look varies only by loadout and faction trim
+- [ ] Retire veteran quirks (`QUIRKS` in `src/app/meta.ts`, `buildSpec`); Service Records stay as ledger flavor
+- [ ] Augments read on the body (chassis attachments by slot and version)
+
+### World and input (draft 17 to 25)
+- [ ] Region grammar parameters and landmark anchor placement in map generation (render kits live on the presentation ladder)
+- [ ] Grammar-shapes-tactics briefing reads
+- [ ] Intent cursor with context-sensitive states and snap-to-target reticles
+- [ ] Order feedback grammar (one-frame confirm, denial reasons)
+- [ ] Shift-queued orders, attack-move, formation-preserving group moves; confirmations on destructive actions
+- [ ] Full smooth camera (continuous eased rotation, smooth zoom, inertial pan) replacing 45-degree steps in `src/render/camera.ts`
+- [ ] Tilt-shift perspective camera prototype, evaluated against orthographic by evidence (draft 25)
+
+### Meta economy (draft 30 to 33)
+- [ ] R&D board: discrete projects with cost and duration, limited lab slots; budget sliders retired
+- [ ] Competing income sinks: projects, replacement assets, augment installs, territory infrastructure
+- [ ] Marquee projects visible deep in the tree; breakthrough offers from salvage and intel
+- [ ] Output law: every project ships a verb, an object, or a threshold-crossing capability
+
+### Narrative (draft 34 to 38)
+- [ ] Region-opening vignettes (scripted comms conversations, app layer, skippable)
+- [ ] Fixed handler-side cast (board liaison, actuarial AI, rival executives)
+- [ ] Reactive comms engine: fact-matched bark database over mission and campaign state
+- [ ] Corporate Archive codex with intel-driven unlocks
+- [ ] Rival arcs with memory (state predicates over campaign facts)
+
+### Delivery and gates (draft 6 to 8, 47)
+- [ ] Two named visual tiers (WebGPU AAA tier, WebGL2 readability tier) with per-tier perf rows
+- [ ] Asset pipeline: compressed geometry, GPU-compressed textures, per-region streaming, GDD Section 17 budgets
+- [ ] Generated-asset production line stood up (3D, image, audio generators; 3D generation key pending)
+- [ ] Measured gates on every milestone: visual scorecard with fresh-eyes review, inspector metrics, regression baselines, bot playtests
+
 ## Phase E: Multiplayer and accounts
 
 - [x] Groundwork: deterministic fixed-point sim, command-stream replays, state hashing, tick-indexed command queue (the lockstep input-delay mechanism)
@@ -194,4 +252,4 @@ Draft spec: `docs/phase-f-platform-release/spec.md`.
 
 - Determinism is load-bearing: no floats in `SimState`, no wall-clock reads, `rand(state, n)` is the only randomness, call order matters. Update `GOLDEN_FINAL_HASH` only for intentional sim changes.
 - Layer dependency is one-way: sim never imports three.js, render never mutates sim state, all gameplay input flows through commands.
-- Presentation ship bar is premium browser (R3 in `docs/presentation-roadmap.md`); AA is later aspiration (R4). GDD Section 13 is the north star. Perf is measured in `docs/perf.md`. Identification under combat remains required (GDD Section 13.4).
+- Presentation ship bar is browser AAA (R5 in `docs/presentation-roadmap.md`); R3 premium browser is the shipped baseline and R4 density is an intermediate rung. GDD v3.0 Sections 13 and 17 are the north star. Perf is measured in `docs/perf.md` per tier. Identification under combat remains required (GDD Section 13.4).

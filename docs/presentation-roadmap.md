@@ -4,17 +4,18 @@ Canonical track for **mission/world visual quality**. Design intent still lives 
 
 Status tokens match the main roadmap: `[x]` done, `[~]` partial, `[ ]` not started.
 
-Last updated 2026-07-10.
+Last updated 2026-07-16.
 
 ## Why this framing
 
 | Label | Meaning for Nexus Protocol |
 |---|---|
-| **Premium browser (ship bar)** | A first-time player in a tab judges the mission view as a finished, high-end browser game: wet readable streets, building mass that is not cardboard, hero agents, clear combat feedback, cold corporate UI. Achievable on Three.js + WebGPU/WebGL with authored kits, measured perf, and streaming. |
-| **AA aspiration (later)** | Mid-tier commercial density: richer modular architecture, larger prop/vehicle sets, stronger near-field characters and crowds, more authored variety per district. Still browser-first; not console/PC package budgets. |
-| **Industry AAA** | Out of scope as a label. Full studio city pipelines, multi-year art teams, and package installers are not the product promise (pillar: pick up and play). |
+| **Premium browser (R3, shipped baseline)** | A first-time player in a tab judges the mission view as a finished, high-end browser game: wet readable streets, building mass that is not cardboard, hero agents, clear combat feedback, cold corporate UI. Achievable on Three.js + WebGPU/WebGL with authored kits, measured perf, and streaming. |
+| **AA density (R4)** | Mid-tier commercial density: richer modular architecture, larger prop/vehicle sets, stronger near-field characters and crowds, more authored variety per district. Still browser-first; now an intermediate rung on the R5 path, not the end state. |
+| **Browser AAA (R5, ship bar per GDD v3.0)** | The mission frame, feel, audio, and interface read as AAA game quality from a shareable link. An experience-quality claim gated by the R5 DoD and the measured scorecard; never industry package scope. |
+| **Industry AAA** | Out of scope as a package claim. Full studio city pipelines, multi-year art teams, and package installers are not the product promise (pillar: pick up and play). The browser AAA bar (R5) is an experience-quality claim, not this. |
 
-GDD v2.1’s high-fidelity language remains the **north star**. This roadmap sequences how close the build gets, without pretending every GDD sentence is the immediate ship gate.
+GDD v3.0 defines the bar (Sections 13 and 17) and the approved decision record is `docs/game-design-aaa-draft.md` (suggestions 1 to 48). This roadmap sequences how the build gets there.
 
 **UI is not on this ladder.** Live UI stays cold command-software (`docs/game-design.md` Section 14). World goes premium; chrome stays terminal.
 
@@ -26,7 +27,8 @@ GDD v2.1’s high-fidelity language remains the **north star**. This roadmap seq
 | R1 | Material baseline | Wet PBR ground, Standard shells, night IBL | `[x]` Slice 1 |
 | R2 | Image content hooks | Facade/asphalt maps, windows, billboard, portraits | `[x]` Slice 2 + T1 night visibility |
 | **R3** | **Premium browser** | Geometry kits + tuned materials + hero agents + combat read | `[x]` T1–T8 complete |
-| R4 | AA aspiration | Density, variety, near-field character/crowd art, prop library | Later — after R3 ships |
+| R4 | AA density | Density, variety, near-field character/crowd art, prop library | `[ ]` Next; absorbed into the R5 tracks |
+| **R5** | **Browser AAA (ship bar)** | Region identity, wet-city stack, architecture grammars, one image pipeline, uniform hero chassis, destruction payoff, hybrid audio, measured gates | `[ ]` Not started |
 
 ### Definition of done: R3 Premium browser
 
@@ -42,7 +44,7 @@ A reviewer opens a night/rain contract (or `?webgl&visualtest` / campaign night)
 
 When R3 is done, main roadmap may call presentation **premium browser complete**; GDD north star remains for R4+.
 
-### Definition of done: R4 AA aspiration (later)
+### Definition of done: R4 AA density
 
 Do not start as a single blob. Unlock only after R3:
 
@@ -53,7 +55,39 @@ Do not start as a single blob. Unlock only after R3:
 - Streaming/atlas discipline so mission weight stays browser-viable.
 - Optional: hand-touched hero mission landmarks (HQ arcology dress).
 
-R4 is **aspiration**, not a release blocker for a premium browser launch.
+R4 is an intermediate rung on the R5 path. The release bar is R5 per GDD v3.0.
+
+### Definition of done: R5 Browser AAA
+
+A reviewer opens contracts in at least three different regions and can affirm all of the following, with the measured evidence attached:
+
+1. **Region identity** — The district's region is recognizable at a glance: region kit, palette bias, and one landmark anchor per district (GDD 6.8).
+2. **Wet city** — One weather envelope drives rain streaks, puddle accumulation, ripples, splashes, and planar wet-asphalt reflection as a coupled system (GDD 13.1).
+3. **Architecture** — Building grammars with authored facade bays and storefront apertures; breaches read as built, then broken.
+4. **Lighting** — A single ordered image pipeline: contact-grounding AO, stable shadows under camera motion, many-light neon, measured exposure and grade, calibrated bloom hierarchy.
+5. **Heroes and crowds** — The uniform operative chassis (male/female variants) reads AAA at squad zoom with augments visible on the body; mid-field crowd pass landed; identification law holds at block zoom.
+6. **Destruction and VFX** — Pooled event VFX plus cosmetic fracture payoff on breaches and wrecks; the sim keeps its clears-only invariant.
+7. **Feel** — Tuned per-event feedback stacks from a single table; the order feedback grammar confirms every command within one frame.
+8. **Audio** — Hybrid model shipping: region ambience beds, weapon report library, score stems, captioned operator voice.
+9. **Interface** — The Section 14 identity rebuilt as a component library; colder and sharper, never warmer.
+10. **Delivery** — Menu interactive under 5 MB, first contract playable near 20 MB, campaign streamed within roughly 50 to 150 MB; both WebGPU and WebGL2 tiers measured in `docs/perf.md`.
+11. **Measured gates** — Ten-category visual scorecard with independent fresh-eyes review (no category below the premium threshold), canvas-inspector metrics, visual regression baselines, and bot playtest evidence for gameplay claims.
+
+## Work tracks (R5 Browser AAA)
+
+Visual and presentation tracks only; the systems and meta tracks of the AAA upgrade (contracts, R&D board, narrative, input) live in `docs/roadmap.md`. Draft numbers reference `docs/game-design-aaa-draft.md`.
+
+- [ ] Region identity kits, landmark anchors, signature-site dress (draft 17 to 19; absorbs the R4 region and landmark tracks)
+- [ ] Wet-city signature stack (draft 39)
+- [ ] Architecture grammars with authored apertures (draft 40)
+- [ ] Lighting and the single image pipeline (draft 41)
+- [ ] Destruction and VFX render events (draft 42)
+- [ ] Crowd and body fidelity (draft 43; absorbs the R4 mid-field track)
+- [ ] Uniform hero chassis with visible augments (draft 14, 16)
+- [ ] Hybrid audio layer (draft 44)
+- [ ] Combat feel pass (draft 46)
+- [ ] Delivery: streaming, budgets, two-tier perf rows (draft 6, 7)
+- [ ] Measured gates on every milestone (draft 47)
 
 ## Work tracks (R3)
 
@@ -110,7 +144,7 @@ Maps already load; night grade and tints crush them.
 - [x] Investigate and fix `?perf` load hangs under heavy texture sets if still reproducible
 - [x] Align with Phase F load targets when streaming lands; R3 must not require an installer
 
-## Work tracks (R4 AA aspiration)
+## Work tracks (R4 AA density)
 
 Start only after R3 checklist is mostly green.
 
@@ -139,7 +173,7 @@ Start only after R3 checklist is mostly green.
 
 ## Explicit non-goals
 
-- Claiming industry AAA or renaming the product as AAA
+- Claiming industry AAA package scope; the browser AAA bar (R5, GDD v3.0) is an experience-quality claim gated by its DoD and the measured scorecard, and it is not met until that DoD passes
 - Warming or “cinematic-softening” the live UI
 - Sim changes for pure cosmetics (determinism and layers stay sacred)
 - Blocking co-op / platform phases forever on R4
@@ -152,7 +186,7 @@ Start only after R3 checklist is mostly green.
 | `docs/game-design.md` §13–17 | North star and quality dimensions |
 | `docs/roadmap.md` | Systems/phases; links here for presentation ladder |
 | `docs/perf.md` | Measured frames; re-baseline as R3 content lands |
-| `.specify/memory/constitution.md` | High-fid visual gate + measured perf; browser-first |
+| `AGENTS.md` (Core Principles, constitution 2.1.0) | High-fid visual gate + measured perf; browser-first; browser AAA amendment |
 | `docs/presentation-roadmap.md` (this file) | Ladder, R3/R4 DoD, ordered tracks |
 
 ## Suggested execution order
@@ -160,8 +194,8 @@ Start only after R3 checklist is mostly green.
 ```text
 T1 visibility → T2 building kits → T3 ground dress → T4 hero agents
     → T5 props/vehicles → T6 combat response → T7 near crowds → T8 perf/delivery
-    → (ship premium browser)
-    → R4 AA tracks as capacity allows
+    → (premium browser shipped 2026-07-11)
+    → R4/R5 tracks per GDD v3.0 → (ship browser AAA at the R5 DoD)
 ```
 
 T1 before more assets: maps already exist but under-read at night. T2 before more texture packs: geometry is the cardboard fix.

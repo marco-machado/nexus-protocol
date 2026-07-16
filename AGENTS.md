@@ -18,7 +18,7 @@ There is no lint/format tooling configured in this repo.
 ## Design System
 
 - `docs/game-design.md` is the canonical design bible: product vision, setting, mechanics, art direction, and the human-facing visual identity all live there. Consult it before UI/presentation work, including HUD, app screens, documentation UI, color intent, typography, spacing, or component styling.
-- Mission and world presentation: GDD Section 13 is the north star; **ship bar is premium browser (R3)**, with AA density as later aspiration (R4). Ladder and tracks: `docs/presentation-roadmap.md`. Live UI remains cold command-software per Section 14. Current build meets the R3 bar (Windows perf row pending); do not claim AAA.
+- Mission and world presentation: GDD Sections 13 and 17 are the north star; **ship bar is browser AAA (R5)** as defined in GDD v3.0, an experience-quality claim gated by measured checks, never industry AAA package scope. Ladder and tracks: `docs/presentation-roadmap.md` (R4 density, then R5). Live UI remains cold command-software per Section 14. Current build meets the R3 premium-browser baseline (Windows perf row pending); do not claim the AAA bar is met until the R5 DoD passes.
 - `DESIGN.md` is the machine-readable design-token export consumed by the build tooling; treat it as the source for exact token values, but the visual-identity intent behind those tokens now lives in `docs/game-design.md` (Sections 13-14). Keep the two consistent when either changes.
 - `docs/roadmap.md` is the canonical source of truth for implementation status (done, partial, or not started); `docs/game-design.md` describes design intent, not build state. Do not use the design bible to infer what is or is not implemented.
 - Token exports live at `tailwind.theme.json` and `tokens.json`; regenerate them from `DESIGN.md` with `npx -y @google/design.md export --format tailwind DESIGN.md > tailwind.theme.json` and `npx -y @google/design.md export --format dtcg DESIGN.md > tokens.json` after token changes.
@@ -145,7 +145,7 @@ Rationale: The delivery form (a browser tab) removes every excuse not to try the
 
 ## Technical Constraints And Standards
 
-- **Stack**: Three.js (r171+) with WebGPU and automatic WebGL2 fallback, TypeScript, Vite. Sim math is 16.16 fixed-point; pathfinding is per-unit A* with module-level reusable buffers (non-reentrant, one `findPath` per tick).
+- **Stack**: Three.js (r171+) with WebGPU and automatic WebGL2 fallback, TypeScript, Vite. Sim math is 16.16 fixed-point; pathfinding is per-unit A* with module-level reusable buffers (non-reentrant, one `findPath` per tick). The approved AAA upgrade (GDD v3.0 Section 18) adds React Three Fiber to the app/render layers via a staged migration; per-frame hot paths stay imperative and the sim layer stays framework-free.
 - **Persistence**: Meta-game state serializes to `localStorage`.
 - **Design source of truth**: `docs/game-design.md` is the canonical design bible; consult it before any UI, HUD, color, typography, spacing, or presentation work. `DESIGN.md` is the machine-readable token export; the two MUST stay consistent when either changes, and token exports (`tailwind.theme.json`, `tokens.json`) are regenerated from `DESIGN.md`.
 - **Status source of truth**: `docs/roadmap.md` is authoritative for what is implemented; the design bible describes intent, not build state. Do not infer implementation status from design docs.
@@ -167,7 +167,9 @@ The Core Principles above supersede ad hoc convention when they conflict. All fe
 - **Versioning**: semantic. MAJOR for a backward-incompatible principle removal or redefinition, MINOR for a new principle or materially expanded guidance, PATCH for clarifications and wording that do not change meaning.
 - **Compliance review**: reviewers verify layer discipline, determinism, high-fidelity presentation intent, actor and objective identification, measured performance, and corporate UI tone before merge.
 
-**Constitution version**: 2.0.0 | **Ratified**: 2026-07-06 | **Last Amended**: 2026-07-08
+- **Amendment 2.1.0 (2026-07-16)**: ship bar raised from premium browser (R3) to browser AAA (R5) per the approved AAA upgrade (GDD v3.0; numbered decision record in `docs/game-design-aaa-draft.md`). Browser AAA is an experience-quality claim gated by the measured checks in GDD Section 17, never industry AAA package scope. Principles I to VII are unchanged; Principle V's gate now points at the R5 rung. Migration impact recorded in `docs/game-design.md` v3.0, `docs/presentation-roadmap.md`, and `docs/roadmap.md`.
+
+**Constitution version**: 2.1.0 | **Ratified**: 2026-07-06 | **Last Amended**: 2026-07-16
 
 ## Git Conventions
 

@@ -166,7 +166,7 @@ The look is systemic, not static. The scene and HUD palette shift with alarm sta
 - **Warn (`{colors.warn}`):** Alarm level 1 and cautionary economy/mission states.
 - **Bad (`{colors.bad}`):** Alarm level 2, siege, enemy ownership, write-offs, failed debriefs, and destructive actions.
 - **Persuaded (`{colors.persuaded}`):** Persuadertron state, converted followers, influence counters, and cyan gear chips.
-- **Gold (`{colors.gold}`):** Credits, VIPs, veteran quirks, HQ tags, and high-value economic readouts.
+- **Gold (`{colors.gold}`):** Credits, VIPs, HQ tags, and high-value economic readouts.
 
 Scene colors should continue to come from `src/render/palette.ts`. The default palette includes colorblind alternatives in code; any new gameplay marker needs an entry in the standard, deuteranopia-safe, and high-contrast palettes.
 
@@ -219,7 +219,7 @@ The in-game shell is intentionally sharp. Current production UI uses square pane
 - `button-primary` is the high-emphasis action, usually one per flow: launch contract, return to operations, resume operations, or selected palette.
 - `button-danger` is for immediate threat or hostile recovery actions such as siege defense. Use sparingly.
 - `card` covers territory cards, research blocks, agent cards, and equipment rows. State should be encoded with border color and small status labels rather than large decorative fills.
-- `chip`, `chip-cyan`, and `chip-gold` cover loadout tags, special equipment, and veteran quirks. Chips are compact and data-like.
+- `chip`, `chip-cyan`, and `chip-gold` cover loadout tags and special equipment. Chips are compact and data-like.
 - `hud-pill` covers mission objective, alarm, influence, and selected-agent summaries. HUD should be readable at a glance during real-time combat.
 - `log-line` covers `NEXUS OPS` comms, campaign logs, and debrief lines. Prefer terse lines that sound like corporate telemetry.
 
