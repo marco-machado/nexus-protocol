@@ -222,6 +222,18 @@ export function missionConditions(seed: number): { tod: number; rain: number } {
 
 export const CONDITION_NAMES = ['DAYLIGHT', 'DUSK', 'NIGHT'];
 
+// contract labels indexed by missionType; shared by the world map popover
+// and the equip header
+export const CONTRACT_NAMES = [
+  'ASSASSINATION',
+  'ACQUISITION (PERSUADE)',
+  'ASSET RAID',
+  'SQUAD PURGE',
+  'DEFENSE',
+  'VAULT HEIST',
+  'HQ ASSAULT',
+];
+
 export const CYCLE_MS = 30 * 60 * 1000;
 export const OFFLINE_CAP_MS = 24 * 60 * 60 * 1000;
 const RESEARCH_BASE = 6;

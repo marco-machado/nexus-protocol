@@ -1,9 +1,12 @@
 import { createRenderer } from './render/renderer';
 import { applyPalette } from './render/palette';
+import { WorldGlobe } from './render/globe';
 import { audio } from './app/audio';
+import { createCanvasHost } from './app/canvasHost';
 import { Game } from './app/game';
 import { runMission } from './app/missionRunner';
-import { Screens } from './app/screens';
+import { ScreenStore } from './app/screenState';
+import { mountScreenRoot } from './app/ui/root';
 import { settings } from './app/settings';
 import { defaultSpec } from './sim/units';
 
@@ -20,6 +23,7 @@ async function main(): Promise<void> {
   const hud = document.getElementById('hud') as HTMLElement;
   const screenEl = document.getElementById('screen') as HTMLElement;
   const renderer = await createRenderer(canvas, settings.shadows);
+  const host = createCanvasHost(canvas, renderer, settings.shadows);
 
   const params = new URLSearchParams(location.search);
   if (params.has('visualtest')) {
@@ -37,7 +41,7 @@ async function main(): Promise<void> {
       hud,
       'VISUAL TEST: cars and agents',
       { visualTest: true, tod: 2, weather: 0 },
-      { civCount: 0 },
+      { civCount: 0, host },
     );
     return;
   }
@@ -64,6 +68,7 @@ async function main(): Promise<void> {
       {
         civCount,
         perf: true,
+        host,
       },
     );
     return;
@@ -84,12 +89,19 @@ async function main(): Promise<void> {
       hud,
       'DEBUG: map and agents',
       { debug: true, tod: 2, weather: 0 },
-      { civCount: 0 },
+      { civCount: 0, host },
     );
     return;
   }
 
-  const game = new Game(renderer, new Screens(screenEl), hud);
+  const store = new ScreenStore();
+  mountScreenRoot(screenEl, store);
+  const game = new Game({
+    screen: store,
+    runMission: (seed, missionType, specs, objectiveText, simParams, opts) =>
+      runMission(renderer, seed, missionType, specs, hud, objectiveText, simParams, { ...opts, host }),
+    createGlobe: () => new WorldGlobe(renderer, { postFx: settings.postFx }),
+  });
   game.start();
 }
 
