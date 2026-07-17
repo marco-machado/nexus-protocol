@@ -1,5 +1,5 @@
 import { GEAR_CHARGE, GEAR_CLOAK, GEAR_DRONE, GEAR_EMP, GEAR_MEDBAY, type Command } from './commands';
-import { deadRelays, expansionSatisfied, failContract, SAT_MAX, updateContract } from './contract';
+import { deadRelays, failContract, objectiveComplete, SAT_MAX, updateContract } from './contract';
 import { fxDiv, fxLen, fxMul, type Fx } from './fixed';
 import { cellIdx, inBounds, losClear, MAP_W, type MapData } from './map';
 import { findPath, nearestWalkable } from './path';
@@ -8,7 +8,6 @@ import {
   SimState,
   STATUS_ACTIVE,
   STATUS_WON,
-  MISSION_ASSASSINATE,
   MISSION_PERSUADE,
   MISSION_RAID,
   MISSION_PURGE,
@@ -93,6 +92,7 @@ import {
   CONVOY_BOOM_R,
   CONVOY_REPATH_T,
   CONVOY_SPEED,
+  VEH_CAR,
   VEH_CONVOY,
   VEH_FUEL,
   VEH_HIT,
@@ -161,6 +161,12 @@ interface Noise {
   z: Fx;
 }
 
+// alive and actually in the field; a held captive is neither commandable
+// nor targetable
+export function fielded(a: Agent): boolean {
+  return a.alive && !a.held;
+}
+
 export function influence(s: SimState): number {
   let n = 0;
   for (const npc of s.npcs) if (npc.state === ST_PERSUADED) n++;
@@ -173,13 +179,15 @@ function cellOfFx(x: Fx, z: Fx): number {
 
 // rain, darkness, fog, and blackout relay kills shrink NPC detection, never
 // player hardware or weapon range
-export function npcSightFx(s: SimState, baseCells: number): Fx {
+export function npcSightFx(
+  s: Pick<SimState, 'env'> & Partial<Pick<SimState, 'mission'>>,
+  baseCells: number,
+): Fx {
   let v = baseCells << 16;
   if (s.env.rain) v = (v * 3) >> 2;
   if (s.env.tod === TOD_NIGHT) v = (v * 7) >> 3;
   if (s.env.mods & MOD_FOG) v = (v * 5) >> 3;
-  // environment-only callers (tests, previews) pass a state without a mission
-  const dead = (s as { mission?: unknown }).mission ? deadRelays(s) : 0;
+  const dead = s.mission ? deadRelays(s.mission) : 0;
   if (dead > 0) v = ((v * (8 - 2 * dead)) / 8) | 0;
   return v;
 }
@@ -551,6 +559,13 @@ function tramUpdate(s: SimState, v: Vehicle): void {
   if (v.state === V_HIJACK) runOver(s, v, TRAM_RUNOVER_DMG);
 }
 
+const VEHICLE_BOOMS: Record<number, { dmg: number; r: number }> = {
+  [VEH_CAR]: { dmg: CAR_BOOM_DMG, r: CAR_BOOM_R },
+  [VEH_TRAM]: { dmg: TRAM_BOOM_DMG, r: TRAM_BOOM_R },
+  [VEH_FUEL]: { dmg: FUEL_BOOM_DMG, r: FUEL_BOOM_R },
+  [VEH_CONVOY]: { dmg: CONVOY_BOOM_DMG, r: CONVOY_BOOM_R },
+};
+
 // another vehicle parked or halted in the next cell blocks the convoy: a
 // roadblock is anything with wheels left in its lane
 function vehicleAhead(s: SimState, v: Vehicle): boolean {
@@ -584,23 +599,8 @@ function updateVehicles(s: SimState, noises: Noise[]): void {
       if (--v.fuseT === 0) {
         v.state = V_WRECK;
         if (v.kind === VEH_FUEL) s.map.obstacle[v.cell] = 0;
-        const dmg =
-          v.kind === VEH_FUEL
-            ? FUEL_BOOM_DMG
-            : v.kind === VEH_TRAM
-              ? TRAM_BOOM_DMG
-              : v.kind === VEH_CONVOY
-                ? CONVOY_BOOM_DMG
-                : CAR_BOOM_DMG;
-        const r =
-          v.kind === VEH_FUEL
-            ? FUEL_BOOM_R
-            : v.kind === VEH_TRAM
-              ? TRAM_BOOM_R
-              : v.kind === VEH_CONVOY
-                ? CONVOY_BOOM_R
-                : CAR_BOOM_R;
-        explodeAt(s, v.x, v.z, dmg, r, noises);
+        const boom = VEHICLE_BOOMS[v.kind] ?? VEHICLE_BOOMS[VEH_CAR]!;
+        explodeAt(s, v.x, v.z, boom.dmg, boom.r, noises);
       }
       continue;
     }
@@ -691,7 +691,7 @@ function applyCommand(s: SimState, c: Command): void {
       let offset = 0;
       for (const id of c.ids) {
         const a = s.agents[id];
-        if (!a || !a.alive || a.held) continue;
+        if (!a || !fielded(a)) continue;
         a.workKind = WORK_NONE;
         if (a.driving >= 0) {
           const v = s.vehicles[a.driving];
@@ -712,7 +712,7 @@ function applyCommand(s: SimState, c: Command): void {
     case 'attack':
       for (const id of c.ids) {
         const a = s.agents[id];
-        if (a && a.alive && !a.held) {
+        if (a && fielded(a)) {
           a.attackTarget = c.npcId;
           a.workKind = WORK_NONE;
         }
@@ -728,7 +728,7 @@ function applyCommand(s: SimState, c: Command): void {
       break;
     case 'persuade': {
       const a = s.agents[c.id];
-      if (!a || !a.alive || a.held || !a.spec.persuadertron || a.persuadeCd > 0 || a.driving >= 0) break;
+      if (!a || !fielded(a) || !a.spec.persuadertron || a.persuadeCd > 0 || a.driving >= 0) break;
       a.persuadeCd = 30;
       const inf = influence(s);
       for (const n of s.npcs) {
@@ -781,7 +781,7 @@ function applyCommand(s: SimState, c: Command): void {
       let user: Agent | null = null;
       for (const id of c.ids) {
         const a = s.agents[id];
-        if (!a || !a.alive || a.held) continue;
+        if (!a || !fielded(a)) continue;
         if (
           (c.gear === GEAR_CHARGE && a.spec.charges > 0) ||
           (c.gear === GEAR_MEDBAY && a.spec.medbays > 0) ||
@@ -847,7 +847,7 @@ function applyCommand(s: SimState, c: Command): void {
     }
     case 'hijack': {
       const a = s.agents[c.id];
-      if (!a || !a.alive || a.held || a.stunT > 0) break;
+      if (!a || !fielded(a) || a.stunT > 0) break;
       if (a.driving >= 0) {
         const v = s.vehicles[a.driving];
         if (v) {
@@ -910,7 +910,7 @@ function applyCommand(s: SimState, c: Command): void {
       if (!workTargetValid(s, kind, c.cell)) break;
       for (const id of c.ids) {
         const a = s.agents[id];
-        if (!a || !a.alive || a.held || a.driving >= 0) continue;
+        if (!a || !fielded(a) || a.driving >= 0) continue;
         // a repeated identical order confirms the channel, never resets it
         if (a.workKind === kind && a.workCell === c.cell) continue;
         a.workKind = kind;
@@ -923,7 +923,7 @@ function applyCommand(s: SimState, c: Command): void {
     }
     case 'carry': {
       const a = s.agents[c.id];
-      if (!a || !a.alive || a.held || a.driving >= 0) break;
+      if (!a || !fielded(a) || a.driving >= 0) break;
       const m = s.mission;
       if (m.carrier === a.id) {
         m.cargoCell = nearestWalkable(s.map, cellOfFx(a.x, a.z));
@@ -958,7 +958,7 @@ function workTargetValid(s: SimState, kind: number, cell: number): boolean {
 }
 
 function updateAgent(s: SimState, a: Agent, noises: Noise[]): void {
-  if (!a.alive || a.held) return;
+  if (!fielded(a)) return;
   if (a.cooldown > 0) a.cooldown--;
   if (a.persuadeCd > 0) a.persuadeCd--;
 
@@ -1210,7 +1210,7 @@ function enemySquadMove(s: SimState, n: Npc): void {
   let tz: Fx | null = null;
   let best: Fx = npcSightFx(s, 14);
   for (const a of s.agents) {
-    if (!a.alive || a.held || a.cloakT > 0) continue;
+    if (!fielded(a) || a.cloakT > 0) continue;
     const d = distFx(n.x, n.z, a.x, a.z);
     if (d < best && losUnits(s, n.x, n.z, a.x, a.z)) {
       best = d;
@@ -1253,7 +1253,7 @@ function enemyPulse(s: SimState, n: Npc): void {
   const swarmDoc = s.mission.doctrine === DOCTRINE_SWARM;
   let fired = false;
   for (const a of s.agents) {
-    if (!a.alive || a.held || distFx(n.x, n.z, a.x, a.z) > PERSUADE_RADIUS) continue;
+    if (!fielded(a) || distFx(n.x, n.z, a.x, a.z) > PERSUADE_RADIUS) continue;
     fired = true;
     if (!a.spec.persuadeImmune) a.stunT = PULSE_STUN;
   }
@@ -1344,7 +1344,7 @@ function mobCiv(s: SimState, n: Npc): void {
   let target: Agent | null = null;
   let best: Fx = 1 << 30;
   for (const a of s.agents) {
-    if (!a.alive || a.held || a.cloakT > 0) continue;
+    if (!fielded(a) || a.cloakT > 0) continue;
     const d = distFx(n.x, n.z, a.x, a.z);
     if (d < best) {
       best = d;
@@ -1538,7 +1538,7 @@ function npcCombat(s: SimState, n: Npc, noises: Noise[]): void {
   let tNpc: Npc | null = null;
   let best: Fx = perception;
   for (const a of s.agents) {
-    if (!a.alive || a.held || a.cloakT > 0) continue;
+    if (!fielded(a) || a.cloakT > 0) continue;
     const d = distFx(n.x, n.z, a.x, a.z);
     if (d < best && losUnits(s, n.x, n.z, a.x, a.z)) {
       best = d;
@@ -1993,7 +1993,7 @@ function updateRecoveryMission(s: SimState): void {
   const captive = s.agents[m.captiveId];
   if (!captive || !captive.alive) return;
   for (const a of s.agents) {
-    if (!a.alive || a.held) continue;
+    if (!fielded(a)) continue;
     if (distFx(a.x, a.z, captive.x, captive.z) <= FREE_RADIUS) {
       captive.held = false;
       m.captiveFreed = true;
@@ -2105,34 +2105,25 @@ function checkMission(s: SimState): void {
   const m = s.mission;
   if (m.status !== STATUS_ACTIVE) return;
   // a still-held captive is not a fielded squad; losing everyone else is a wipe
-  const anyAlive = s.agents.some((a) => a.alive && !a.held);
+  const anyAlive = s.agents.some(fielded);
   if (!anyAlive) {
     failContract(s, FM_SQUAD_WIPED);
     return;
   }
-  let objectiveDone = false;
+  // objective completeness is owned by the contract read model; only the
+  // win-or-fail special cases live here
+  let objectiveDone = objectiveComplete(s);
   switch (m.type) {
-    case MISSION_ASSASSINATE:
-      objectiveDone = s.npcs.every((n) => !n.missionTarget || n.state === ST_DEAD);
-      break;
     case MISSION_PERSUADE: {
       const vip = s.npcs[m.vipId];
       if (!vip || vip.state === ST_DEAD) {
         failContract(s, FM_VIP_DOWN);
         return;
       }
-      objectiveDone =
-        vip.state === ST_PERSUADED && distFx(vip.x, vip.z, m.exfilX, m.exfilZ) <= m.exfilR;
+      // winning additionally requires the VIP inside the exfil zone
+      objectiveDone = objectiveDone && distFx(vip.x, vip.z, m.exfilX, m.exfilZ) <= m.exfilR;
       break;
     }
-    case MISSION_RAID:
-      objectiveDone = m.assets.every((a) => !a.alive);
-      break;
-    case MISSION_PURGE:
-      objectiveDone = s.npcs.every(
-        (n) => n.kind !== NPC_ENEMY || n.state === ST_DEAD || n.state === ST_PERSUADED,
-      );
-      break;
     case MISSION_DEFENSE: {
       const held = m.assets[0];
       if (!held || !held.alive) {
@@ -2162,34 +2153,7 @@ function checkMission(s: SimState): void {
       }
       return;
     }
-    case MISSION_HEIST:
-      objectiveDone = !(m.assets[1]?.alive ?? true);
-      break;
-    case MISSION_HQ:
-      objectiveDone =
-        !(m.assets[0]?.alive ?? true) &&
-        s.npcs.every((n) => n.kind !== NPC_ENEMY || n.state === ST_DEAD || n.state === ST_PERSUADED);
-      break;
-    case MISSION_SABOTAGE:
-    case MISSION_BLACKOUT:
-      objectiveDone = m.assets.every((a) => !a.alive);
-      break;
-    case MISSION_CONVOY:
-      objectiveDone = m.cargoSecured;
-      break;
-    case MISSION_ESCORT:
-      objectiveDone = m.escortDone;
-      break;
-    case MISSION_RECOVERY:
-      objectiveDone = m.captiveFreed;
-      break;
-    case MISSION_BROADCAST:
-      objectiveDone = s.npcs.every(
-        (n) => !n.broadcaster || n.state === ST_DEAD || n.state === ST_PERSUADED,
-      );
-      break;
   }
-  objectiveDone = objectiveDone && expansionSatisfied(s);
   if (!EXFIL_NEED_OBJECTIVE || objectiveDone) {
     const squadOut = s.agents.every(
       (a) => !a.alive || distFx(a.x, a.z, m.exfilX, m.exfilZ) <= m.exfilR,

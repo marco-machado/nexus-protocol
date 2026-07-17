@@ -1,10 +1,15 @@
 import type { MapParams } from '../sim/map';
 import {
+  MISSION_ASSASSINATE,
   MISSION_BLACKOUT,
   MISSION_BROADCAST,
   MISSION_CONVOY,
   MISSION_ESCORT,
+  MISSION_HEIST,
   MISSION_HQ,
+  MISSION_PERSUADE,
+  MISSION_PURGE,
+  MISSION_RAID,
   MISSION_RECOVERY,
   MISSION_SABOTAGE,
   MOD_CHEM,
@@ -155,8 +160,7 @@ export interface MetaState {
   weaponPts: number;
   augPts: number;
   agents: MetaAgent[];
-  // agents lost to a rival holding facility, loadout snapshot intact; the
-  // Asset Recovery contract type is generated against this list
+  // agents lost to a rival holding facility, loadout snapshot intact
   captured: MetaAgent[];
   territories: Territory[];
   syndicates: Syndicate[];
@@ -170,14 +174,14 @@ export interface RegionDef {
 }
 
 export const REGIONS: RegionDef[] = [
-  { name: 'HOME ARC', mapParams: {}, missionMix: [0, 1, 0, 2, 1] },
-  { name: 'GREY HARBOR', mapParams: { skipMod: 5 }, missionMix: [2, MISSION_CONVOY, 1, 2, 3] },
-  { name: 'IRONFIELD SPRAWL', mapParams: { splitMod: 2, heightBase: 5 }, missionMix: [3, MISSION_SABOTAGE, 5, 0, 2] },
-  { name: 'MERIDIAN FLATS', mapParams: { skipMod: 4, heightVar: 8 }, missionMix: [0, MISSION_ESCORT, 1, 5, MISSION_BROADCAST] },
-  { name: 'NEON BASIN', mapParams: { skipMod: 8, heightBase: 6 }, missionMix: [3, 5, MISSION_BLACKOUT, 1, 3] },
-  { name: 'SPIRE DISTRICT', mapParams: { splitMod: 4, heightVar: 20 }, missionMix: [5, 2, MISSION_RECOVERY, 0, 1] },
-  { name: 'CORDON BELT', mapParams: { skipMod: 9, splitMod: 2, heightBase: 8 }, missionMix: [MISSION_BLACKOUT, 0, MISSION_ESCORT, MISSION_SABOTAGE, MISSION_BROADCAST] },
-  { name: 'ARCOLOGY CORE', mapParams: { skipMod: 10, splitMod: 2, heightBase: 10, heightVar: 18 }, missionMix: [1, 5, MISSION_HQ, MISSION_HQ, MISSION_HQ] },
+  { name: 'HOME ARC', mapParams: {}, missionMix: [MISSION_ASSASSINATE, MISSION_PERSUADE, MISSION_ASSASSINATE, MISSION_RAID, MISSION_PERSUADE] },
+  { name: 'GREY HARBOR', mapParams: { skipMod: 5 }, missionMix: [MISSION_RAID, MISSION_CONVOY, MISSION_PERSUADE, MISSION_RAID, MISSION_PURGE] },
+  { name: 'IRONFIELD SPRAWL', mapParams: { splitMod: 2, heightBase: 5 }, missionMix: [MISSION_PURGE, MISSION_SABOTAGE, MISSION_HEIST, MISSION_ASSASSINATE, MISSION_RAID] },
+  { name: 'MERIDIAN FLATS', mapParams: { skipMod: 4, heightVar: 8 }, missionMix: [MISSION_ASSASSINATE, MISSION_ESCORT, MISSION_PERSUADE, MISSION_HEIST, MISSION_BROADCAST] },
+  { name: 'NEON BASIN', mapParams: { skipMod: 8, heightBase: 6 }, missionMix: [MISSION_PURGE, MISSION_HEIST, MISSION_BLACKOUT, MISSION_PERSUADE, MISSION_PURGE] },
+  { name: 'SPIRE DISTRICT', mapParams: { splitMod: 4, heightVar: 20 }, missionMix: [MISSION_HEIST, MISSION_RAID, MISSION_RECOVERY, MISSION_ASSASSINATE, MISSION_PERSUADE] },
+  { name: 'CORDON BELT', mapParams: { skipMod: 9, splitMod: 2, heightBase: 8 }, missionMix: [MISSION_BLACKOUT, MISSION_ASSASSINATE, MISSION_ESCORT, MISSION_SABOTAGE, MISSION_BROADCAST] },
+  { name: 'ARCOLOGY CORE', mapParams: { skipMod: 10, splitMod: 2, heightBase: 10, heightVar: 18 }, missionMix: [MISSION_PERSUADE, MISSION_HEIST, MISSION_HQ, MISSION_HQ, MISSION_HQ] },
 ];
 
 const DISTRICT_NAMES = [

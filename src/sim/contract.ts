@@ -210,10 +210,10 @@ function countBroadcasters(s: SimState): ContractProgress {
   return { done, total };
 }
 
-export function deadRelays(s: SimState): number {
-  if (s.mission.type !== MISSION_BLACKOUT) return 0;
+export function deadRelays(m: import('./state').MissionState): number {
+  if (m.type !== MISSION_BLACKOUT) return 0;
   let dead = 0;
-  for (const a of s.mission.assets) if (!a.alive) dead++;
+  for (const a of m.assets) if (!a.alive) dead++;
   return dead;
 }
 

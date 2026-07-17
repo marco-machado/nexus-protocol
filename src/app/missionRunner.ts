@@ -557,8 +557,7 @@ function createMissionSystems(
       if (ids.length > 0) send({ type: 'use', ids, gear });
     } else if (k === 'n') {
       // context interact: hack the nearest live relay, breach the holding
-      // cell door, or pick up / drop the convoy cargo (minimal bindings; the
-      // intent-cursor track owns richer pointer UX)
+      // cell door, or pick up / drop the convoy cargo
       const ids = selIds();
       if (ids.length === 0) return;
       const lead = state.agents[ids[0]!]!;
