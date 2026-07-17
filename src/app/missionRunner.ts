@@ -84,8 +84,8 @@ export interface MissionOptions {
   opName?: string;
   // R3F canvas host (stages 2+3): the mission mounts into the persistent
   // fiber root as a component; setup/teardown is mount/unmount and loop
-  // ownership stays with the accumulator below. Required.
-  host?: CanvasHost;
+  // ownership stays with the accumulator below
+  host: CanvasHost;
 }
 
 // agent card portraits: /portraits/a{n}.png when present, else a generated
@@ -140,11 +140,10 @@ export function runMission(
   specs: AgentSpec[],
   hud: HTMLElement,
   objectiveText: string,
-  simParams: MissionParams = {},
-  opts: MissionOptions = {},
+  simParams: MissionParams,
+  opts: MissionOptions,
 ): Promise<MissionResult> {
   const host = opts.host;
-  if (!host) throw new Error('runMission requires an R3F canvas host (opts.host)');
   return new Promise((resolve) => {
     // starting a mission is mounting it: the component's mount effect runs
     // createMissionSystems, its unmount disposes the returned handle

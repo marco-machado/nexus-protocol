@@ -42,7 +42,8 @@ export interface GameDeps {
     specs: AgentSpec[],
     objectiveText: string,
     simParams: MissionParams,
-    opts: MissionOptions,
+    // the canvas host is main.ts's concern; the flow controller never sees it
+    opts: Omit<MissionOptions, 'host'>,
   ) => Promise<MissionResult>;
   createGlobe: () => GlobeHandle | null;
 }

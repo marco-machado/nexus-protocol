@@ -1,5 +1,6 @@
 import type { GlobeSnapshot } from '../render/globe';
 import type { DebriefInfo, MetaState, Territory } from './meta';
+import { Store } from './store';
 
 // the surface the world-map screen needs from the strategic globe; the real
 // WorldGlobe satisfies it, headless tests pass null
@@ -43,19 +44,8 @@ export type ScreenKind = Screen['kind'];
 
 // the Game controller's observable screen state: the one seam between the
 // framework-free app flow and the React screen tree (and headless flow tests)
-export class ScreenStore {
-  private current: Screen = { kind: 'hidden' };
-  private listeners = new Set<() => void>();
-
-  get = (): Screen => this.current;
-
-  set = (screen: Screen): void => {
-    this.current = screen;
-    for (const fn of [...this.listeners]) fn();
-  };
-
-  subscribe = (fn: () => void): (() => void) => {
-    this.listeners.add(fn);
-    return () => this.listeners.delete(fn);
-  };
+export class ScreenStore extends Store<Screen> {
+  constructor() {
+    super({ kind: 'hidden' });
+  }
 }

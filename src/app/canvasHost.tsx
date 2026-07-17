@@ -1,9 +1,10 @@
 import { NeutralToneMapping, PCFShadowMap, type Scene } from 'three';
 import type { WebGPURenderer } from 'three/webgpu';
-import { useEffect, useState, useSyncExternalStore } from 'react';
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { createRoot as createFiberRoot } from '@react-three/fiber';
-import { applyPalette } from '../render/palette';
+import { applyPalette, type PaletteName } from '../render/palette';
 import { settings, settingsVersion, subscribeSettings } from './settings';
+import { Store } from './store';
 
 // R3F migration stages 2+3 (issue #12): a persistent fiber root adopts the
 // existing WebGPURenderer without owning the frame loop (frameloop 'never';
@@ -28,25 +29,18 @@ export interface CanvasHost {
   setMission(create: (() => MissionHandle) | null): void;
 }
 
-class MissionStore {
-  private create: (() => MissionHandle) | null = null;
-  private listeners = new Set<() => void>();
-  get = (): (() => MissionHandle) | null => this.create;
-  set = (create: (() => MissionHandle) | null): void => {
-    this.create = create;
-    for (const fn of [...this.listeners]) fn();
-  };
-  subscribe = (fn: () => void): (() => void) => {
-    this.listeners.add(fn);
-    return () => this.listeners.delete(fn);
-  };
-}
+type MissionStore = Store<(() => MissionHandle) | null>;
 
-// palette application as a reactive binding: any saveSettings() re-applies
-// the operator palette to both the scene colors and the UI variables
+// palette application as a reactive binding: re-applies the operator palette
+// (scene colors + UI variables) when the palette setting changes. Other
+// settings writes are ignored so the alarm script's --accent is not stomped
+// mid-mission by a volume or sim-speed change.
 function PaletteBinding() {
   useSyncExternalStore(subscribeSettings, settingsVersion);
+  const applied = useRef<PaletteName | null>(null);
   useEffect(() => {
+    if (applied.current === settings.palette) return;
+    applied.current = settings.palette;
     applyPalette(settings.palette);
   });
   return null;
@@ -98,7 +92,7 @@ export function createCanvasHost(
   renderer: WebGPURenderer,
   shadows: boolean,
 ): CanvasHost {
-  const store = new MissionStore();
+  const store: MissionStore = new Store<(() => MissionHandle) | null>(null);
   const root = createFiberRoot(canvas);
   void root
     .configure({

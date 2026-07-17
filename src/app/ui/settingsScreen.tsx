@@ -96,7 +96,7 @@ export function SettingsScreen({ onBack }: { onBack: () => void }) {
       <h3>VIDEO</h3>
       <ToggleRow label="Neon post-processing" note="bloom and vignette over the night palette" on={settings.postFx} onToggle={setToggle('postFx')} />
       <ToggleRow label="Weather effects" note="rain renders when the contract forecast calls it" on={settings.rain} onToggle={setToggle('rain')} />
-      <ToggleRow label="Dynamic shadows" note="applies from the next deployment" on={settings.shadows} onToggle={setToggle('shadows')} />
+      <ToggleRow label="Dynamic shadows" note="gates the shadow pass immediately; casters bake at deployment" on={settings.shadows} onToggle={setToggle('shadows')} />
       <div className="btnrow">
         <button onClick={onBack}>BACK</button>
       </div>

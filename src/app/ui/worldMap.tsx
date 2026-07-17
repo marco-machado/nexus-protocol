@@ -1,8 +1,9 @@
 import { useEffect, useReducer, useRef, useState } from 'react';
-import { OWNER_NEUTRAL, OWNER_NEXUS, type GlobeSnapshot } from '../../render/globe';
+import { factionHex, OWNER_NEUTRAL, OWNER_NEXUS, type GlobeSnapshot } from '../../render/globe';
 import {
   AUG_LEVEL_PTS,
   campaignAct,
+  CONTRACT_NAMES,
   CYCLE_MS,
   DEFENSE_UNREST,
   incomePerCycle,
@@ -18,15 +19,6 @@ import {
 import type { GlobeHandle } from '../screenState';
 import { fillPct, RangeInput } from './controls';
 
-const CONTRACT_NAMES = [
-  'ASSASSINATION',
-  'ACQUISITION (PERSUADE)',
-  'ASSET RAID',
-  'SQUAD PURGE',
-  'DEFENSE',
-  'VAULT HEIST',
-  'HQ ASSAULT',
-];
 
 function shortName(t: Territory): string {
   return t.name.replace('SECTOR ', '').replace(/"/g, '');
@@ -201,7 +193,7 @@ function Popover({
   );
 }
 
-function Legend() {
+function Legend({ m }: { m: MetaState }) {
   const key = (color: string, label: string) => (
     <span key={label}>
       <i className="sw" style={{ color, background: color }}></i>
@@ -210,11 +202,9 @@ function Legend() {
   );
   return (
     <div className="legend">
-      {key('#33e08a', 'NEXUS')}
-      {key('#ff9d3a', 'HELIOS')}
-      {key('#c95bff', 'MIRAGE')}
-      {key('#ff3b5c', 'CHORUS')}
-      {key('#5b6b86', 'NEUTRAL')}
+      {key(factionHex(OWNER_NEXUS), 'NEXUS')}
+      {m.syndicates.map((s, i) => key(factionHex(i), s.name.split(' ')[0]!))}
+      {key(factionHex(OWNER_NEUTRAL), 'NEUTRAL')}
     </div>
   );
 }
@@ -387,7 +377,7 @@ export function WorldMapScreen({
           ) : null}
           <div className="maphint">DRAG TO ROTATE · SELECT A BEACON</div>
         </div>
-        <Legend />
+        <Legend m={m} />
       </div>
       <RdDrawer m={m} open={rdOpen} onToggle={() => setRdOpen((o) => !o)} onEdited={bump} />
       <div className="ticker" title={m.log.slice(0, 4).join('\n')}>

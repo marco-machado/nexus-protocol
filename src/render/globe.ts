@@ -117,6 +117,13 @@ function rivalColor(id: number): Color {
   return RIVAL_COLORS[id] ?? COL_NEUTRAL;
 }
 
+// canonical strategic-layer faction tints for UI chrome (world-map legend),
+// so the legend can never drift from the beacon colors above
+export function factionHex(owner: number): string {
+  const c = owner === OWNER_NEXUS ? COL_NEXUS : owner === OWNER_NEUTRAL ? COL_NEUTRAL : rivalColor(owner);
+  return `#${c.getHexString()}`;
+}
+
 function ownerColor(t: GlobeTerritory): Color {
   if (t.owner === OWNER_NEXUS) return COL_NEXUS;
   if (t.owner === OWNER_NEUTRAL) return COL_NEUTRAL;

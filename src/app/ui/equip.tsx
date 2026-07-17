@@ -7,6 +7,7 @@ import {
   augLevelUnlocked,
   buildSpec,
   CONDITION_NAMES,
+  CONTRACT_NAMES,
   missionConditions,
   newAgent,
   nextMissionSeed,
@@ -31,15 +32,6 @@ const CONSUMABLES = {
   charge: { name: 'Demo Charge', desc: 'T plants a timed bomb', price: 350, tier: 4, field: 'charges' },
   emp: { name: 'EMP Burst', desc: 'K stuns everything nearby', price: 800, tier: 5, field: 'emps' },
 } as const;
-const CONTRACT_NAMES = [
-  'ASSASSINATION',
-  'ACQUISITION (PERSUADE)',
-  'ASSET RAID',
-  'SQUAD PURGE',
-  'DEFENSE',
-  'VAULT HEIST',
-  'HQ ASSAULT',
-];
 const RECRUIT_COST = 800;
 const SLOT_CAP = 8;
 
