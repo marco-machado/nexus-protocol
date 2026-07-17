@@ -1,4 +1,4 @@
-import { MISSION_DEFENSE } from '../sim/state';
+import { MISSION_DEFENSE, MISSION_RECOVERY } from '../sim/state';
 import type { MissionParams } from '../sim/setup';
 import type { AgentSpec } from '../sim/units';
 import type { MissionOptions, MissionResult } from './missionRunner';
@@ -157,6 +157,11 @@ export class Game {
       return;
     }
     const missionType = defense ? MISSION_DEFENSE : t.missionType;
+    // recovery contracts target the pending capture when one exists; without
+    // one the client supplies a generic contractor to pull out
+    const isRecovery = !defense && missionType === MISSION_RECOVERY;
+    const captive = isRecovery ? this.meta.captured[0] : undefined;
+    if (isRecovery) codenames.push(captive ? captive.name : 'CONTRACTOR');
     const act = actOfTerritory(t.id);
     const difficulty = this.meta.territories.filter((x) => x.owned).length - 1;
     const seed = nextMissionSeed(t, this.meta.ngPlus);
@@ -173,6 +178,7 @@ export class Game {
       tod: cond.tod,
       weather: cond.rain,
       modifiers: cond.mods,
+      ...(captive ? { captiveSpec: buildSpec(captive) } : {}),
     };
     const result = await this.deps.runMission(seed, missionType, specs, simParams, {
       hints: hintsFor(this.meta, t, missionType),
@@ -198,6 +204,8 @@ export class Game {
       persuaded: result.persuaded,
       lossLine: result.won ? undefined : lossDebriefLine(result.lossReason),
       review,
+      captureEligible: !defense && !isRecovery,
+      recovery: isRecovery && captive !== undefined,
     });
     saveMeta(this.meta);
     this.deps.screen.set({ kind: 'debrief', info, meta: this.meta, onContinue: () => this.map() });

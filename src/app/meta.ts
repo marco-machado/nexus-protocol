@@ -1,5 +1,18 @@
 import type { MapParams } from '../sim/map';
-import { MISSION_HQ, MOD_CHEM, MOD_EMP, MOD_FOG, MOD_SENSOR, MOD_WINDOW } from '../sim/state';
+import {
+  MISSION_BLACKOUT,
+  MISSION_BROADCAST,
+  MISSION_CONVOY,
+  MISSION_ESCORT,
+  MISSION_HQ,
+  MISSION_RECOVERY,
+  MISSION_SABOTAGE,
+  MOD_CHEM,
+  MOD_EMP,
+  MOD_FOG,
+  MOD_SENSOR,
+  MOD_WINDOW,
+} from '../sim/state';
 import {
   defaultSpec,
   DOCTRINE_BRUTE,
@@ -142,6 +155,9 @@ export interface MetaState {
   weaponPts: number;
   augPts: number;
   agents: MetaAgent[];
+  // agents lost to a rival holding facility, loadout snapshot intact; the
+  // Asset Recovery contract type is generated against this list
+  captured: MetaAgent[];
   territories: Territory[];
   syndicates: Syndicate[];
   log: string[];
@@ -155,12 +171,12 @@ export interface RegionDef {
 
 export const REGIONS: RegionDef[] = [
   { name: 'HOME ARC', mapParams: {}, missionMix: [0, 1, 0, 2, 1] },
-  { name: 'GREY HARBOR', mapParams: { skipMod: 5 }, missionMix: [2, 0, 1, 2, 3] },
-  { name: 'IRONFIELD SPRAWL', mapParams: { splitMod: 2, heightBase: 5 }, missionMix: [3, 1, 5, 0, 2] },
-  { name: 'MERIDIAN FLATS', mapParams: { skipMod: 4, heightVar: 8 }, missionMix: [0, 3, 1, 5, 2] },
-  { name: 'NEON BASIN', mapParams: { skipMod: 8, heightBase: 6 }, missionMix: [3, 5, 0, 1, 3] },
-  { name: 'SPIRE DISTRICT', mapParams: { splitMod: 4, heightVar: 20 }, missionMix: [5, 2, 3, 0, 1] },
-  { name: 'CORDON BELT', mapParams: { skipMod: 9, splitMod: 2, heightBase: 8 }, missionMix: [3, 0, 5, 3, 2] },
+  { name: 'GREY HARBOR', mapParams: { skipMod: 5 }, missionMix: [2, MISSION_CONVOY, 1, 2, 3] },
+  { name: 'IRONFIELD SPRAWL', mapParams: { splitMod: 2, heightBase: 5 }, missionMix: [3, MISSION_SABOTAGE, 5, 0, 2] },
+  { name: 'MERIDIAN FLATS', mapParams: { skipMod: 4, heightVar: 8 }, missionMix: [0, MISSION_ESCORT, 1, 5, MISSION_BROADCAST] },
+  { name: 'NEON BASIN', mapParams: { skipMod: 8, heightBase: 6 }, missionMix: [3, 5, MISSION_BLACKOUT, 1, 3] },
+  { name: 'SPIRE DISTRICT', mapParams: { splitMod: 4, heightVar: 20 }, missionMix: [5, 2, MISSION_RECOVERY, 0, 1] },
+  { name: 'CORDON BELT', mapParams: { skipMod: 9, splitMod: 2, heightBase: 8 }, missionMix: [MISSION_BLACKOUT, 0, MISSION_ESCORT, MISSION_SABOTAGE, MISSION_BROADCAST] },
   { name: 'ARCOLOGY CORE', mapParams: { skipMod: 10, splitMod: 2, heightBase: 10, heightVar: 18 }, missionMix: [1, 5, MISSION_HQ, MISSION_HQ, MISSION_HQ] },
 ];
 
@@ -244,6 +260,12 @@ export const CONTRACT_NAMES = [
   'DEFENSE',
   'VAULT HEIST',
   'HQ ASSAULT',
+  'SABOTAGE',
+  'CONVOY INTERCEPTION',
+  'ESCORT',
+  'ASSET RECOVERY',
+  'BLACKOUT',
+  'COUNTER-BROADCAST',
 ];
 
 export const CYCLE_MS = 30 * 60 * 1000;
@@ -431,6 +453,7 @@ export function newMeta(now: number = Date.now()): MetaState {
     weaponPts: 0,
     augPts: 0,
     agents: Array.from({ length: 4 }, (_, i) => newAgent(i)),
+    captured: [],
     territories: makeTerritories(),
     syndicates: SYNDICATE_DEFS.map((sd, i) => ({
       id: i,
@@ -566,6 +589,11 @@ export interface ResultOptions {
   lossLine?: string;
   // clause outcomes and approach metrics; riders inside are booked here
   review?: import('./clauses').PerformanceReview;
+  // a lost field contract may convert one write-off into a rival capture
+  captureEligible?: boolean;
+  // asset recovery settlement: the pending captive returns on a win and is
+  // finally written off on a loss
+  recovery?: boolean;
 }
 
 export function applyResult(
@@ -579,6 +607,32 @@ export function applyResult(
 ): DebriefInfo {
   const lines: string[] = [];
   let salvage = 0;
+  m.captured ??= [];
+
+  // one live capture at a time: a lost contract's first write-off is instead
+  // held by the counterparty, loadout snapshot intact, pending recovery
+  if (!won && opts.captureEligible && m.captured.length === 0) {
+    const idx = m.agents.findIndex((a, i) => a.alive && survivors[i] === false);
+    if (idx >= 0) {
+      const cap = m.agents.splice(idx, 1)[0]!;
+      survivors = survivors.filter((_, i) => i !== idx);
+      m.captured.push(cap);
+      lines.push(
+        `Asset ${cap.name} unaccounted for. Rival holding confirmed; a recovery contract is on the board.`,
+      );
+    }
+  }
+
+  if (opts.recovery && m.captured.length > 0) {
+    const cap = m.captured.shift()!;
+    if (won) {
+      cap.alive = true;
+      m.agents.push(cap);
+      lines.push(`Asset ${cap.name} recovered and reinstated on the active roster.`);
+    } else {
+      lines.push(`Asset ${cap.name} written off by the holding party. The file is closed.`);
+    }
+  }
 
   m.agents.forEach((a, i) => {
     if (!a.alive) return;
@@ -715,6 +769,7 @@ export function loadMeta(): MetaState | null {
     if (!raw) return null;
     const m = JSON.parse(raw) as MetaState;
     if (m.version !== 2) return null;
+    m.captured ??= [];
     return m;
   } catch {
     return null;

@@ -32,6 +32,7 @@ import {
   objectiveComplete,
 } from '../sim/contract';
 import { fromFx, toFx } from '../sim/fixed';
+import { MAP_W } from '../sim/map';
 import {
   CommandQueue,
   GEAR_CHARGE,
@@ -53,7 +54,10 @@ import {
   FAIL_FIRED,
   FAIL_WARNING,
   FM_ABANDONED,
+  MISSION_BLACKOUT,
+  MISSION_CONVOY,
   MISSION_DEFENSE,
+  MISSION_RECOVERY,
   SWARM_FLASHMOB,
   SWARM_FOLLOW,
   SWARM_HOLD,
@@ -551,6 +555,36 @@ function createMissionSystems(
         k === 't' ? GEAR_CHARGE : k === 'y' ? GEAR_MEDBAY : k === 'u' ? GEAR_DRONE : GEAR_EMP;
       const ids = selIds();
       if (ids.length > 0) send({ type: 'use', ids, gear });
+    } else if (k === 'n') {
+      // context interact: hack the nearest live relay, breach the holding
+      // cell door, or pick up / drop the convoy cargo (minimal bindings; the
+      // intent-cursor track owns richer pointer UX)
+      const ids = selIds();
+      if (ids.length === 0) return;
+      const lead = state.agents[ids[0]!]!;
+      if (missionType === MISSION_BLACKOUT || missionType === MISSION_RECOVERY) {
+        let best = -1;
+        let bestD = Infinity;
+        for (const asset of state.mission.assets) {
+          if (!asset.alive) continue;
+          const dx = fromFx(lead.x) - ((asset.cell % MAP_W) + 0.5);
+          const dz = fromFx(lead.z) - (((asset.cell / MAP_W) | 0) + 0.5);
+          const d = dx * dx + dz * dz;
+          if (d < bestD) {
+            bestD = d;
+            best = asset.cell;
+          }
+        }
+        if (best >= 0) {
+          send(
+            missionType === MISSION_BLACKOUT
+              ? { type: 'hack', ids, cell: best }
+              : { type: 'breach', ids, cell: best },
+          );
+        }
+      } else if (missionType === MISSION_CONVOY) {
+        send({ type: 'carry', id: ids[0]! });
+      }
     } else if (k === 'p' && missionType === MISSION_DEFENSE) {
       placeMode = !placeMode && state.mission.turretBudget + state.mission.trapBudget > 0;
     } else if (k === 'enter' && placeMode) {
@@ -1255,7 +1289,7 @@ function renderHud(
     <div class="hud-agents">${agents}</div>
     <div class="hud-help">
       <span class="kgroup"><b>LMB</b>select<b>RMB</b>move/attack<b>1-4</b>squad<b>5</b>all</span>
-      <span class="kgroup"><b>F</b>persuade<b>V</b>cloak<b>J</b>hijack<b>T</b>charge<b>Y</b>medbay<b>U</b>drone<b>K</b>EMP<b>G/H/B</b>swarm</span>
+      <span class="kgroup"><b>F</b>persuade<b>V</b>cloak<b>J</b>hijack<b>T</b>charge<b>Y</b>medbay<b>U</b>drone<b>K</b>EMP<b>N</b>interact<b>G/H/B</b>swarm</span>
       <span class="kgroup"><b>Z/X/C</b>stims<b>Tab</b>weapon<b>R</b>aggression</span>
       <span class="kgroup"><b>WASD</b>pan<b>Q/E</b>rotate<b>SPACE</b>pause<b>-/=</b>speed</span>
     </div>`;

@@ -2,7 +2,12 @@ import { contractProgress } from '../sim/contract';
 import {
   FM_ABANDONED,
   FM_ASSET_LOST,
+  FM_CAPTIVE_EXECUTED,
+  FM_CONVOY_ESCAPED,
+  FM_ESCORT_LOST,
+  FM_GRID_RESTORED,
   FM_LOCKDOWN,
+  FM_SIGNAL_SATURATED,
   FM_REINFORCED,
   FM_RIVAL_CONTRACT,
   FM_SQUAD_WIPED,
@@ -11,12 +16,18 @@ import {
   FM_VIP_ESCAPED,
   FM_WINDOW_CLOSED,
   MISSION_ASSASSINATE,
+  MISSION_BLACKOUT,
+  MISSION_BROADCAST,
+  MISSION_CONVOY,
   MISSION_DEFENSE,
+  MISSION_ESCORT,
   MISSION_HEIST,
   MISSION_HQ,
   MISSION_PERSUADE,
   MISSION_PURGE,
   MISSION_RAID,
+  MISSION_RECOVERY,
+  MISSION_SABOTAGE,
   type SimState,
 } from '../sim/state';
 import { TICK_RATE } from '../sim/tick';
@@ -36,6 +47,12 @@ const TITLES: Record<number, string> = {
   [MISSION_DEFENSE]: 'Hold the Nexus relay against all waves',
   [MISSION_HEIST]: 'Cut power, persuade the technician, open the vault, exfiltrate',
   [MISSION_HQ]: 'Purge the arcology garrison and destroy the HQ core, then exfiltrate',
+  [MISSION_SABOTAGE]: 'Demolish the marked infrastructure with planted charges, then exfiltrate',
+  [MISSION_CONVOY]: 'Stop the convoy before the district exit and deliver its cargo to exfil',
+  [MISSION_ESCORT]: 'Deliver the client asset to the marked destination, then exfiltrate',
+  [MISSION_RECOVERY]: 'Breach the holding cell and recover the captured asset before execution',
+  [MISSION_BLACKOUT]: 'Take every grid relay offline and hold the dark, then exfiltrate',
+  [MISSION_BROADCAST]: 'Silence the broadcast towers before signal saturation, then exfiltrate',
 };
 
 export function objectiveTitle(missionType: number): string {
@@ -50,6 +67,12 @@ const PROGRESS_LABELS: Record<number, string> = {
   [MISSION_DEFENSE]: 'WAVES HELD',
   [MISSION_HEIST]: 'STAGES CLEARED',
   [MISSION_HQ]: 'GARRISON AND CORE',
+  [MISSION_SABOTAGE]: 'STRUCTURES DEMOLISHED',
+  [MISSION_CONVOY]: 'CONVOY STOPPED AND CARGO SECURED',
+  [MISSION_ESCORT]: 'ASSET DELIVERED',
+  [MISSION_RECOVERY]: 'ASSET RECOVERED',
+  [MISSION_BLACKOUT]: 'RELAYS OFFLINE',
+  [MISSION_BROADCAST]: 'TOWERS SILENCED',
 };
 
 export function successLine(state: SimState): string {
@@ -146,6 +169,41 @@ const FAILURE_TEXT: Record<number, FailureText> = {
     fired: 'The client window has closed. The contract is void.',
     status: 'WINDOW CLOSED',
     debrief: 'Cause of loss: the client execution window elapsed.',
+  },
+  [FM_CONVOY_ESCAPED]: {
+    label: 'CONVOY EXIT',
+    warn: 'Convoy en route to the district exit. Projected exit in {t}.',
+    fired: 'The convoy has left the district. The cargo is off the books.',
+    status: 'CONVOY ESCAPED',
+    debrief: 'Cause of loss: the convoy exited the district intact.',
+  },
+  [FM_ESCORT_LOST]: {
+    label: 'ASSET INTEGRITY',
+    warn: 'Client asset integrity degraded. Replacement is not budgeted.',
+    fired: 'Client asset written off in transit. Delivery is void.',
+    status: 'ASSET WRITTEN OFF',
+    debrief: 'Cause of loss: the escorted asset was written off before delivery.',
+  },
+  [FM_CAPTIVE_EXECUTED]: {
+    label: 'EXECUTION DOCKET',
+    warn: 'Holding facility has scheduled the write-off. Execution in {t}.',
+    fired: 'The asset has been written off by the holding party.',
+    status: 'ASSET EXECUTED',
+    debrief: 'Cause of loss: the captured asset was executed before recovery.',
+  },
+  [FM_GRID_RESTORED]: {
+    label: 'GRID RESTORATION',
+    warn: 'Restoration crew on a dead relay. Grid back online in {t}.',
+    fired: 'Grid restored. The blackout window is closed.',
+    status: 'GRID RESTORED',
+    debrief: 'Cause of loss: the utility restored grid coverage.',
+  },
+  [FM_SIGNAL_SATURATED]: {
+    label: 'SIGNAL SATURATION',
+    warn: 'Broadcast saturation approaching threshold. Full conversion in {t}.',
+    fired: 'Saturation threshold reached. The district signal is theirs.',
+    status: 'SIGNAL SATURATED',
+    debrief: 'Cause of loss: broadcast saturation reached threshold.',
   },
 };
 

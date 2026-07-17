@@ -2,7 +2,8 @@ import type { CameraRig } from '../render/camera';
 import { SCENE_COLORS } from '../render/palette';
 import { fromFx } from '../sim/fixed';
 import { MAP_H, MAP_W } from '../sim/map';
-import { MOD_CHEM, type SimState } from '../sim/state';
+import { MISSION_BLACKOUT, MISSION_ESCORT, MOD_CHEM, type SimState } from '../sim/state';
+import { VEH_CONVOY, V_WRECK } from '../sim/vehicles';
 import { NPC_CIV, ST_DEAD, ST_PERSUADED } from '../sim/units';
 
 const SCALE = 2;
@@ -102,9 +103,35 @@ export function createMinimap(state: SimState, host?: HTMLElement): Minimap {
       );
       ctx.stroke();
 
+      const assetTint = s.mission.type === MISSION_BLACKOUT ? SCENE_COLORS.relay : SCENE_COLORS.asset;
       for (const asset of s.mission.assets) {
         if (!asset.alive) continue;
-        dot((asset.cell % MAP_W) + 0.5, ((asset.cell / MAP_W) | 0) + 0.5, css(SCENE_COLORS.asset), 3);
+        dot((asset.cell % MAP_W) + 0.5, ((asset.cell / MAP_W) | 0) + 0.5, css(assetTint), 3);
+      }
+
+      // convoy, grounded cargo, escort destination, and the held captive are
+      // square/ring marks so shape carries the distinction, not color alone
+      const rect = (x: number, z: number, color: string, r: number) => {
+        ctx.fillStyle = color;
+        ctx.fillRect(x * SCALE - r, z * SCALE - r, r * 2, r * 2);
+      };
+      const convoy = s.vehicles[s.mission.convoyId];
+      if (convoy && convoy.state !== V_WRECK && convoy.kind === VEH_CONVOY) {
+        rect(fromFx(convoy.x), fromFx(convoy.z), css(SCENE_COLORS.convoy), 3);
+      }
+      if (s.mission.cargoCell >= 0 && !s.mission.cargoSecured) {
+        rect((s.mission.cargoCell % MAP_W) + 0.5, ((s.mission.cargoCell / MAP_W) | 0) + 0.5, css(SCENE_COLORS.cargo), 2.5);
+      }
+      if (s.mission.type === MISSION_ESCORT && !s.mission.escortDone) {
+        const ex = ((s.mission.escortCell % MAP_W) + 0.5) * SCALE;
+        const ez = (((s.mission.escortCell / MAP_W) | 0) + 0.5) * SCALE;
+        ctx.strokeStyle = css(SCENE_COLORS.escort);
+        ctx.lineWidth = 1;
+        ctx.strokeRect(ex - 4, ez - 4, 8, 8);
+      }
+      const captive = s.agents[s.mission.captiveId];
+      if (captive && captive.alive && captive.held) {
+        rect(fromFx(captive.x), fromFx(captive.z), css(SCENE_COLORS.captive), 2.5);
       }
 
       for (const d of s.deployables) {

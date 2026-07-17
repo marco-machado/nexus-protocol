@@ -61,11 +61,12 @@ import {
   DEP_MEDBAY,
   DEP_TRAP,
   DEP_TURRET,
+  MISSION_ESCORT,
   MOD_CHEM,
   type SimState,
 } from '../sim/state';
 import { ST_DEAD } from '../sim/units';
-import { VEH_CAR, VEH_FUEL, VEH_TRAM, V_WRECK } from '../sim/vehicles';
+import { VEH_CAR, VEH_CONVOY, VEH_FUEL, VEH_TRAM, V_WRECK } from '../sim/vehicles';
 
 import {
   buildRig,
@@ -3641,7 +3642,8 @@ export function createGameScene(state: SimState, shadows = true): GameScene {
       metalness: 0.55,
       envMapIntensity: wet.groundEnv * 0.6,
     }),
-    2,
+    // two trams plus a possible convoy truck share the heavy-vehicle mesh
+    3,
   );
   tramMesh.instanceMatrix.setUsage(DynamicDrawUsage);
   tramMesh.frustumCulled = false;
@@ -3879,12 +3881,17 @@ export function createGameScene(state: SimState, shadows = true): GameScene {
   }
 
   const markerMeshes: Mesh[] = [];
+  const escortMission = state.mission.type === MISSION_ESCORT;
   for (const n of state.npcs) {
     if (!n.missionTarget && !n.vip) continue;
-    const m = new Mesh(
-      new ConeGeometry(0.3, 0.6, 4),
-      new MeshBasicMaterial({ color: n.vip ? SCENE_COLORS.vip : SCENE_COLORS.target }),
-    );
+    const markerColor = n.broadcaster
+      ? SCENE_COLORS.broadcaster
+      : n.vip
+        ? escortMission
+          ? SCENE_COLORS.escort
+          : SCENE_COLORS.vip
+        : SCENE_COLORS.target;
+    const m = new Mesh(new ConeGeometry(0.3, 0.6, 4), new MeshBasicMaterial({ color: markerColor }));
     m.rotation.x = Math.PI;
     m.userData.npcId = n.id;
     m.userData.vip = n.vip;
@@ -4273,7 +4280,7 @@ export function syncScene(
     const mesh = v.kind === VEH_CAR ? gs.carVariantMeshes[cv]! : gs.tramMesh;
     const lights = v.kind === VEH_CAR ? gs.carVariantLights[cv]! : gs.tramLightsMesh;
     const idx = v.kind === VEH_CAR ? gs.carVariantMeshes[cv]!.count++ : ti++;
-    if (idx >= (v.kind === VEH_CAR ? CAR_CAP : 2)) return;
+    if (idx >= (v.kind === VEH_CAR ? CAR_CAP : 3)) return;
     const wreck = v.state === V_WRECK;
     if (gs.vehSeen[i] === 0) {
       gs.vehSeen[i] = 1;
@@ -4310,6 +4317,7 @@ export function syncScene(
     npcTint.set(wreck ? 0x0a0a0a : 0xffffff).multiplyScalar(wreck ? 1 : 1.6 * lightRow.neon);
     lights.setColorAt(idx, npcTint);
     npcTint.set(wreck ? 0x14161a : v.kind === VEH_TRAM ? 0x2e6f6a : 0x7d8fb3);
+    if (!wreck && v.kind === VEH_CONVOY) npcTint.copy(SCENE_COLORS.convoy);
     if (!wreck && v.fuseT > 0 && (state.tick & 4) !== 0) npcTint.set(0xff5a3c);
     if (!wreck && v.driver >= 0) npcTint.lerp(SCENE_COLORS.agent, 0.35);
     mesh.setColorAt(idx, npcTint);

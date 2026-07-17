@@ -28,6 +28,12 @@ export const SCENE_COLORS = {
   alarmSiege: new Color(0xff2233),
   chemZone: new Color(0x9ef01a),
   empZone: new Color(0x7c6cff),
+  convoy: new Color(0xb8860b),
+  relay: new Color(0x3ddc97),
+  broadcaster: new Color(0xff7a00),
+  escort: new Color(0x7fffd4),
+  cargo: new Color(0xffe066),
+  captive: new Color(0x9ad0ff),
 };
 
 export const PALETTES: Record<PaletteName, PaletteDef> = {
@@ -66,6 +72,12 @@ export const PALETTES: Record<PaletteName, PaletteDef> = {
       alarmSiege: 0xff2233,
       chemZone: 0x9ef01a,
       empZone: 0x7c6cff,
+      convoy: 0xb8860b,
+      relay: 0x3ddc97,
+      broadcaster: 0xff7a00,
+      escort: 0x7fffd4,
+      cargo: 0xffe066,
+      captive: 0x9ad0ff,
     },
   },
   // Okabe-Ito colorblind-safe set for the red/magenta/orange faction cluster
@@ -105,6 +117,12 @@ export const PALETTES: Record<PaletteName, PaletteDef> = {
       alarmSiege: 0xd55e00,
       chemZone: 0xf0e442,
       empZone: 0x56b4e9,
+      convoy: 0xe69f00,
+      relay: 0x009e73,
+      broadcaster: 0xd55e00,
+      escort: 0x56b4e9,
+      cargo: 0xf0e442,
+      captive: 0x0072b2,
     },
   },
   contrast: {
@@ -142,6 +160,12 @@ export const PALETTES: Record<PaletteName, PaletteDef> = {
       alarmSiege: 0xff3333,
       chemZone: 0xccff00,
       empZone: 0x8899ff,
+      convoy: 0xffaa00,
+      relay: 0x00ff99,
+      broadcaster: 0xff8800,
+      escort: 0x66ffee,
+      cargo: 0xffee44,
+      captive: 0x99ccff,
     },
   },
 };
