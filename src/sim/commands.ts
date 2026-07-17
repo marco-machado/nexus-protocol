@@ -76,6 +76,36 @@ export interface AbortCommand {
   type: 'abort';
 }
 
+// timed demolition of a wall or door cell; the agent stands adjacent and is
+// exposed for the whole channel
+export interface BreachCommand {
+  type: 'breach';
+  ids: number[];
+  cell: number;
+}
+
+// hack-and-hold on a grid relay: quiet (no alarm noise), interruptible, and
+// only performable adjacent to the marked asset
+export interface HackCommand {
+  type: 'hack';
+  ids: number[];
+  cell: number;
+}
+
+// pick up or set down the mission cargo crate
+export interface CarryCommand {
+  type: 'carry';
+  id: number;
+}
+
+// explicit drive-to-waypoint for a crewed vehicle
+export interface DriveCommand {
+  type: 'drive';
+  id: number;
+  x: Fx;
+  z: Fx;
+}
+
 export type Command =
   | MoveCommand
   | AttackCommand
@@ -88,7 +118,11 @@ export type Command =
   | PlaceCommand
   | HijackCommand
   | AttackVehCommand
-  | AbortCommand;
+  | AbortCommand
+  | BreachCommand
+  | HackCommand
+  | CarryCommand
+  | DriveCommand;
 
 export class CommandQueue {
   private byTick = new Map<number, Command[]>();

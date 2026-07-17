@@ -5,6 +5,7 @@ import { MAP_W } from './map';
 export const VEH_CAR = 0;
 export const VEH_TRAM = 1;
 export const VEH_FUEL = 2;
+export const VEH_CONVOY = 3;
 
 export const V_PARKED = 0;
 export const V_DRIVE = 1;
@@ -15,6 +16,11 @@ export const V_WRECK = 4;
 export const CAR_HP = 90;
 export const TRAM_HP = 300;
 export const FUEL_HP = 70;
+export const CONVOY_HP = 500;
+export const CONVOY_SPEED = toFx(3 / 20);
+export const CONVOY_BOOM_DMG = 80;
+export const CONVOY_BOOM_R = 3;
+export const CONVOY_REPATH_T = 100;
 export const CAR_SPEED = toFx(6 / 20);
 export const CAR_HIJACK_SPEED = toFx(9 / 20);
 export const TRAM_SPEED = toFx(4 / 20);
@@ -66,7 +72,7 @@ export function createVehicle(id: number, kind: number, cell: number): Vehicle {
     dirX: 0,
     dirZ: 0,
     state: V_PARKED,
-    hp: kind === VEH_CAR ? CAR_HP : kind === VEH_TRAM ? TRAM_HP : FUEL_HP,
+    hp: kind === VEH_CAR ? CAR_HP : kind === VEH_TRAM ? TRAM_HP : kind === VEH_CONVOY ? CONVOY_HP : FUEL_HP,
     fuseT: 0,
     driver: -1,
     path: [],

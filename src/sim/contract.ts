@@ -12,9 +12,14 @@ import {
   FAIL_WARNING,
   FM_ABANDONED,
   FM_ASSET_LOST,
+  FM_CAPTIVE_EXECUTED,
+  FM_CONVOY_ESCAPED,
+  FM_ESCORT_LOST,
+  FM_GRID_RESTORED,
   FM_LOCKDOWN,
   FM_REINFORCED,
   FM_RIVAL_CONTRACT,
+  FM_SIGNAL_SATURATED,
   FM_SQUAD_WIPED,
   FM_TARGET_ESCAPED,
   FM_VIP_DOWN,
@@ -22,12 +27,18 @@ import {
   FM_WINDOW_CLOSED,
   MOD_WINDOW,
   MISSION_ASSASSINATE,
+  MISSION_BLACKOUT,
+  MISSION_BROADCAST,
+  MISSION_CONVOY,
   MISSION_DEFENSE,
+  MISSION_ESCORT,
   MISSION_HEIST,
   MISSION_HQ,
   MISSION_PERSUADE,
   MISSION_PURGE,
   MISSION_RAID,
+  MISSION_RECOVERY,
+  MISSION_SABOTAGE,
   rand,
   STATUS_ACTIVE,
   STATUS_LOST,
@@ -35,6 +46,7 @@ import {
   type SimState,
 } from './state';
 import { NPC_CIV, NPC_ENEMY, ST_DEAD, ST_PANIC, ST_PERSUADED, type Npc } from './units';
+import { V_WRECK } from './vehicles';
 
 export const RAID_LOCKDOWN_TICKS = 900;
 export const HEIST_LOCKDOWN_TICKS = 1500;
@@ -48,6 +60,15 @@ export const WINDOW_TICKS = 6000;
 export const WINDOW_WARN_TICKS = 1200;
 export const EXP_TICK_BASE = 600;
 export const EXP_TICK_SPREAD = 600;
+export const SABOTAGE_LOCKDOWN_TICKS = 1200;
+export const CONVOY_TICKS_PER_CELL = 7;
+export const ESCORT_WARN_HP = 20;
+export const EXEC_TICKS = 4800;
+export const EXEC_WARN_TICKS = 1500;
+export const RESTORE_TICKS = 600;
+export const RESTORE_RADIUS_FX = 2 << 16;
+export const SAT_MAX = 6000;
+export const SAT_WARN = 4200;
 
 export function initContract(s: SimState): void {
   const m = s.mission;
@@ -82,6 +103,24 @@ export function initContract(s: SimState): void {
       break;
     case MISSION_HQ:
       failures.push({ kind: FM_REINFORCED, state: FAIL_LATENT, countdown: HQ_DEADLINE_TICKS });
+      break;
+    case MISSION_SABOTAGE:
+      failures.push({ kind: FM_LOCKDOWN, state: FAIL_LATENT, countdown: -1 });
+      break;
+    case MISSION_CONVOY:
+      failures.push({ kind: FM_CONVOY_ESCAPED, state: FAIL_LATENT, countdown: -1 });
+      break;
+    case MISSION_ESCORT:
+      failures.push({ kind: FM_ESCORT_LOST, state: FAIL_LATENT, countdown: -1 });
+      break;
+    case MISSION_RECOVERY:
+      failures.push({ kind: FM_CAPTIVE_EXECUTED, state: FAIL_LATENT, countdown: EXEC_TICKS });
+      break;
+    case MISSION_BLACKOUT:
+      failures.push({ kind: FM_GRID_RESTORED, state: FAIL_LATENT, countdown: -1 });
+      break;
+    case MISSION_BROADCAST:
+      failures.push({ kind: FM_SIGNAL_SATURATED, state: FAIL_LATENT, countdown: -1 });
       break;
   }
   if (s.env.mods & MOD_WINDOW) {
@@ -160,6 +199,33 @@ function countAssetsDown(s: SimState): ContractProgress {
   return { done, total: s.mission.assets.length };
 }
 
+function countBroadcasters(s: SimState): ContractProgress {
+  let done = 0;
+  let total = 0;
+  for (const n of s.npcs) {
+    if (!n.broadcaster) continue;
+    total++;
+    if (n.state === ST_DEAD || n.state === ST_PERSUADED) done++;
+  }
+  return { done, total };
+}
+
+export function deadRelays(s: SimState): number {
+  if (s.mission.type !== MISSION_BLACKOUT) return 0;
+  let dead = 0;
+  for (const a of s.mission.assets) if (!a.alive) dead++;
+  return dead;
+}
+
+export function convoyStopped(s: SimState): boolean {
+  const v = s.vehicles[s.mission.convoyId];
+  return v !== undefined && v.state === V_WRECK;
+}
+
+export function saturationLevel(s: SimState): { value: number; max: number } {
+  return { value: s.mission.saturation, max: SAT_MAX };
+}
+
 export function contractProgress(s: SimState): ContractProgress {
   const m = s.mission;
   switch (m.type) {
@@ -184,6 +250,17 @@ export function contractProgress(s: SimState): ContractProgress {
         total: rivals.total + 1,
       };
     }
+    case MISSION_SABOTAGE:
+    case MISSION_BLACKOUT:
+      return countAssetsDown(s);
+    case MISSION_CONVOY:
+      return { done: (convoyStopped(s) ? 1 : 0) + (m.cargoSecured ? 1 : 0), total: 2 };
+    case MISSION_ESCORT:
+      return { done: m.escortDone ? 1 : 0, total: 1 };
+    case MISSION_RECOVERY:
+      return { done: m.captiveFreed ? 1 : 0, total: 1 };
+    case MISSION_BROADCAST:
+      return countBroadcasters(s);
   }
   return { done: 0, total: 1 };
 }
@@ -225,6 +302,21 @@ function baseObjectiveComplete(s: SimState): boolean {
       const r = countRivals(s);
       return !(m.assets[0]?.alive ?? true) && r.done >= r.total;
     }
+    case MISSION_SABOTAGE:
+    case MISSION_BLACKOUT: {
+      const a = countAssetsDown(s);
+      return a.done >= a.total;
+    }
+    case MISSION_CONVOY:
+      return m.cargoSecured;
+    case MISSION_ESCORT:
+      return m.escortDone;
+    case MISSION_RECOVERY:
+      return m.captiveFreed;
+    case MISSION_BROADCAST: {
+      const b = countBroadcasters(s);
+      return b.done >= b.total;
+    }
   }
   return false;
 }
@@ -232,7 +324,7 @@ function baseObjectiveComplete(s: SimState): boolean {
 export function squadAtExfil(s: SimState): boolean {
   const m = s.mission;
   return s.agents.every(
-    (a) => !a.alive || fxLen(a.x - m.exfilX, a.z - m.exfilZ) <= m.exfilR,
+    (a) => !a.alive || a.held || fxLen(a.x - m.exfilX, a.z - m.exfilZ) <= m.exfilR,
   );
 }
 
@@ -404,6 +496,103 @@ function updateDeadline(s: SimState): void {
   fm.state = fm.countdown <= HQ_DEADLINE_WARN_TICKS ? FAIL_WARNING : FAIL_LATENT;
 }
 
+function updateConvoy(s: SimState): void {
+  const fm = failureOf(s, FM_CONVOY_ESCAPED);
+  if (!fm || fm.state === FAIL_FIRED) return;
+  const m = s.mission;
+  const v = s.vehicles[m.convoyId];
+  if (!v || v.state === V_WRECK) {
+    setState(fm, FAIL_LATENT);
+    return;
+  }
+  const cur = (v.x >> 16) + (v.z >> 16) * MAP_W;
+  if (cur === m.convoyExit) {
+    failContract(s, FM_CONVOY_ESCAPED);
+    return;
+  }
+  const d =
+    Math.abs((m.convoyExit % MAP_W) - (v.x >> 16)) +
+    Math.abs(((m.convoyExit / MAP_W) | 0) - (v.z >> 16));
+  setState(fm, FAIL_WARNING, d * CONVOY_TICKS_PER_CELL);
+}
+
+function updateEscort(s: SimState): void {
+  const fm = failureOf(s, FM_ESCORT_LOST);
+  const escort = s.npcs[s.mission.vipId];
+  if (!escort) return;
+  if (escort.state === ST_DEAD) {
+    if (!s.mission.escortDone) failContract(s, FM_ESCORT_LOST);
+    return;
+  }
+  setState(fm, escort.hp <= ESCORT_WARN_HP ? FAIL_WARNING : FAIL_LATENT);
+}
+
+function updateRecovery(s: SimState): void {
+  const fm = failureOf(s, FM_CAPTIVE_EXECUTED);
+  if (!fm || fm.state === FAIL_FIRED) return;
+  const captive = s.agents[s.mission.captiveId];
+  if (captive && !captive.alive) {
+    failContract(s, FM_CAPTIVE_EXECUTED);
+    return;
+  }
+  if (s.mission.captiveFreed || fm.countdown < 0) {
+    // a freed asset is off the execution docket
+    setState(fm, FAIL_LATENT);
+    return;
+  }
+  if (--fm.countdown <= 0) {
+    if (captive) captive.alive = false;
+    failContract(s, FM_CAPTIVE_EXECUTED);
+    return;
+  }
+  fm.state = fm.countdown <= EXEC_WARN_TICKS ? FAIL_WARNING : FAIL_LATENT;
+}
+
+function updateBlackout(s: SimState): void {
+  const fm = failureOf(s, FM_GRID_RESTORED);
+  if (!fm || fm.state === FAIL_FIRED) return;
+  let onSite = false;
+  for (const a of s.mission.assets) {
+    if (a.alive) continue;
+    const rx = ((a.cell % MAP_W) << 16) + (1 << 15);
+    const rz = (((a.cell / MAP_W) | 0) << 16) + (1 << 15);
+    for (const n of s.npcs) {
+      if (!n.raider || n.state === ST_DEAD || n.state === ST_PERSUADED) continue;
+      if (fxLen(n.x - rx, n.z - rz) <= RESTORE_RADIUS_FX) {
+        onSite = true;
+        break;
+      }
+    }
+    if (onSite) break;
+  }
+  if (fm.countdown < 0) {
+    if (onSite) {
+      fm.state = FAIL_WARNING;
+      fm.countdown = RESTORE_TICKS;
+    }
+    return;
+  }
+  // interrupted restoration holds its progress, like the rival contract
+  if (onSite && --fm.countdown <= 0) failContract(s, FM_GRID_RESTORED);
+}
+
+function updateBroadcast(s: SimState): void {
+  const fm = failureOf(s, FM_SIGNAL_SATURATED);
+  if (!fm || fm.state === FAIL_FIRED) return;
+  const sat = s.mission.saturation;
+  if (sat >= SAT_MAX) {
+    failContract(s, FM_SIGNAL_SATURATED);
+    return;
+  }
+  const live = countBroadcasters(s);
+  const rate = live.total - live.done;
+  if (sat >= SAT_WARN && rate > 0) {
+    setState(fm, FAIL_WARNING, ((SAT_MAX - sat) / rate) | 0);
+  } else {
+    setState(fm, FAIL_LATENT);
+  }
+}
+
 function updateWindow(s: SimState): void {
   const fm = failureOf(s, FM_WINDOW_CLOSED);
   if (!fm || fm.state === FAIL_FIRED || fm.countdown < 0) return;
@@ -473,6 +662,24 @@ export function updateContract(s: SimState): void {
       break;
     case MISSION_HQ:
       updateDeadline(s);
+      break;
+    case MISSION_SABOTAGE:
+      updateLockdown(s, SABOTAGE_LOCKDOWN_TICKS);
+      break;
+    case MISSION_CONVOY:
+      updateConvoy(s);
+      break;
+    case MISSION_ESCORT:
+      updateEscort(s);
+      break;
+    case MISSION_RECOVERY:
+      updateRecovery(s);
+      break;
+    case MISSION_BLACKOUT:
+      updateBlackout(s);
+      break;
+    case MISSION_BROADCAST:
+      updateBroadcast(s);
       break;
   }
 }

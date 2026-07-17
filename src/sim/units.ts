@@ -80,7 +80,18 @@ export interface Agent {
   stunT: number;
   driving: number;
   attackVeh: number;
+  // timed field work (breach or hack): the verb, the target cell, and ticks
+  // of uninterrupted channel completed; WORK_NONE when idle
+  workKind: number;
+  workCell: number;
+  workT: number;
+  // a captured asset awaiting recovery: inert and uncommandable until freed
+  held: boolean;
 }
+
+export const WORK_NONE = 0;
+export const WORK_BREACH = 1;
+export const WORK_HACK = 2;
 
 export interface Npc {
   id: number;
@@ -109,6 +120,9 @@ export interface Npc {
   enemyMaster: number;
   fleeCell: number;
   escaped: boolean;
+  // counter-broadcast tower crew: pulses convert the persuaded swarm and feed
+  // the saturation meter
+  broadcaster: boolean;
 }
 
 export interface Projectile {
@@ -199,6 +213,10 @@ export function createAgent(id: number, x: Fx, z: Fx, spec: AgentSpec): Agent {
     stunT: 0,
     driving: -1,
     attackVeh: -1,
+    workKind: WORK_NONE,
+    workCell: -1,
+    workT: 0,
+    held: false,
   };
 }
 
@@ -223,6 +241,7 @@ export function createNpc(id: number, kind: number, cell: number, mapW: number):
     enemyMaster: -1,
     fleeCell: -1,
     escaped: false,
+    broadcaster: false,
     ammo: 999,
     cooldown: 0,
     panicT: 0,

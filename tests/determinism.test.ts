@@ -11,9 +11,14 @@ import {
   DEP_TURRET,
   MISSION_ASSASSINATE,
   MISSION_DEFENSE,
+  MISSION_BLACKOUT,
+  MISSION_BROADCAST,
+  MISSION_CONVOY,
+  MISSION_ESCORT,
   MISSION_HEIST,
   MISSION_HQ,
   MISSION_PURGE,
+  MISSION_RECOVERY,
 } from '../src/sim/state';
 import type { MissionParams } from '../src/sim/setup';
 import { npcSightFx, spawnNpc, step } from '../src/sim/tick';
@@ -27,11 +32,13 @@ const CHECKPOINT_EVERY = 200;
 
 // If this hash changes, sim behavior changed: either the change was an
 // intentional gameplay edit (update the constant) or determinism broke.
-// Re-pinned for the contracts-track milestone B (issue #13): initContract now
-// rolls a seeded compounding-expansion offer on every field contract (extra
-// RNG consumption at setup), the expansion and env-modifier fields joined
-// hashState, and an announced amendment gates the win condition.
-const GOLDEN_FINAL_HASH = 0xdaaeaa2d;
+// Re-pinned for the contracts-track milestone C (issue #13): the six new
+// contract types added mission fields (convoy/cargo, escort, captive,
+// saturation, garrison) and agent work-channel/held fields to hashState, and
+// assassination targets now spawn ten cells deeper than the guard anchor so
+// the flight-to-exit failure is a contestable chase (GDD 9.2, doctrine-matrix
+// probe finding). Other mission types are behaviorally unchanged.
+const GOLDEN_FINAL_HASH = 0x4bc18742;
 
 function specs() {
   const lead = defaultSpec();
@@ -292,6 +299,48 @@ describe('phase D vehicles', () => {
     expect(runHashes(MISSION_ASSASSINATE, script, 900)).toEqual(
       runHashes(MISSION_ASSASSINATE, script, 900),
     );
+  });
+});
+
+describe('milestone C new-command determinism', () => {
+  it('breach and hack replay identically on recovery and blackout', () => {
+    const recovery = createMission(SEED, MISSION_RECOVERY, phaseBSpecs());
+    const door = recovery.mission.assets[0]!.cell;
+    const breachScript: ReplayEntry[] = [
+      { tick: 5, command: { type: 'move', ids: [0, 1, 2, 3], x: toFx(48.5), z: toFx(30.5) } },
+      { tick: 300, command: { type: 'breach', ids: [0, 1], cell: door } },
+    ];
+    expect(runHashes(MISSION_RECOVERY, breachScript, 900)).toEqual(runHashes(MISSION_RECOVERY, breachScript, 900));
+
+    const blackout = createMission(SEED, MISSION_BLACKOUT, phaseBSpecs());
+    const relay = blackout.mission.assets[0]!.cell;
+    const hackScript: ReplayEntry[] = [
+      { tick: 5, command: { type: 'move', ids: [0, 1, 2, 3], x: toFx(48.5), z: toFx(30.5) } },
+      { tick: 300, command: { type: 'hack', ids: [0], cell: relay } },
+    ];
+    expect(runHashes(MISSION_BLACKOUT, hackScript, 900)).toEqual(runHashes(MISSION_BLACKOUT, hackScript, 900));
+  });
+
+  it('carry and drive replay identically on convoy interception', () => {
+    const script: ReplayEntry[] = [
+      { tick: 5, command: { type: 'move', ids: [0, 1, 2, 3], x: toFx(48.5), z: toFx(49.5) } },
+      { tick: 200, command: { type: 'attackveh', ids: [0, 1, 2, 3], vehId: 0 } },
+      { tick: 400, command: { type: 'carry', id: 0 } },
+      { tick: 450, command: { type: 'hijack', id: 1 } },
+      { tick: 470, command: { type: 'drive', id: 1, x: toFx(10.5), z: toFx(49.5) } },
+      { tick: 700, command: { type: 'carry', id: 0 } },
+    ];
+    expect(runHashes(MISSION_CONVOY, script, 900)).toEqual(runHashes(MISSION_CONVOY, script, 900));
+  });
+
+  it('escort and counter-broadcast missions replay identically', () => {
+    const script: ReplayEntry[] = [
+      { tick: 5, command: { type: 'move', ids: [0, 1, 2, 3], x: toFx(48.5), z: toFx(40.5) } },
+      { tick: 300, command: { type: 'persuade', id: 0 } },
+      { tick: 500, command: { type: 'move', ids: [0, 1, 2, 3], x: toFx(48.5), z: toFx(20.5) } },
+    ];
+    expect(runHashes(MISSION_ESCORT, script, 900)).toEqual(runHashes(MISSION_ESCORT, script, 900));
+    expect(runHashes(MISSION_BROADCAST, script, 900)).toEqual(runHashes(MISSION_BROADCAST, script, 900));
   });
 });
 

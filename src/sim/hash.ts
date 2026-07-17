@@ -16,8 +16,12 @@ export function hashState(s: SimState): number {
   mix(s.alarm.level);
   mix(s.mission.status);
   mix(s.mission.stage | (s.mission.wave << 4) | (s.mission.crackT << 8));
+  const m = s.mission;
+  mix((m.convoyId + 2) | ((m.carrier + 2) << 8) | ((m.cargoSecured ? 1 : 0) << 16));
+  mix((m.cargoCell + 2) | ((m.escortDone ? 1 : 0) << 15) | ((m.captiveFreed ? 1 : 0) << 16));
+  mix((m.captiveId + 2) | (m.saturation << 8));
   const ct = s.mission.contract;
-  mix((ct.lossReason + 2) | ((ct.abortArmed ? 1 : 0) << 8) | ((ct.rivalCell + 2) << 9));
+  mix((ct.lossReason + 2) | ((ct.abortArmed ? 1 : 0) << 8) | ((ct.rivalCell + 2) << 9) | (ct.garrison << 24));
   for (const f of ct.failures) mix(f.kind | (f.state << 4) | ((f.countdown + 2) << 6));
   mix(ct.expansion.state | ((ct.expansion.tick + 2) << 4) | ((ct.expansion.npc + 2) << 16));
   mix(s.env.tod | (s.env.rain << 4) | (s.env.mods << 8));
@@ -36,7 +40,8 @@ export function hashState(s: SimState): number {
     mix(a.stims[0] | (a.stims[1] << 4) | (a.stims[2] << 8) | (a.active << 12));
     mix(a.alive ? 1 : 0);
     mix(a.cloakT | (a.shield << 9) | (a.stunT << 18));
-    mix((a.driving + 2) | ((a.attackVeh + 2) << 8));
+    mix((a.driving + 2) | ((a.attackVeh + 2) << 8) | ((a.held ? 1 : 0) << 16));
+    mix(a.workKind | ((a.workCell + 2) << 2) | (a.workT << 18));
   }
   for (const n of s.npcs) {
     mix(n.x);

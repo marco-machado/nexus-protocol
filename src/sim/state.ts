@@ -12,6 +12,12 @@ export const MISSION_PURGE = 3;
 export const MISSION_DEFENSE = 4;
 export const MISSION_HEIST = 5;
 export const MISSION_HQ = 6;
+export const MISSION_SABOTAGE = 7;
+export const MISSION_CONVOY = 8;
+export const MISSION_ESCORT = 9;
+export const MISSION_RECOVERY = 10;
+export const MISSION_BLACKOUT = 11;
+export const MISSION_BROADCAST = 12;
 
 export const DEP_TURRET = 0;
 export const DEP_TRAP = 1;
@@ -43,6 +49,11 @@ export const FM_RIVAL_CONTRACT = 6;
 export const FM_ASSET_LOST = 7;
 export const FM_REINFORCED = 8;
 export const FM_WINDOW_CLOSED = 9;
+export const FM_CONVOY_ESCAPED = 10;
+export const FM_ESCORT_LOST = 11;
+export const FM_CAPTIVE_EXECUTED = 12;
+export const FM_GRID_RESTORED = 13;
+export const FM_SIGNAL_SATURATED = 14;
 
 // environmental modifier bits carried in EnvState.mods
 export const MOD_FOG = 1;
@@ -77,6 +88,8 @@ export interface ContractState {
   lossReason: number;
   abortArmed: boolean;
   rivalCell: number;
+  // blackout: 1 once the grid-restoration crew has been dispatched
+  garrison: number;
   expansion: ExpansionState;
 }
 
@@ -140,6 +153,25 @@ export interface MissionState {
   // keeps exactly what was taken and nothing promised
   loot: number;
   lootPrize: number;
+  // convoy interception: the convoy's vehicle id and the exit street cell it
+  // is driving toward; the cargo crate appears at the wreck once it is stopped
+  convoyId: number;
+  convoyExit: number;
+  // cell the crate sits on when not carried; -1 while an agent carries it
+  cargoCell: number;
+  // agent id carrying the crate; -1 when grounded
+  carrier: number;
+  // cargo is booked the moment it crosses the exfil zone and stays booked
+  cargoSecured: boolean;
+  // escort: destination cell for the fragile asset
+  escortCell: number;
+  escortDone: boolean;
+  // asset recovery: agent id of the held captive (created inert at setup so
+  // agent-count-sized render buffers never resize mid-mission)
+  captiveId: number;
+  captiveFreed: boolean;
+  // counter-broadcast conversion-pressure meter (glossary: not "unrest")
+  saturation: number;
   contract: ContractState;
 }
 
@@ -261,11 +293,22 @@ export function baseState(seed: number, mapSeed: number, mapParams?: MapParams):
       trapBudget: 0,
       loot: 0,
       lootPrize: 0,
+      convoyId: -1,
+      convoyExit: -1,
+      cargoCell: -1,
+      carrier: -1,
+      cargoSecured: false,
+      escortCell: -1,
+      escortDone: false,
+      captiveId: -1,
+      captiveFreed: false,
+      saturation: 0,
       contract: {
         failures: [],
         lossReason: REASON_NONE,
         abortArmed: false,
         rivalCell: -1,
+        garrison: 0,
         expansion: { state: EXP_NONE, tick: -1, npc: -1 },
       },
     },

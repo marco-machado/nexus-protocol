@@ -1,5 +1,5 @@
 import { GEAR_CHARGE, GEAR_CLOAK, GEAR_DRONE, GEAR_EMP, GEAR_MEDBAY, type Command } from './commands';
-import { expansionSatisfied, failContract, updateContract } from './contract';
+import { deadRelays, expansionSatisfied, failContract, SAT_MAX, updateContract } from './contract';
 import { fxDiv, fxLen, fxMul, type Fx } from './fixed';
 import { cellIdx, inBounds, losClear, MAP_W, type MapData } from './map';
 import { findPath, nearestWalkable } from './path';
@@ -15,6 +15,12 @@ import {
   MISSION_DEFENSE,
   MISSION_HEIST,
   MISSION_HQ,
+  MISSION_SABOTAGE,
+  MISSION_CONVOY,
+  MISSION_ESCORT,
+  MISSION_RECOVERY,
+  MISSION_BLACKOUT,
+  MISSION_BROADCAST,
   DEP_CHARGE,
   DEP_DRONE,
   DEP_MEDBAY,
@@ -57,6 +63,9 @@ import {
   ST_PANIC,
   ST_PERSUADED,
   ST_WALK,
+  WORK_BREACH,
+  WORK_HACK,
+  WORK_NONE,
 } from './units';
 import { PROJ_SPEED_FX, PROJ_SUBSTEPS, WEAPONS } from './weapons';
 import {
@@ -80,6 +89,11 @@ import {
   TRAM_RUNOVER_DMG,
   TRAM_SPEED,
   TRAM_STOP_T,
+  CONVOY_BOOM_DMG,
+  CONVOY_BOOM_R,
+  CONVOY_REPATH_T,
+  CONVOY_SPEED,
+  VEH_CONVOY,
   VEH_FUEL,
   VEH_HIT,
   VEH_TRAM,
@@ -121,6 +135,23 @@ const MEDBAY_RADIUS = 3 << 16;
 const SMOKE_TTL = 240;
 const VAULT_CRACK_TICKS = 300;
 const PLACE_RADIUS = 14 << 16;
+export const BREACH_TICKS = 120;
+export const HACK_TICKS = 160;
+// centers of diagonal-adjacent cells are ~1.41 cells apart
+const WORK_RANGE = 3 << 15;
+const CARGO_PICK_RADIUS = 3 << 15;
+const CARRY_SPEED_PCT = 70;
+// a persuaded follower holds three cells off its leader, so the delivery
+// zone must be wider than that standoff or arrival can deadlock
+const ESCORT_ARRIVE_FX = 4 << 16;
+const FREE_RADIUS = 2 << 16;
+const CHARGE_SPOT_CELLS = 5;
+const DEFUSE_TICKS = 60;
+// sabotage charges arm slow: the plant lives or dies inside patrol windows
+export const SABOTAGE_FUSE = 400;
+const BCAST_RADIUS = 8 << 16;
+const BCAST_PERIOD = 90;
+const GARRISON_SIZE = 3;
 // inside this range projectiles overshoot (they spawn 2 units past the muzzle
 // and are only collision-checked from 3 units out), so shots resolve directly
 const CQC_RANGE = 5 << 15;
@@ -140,12 +171,16 @@ function cellOfFx(x: Fx, z: Fx): number {
   return (x >> 16) + (z >> 16) * MAP_W;
 }
 
-// rain, darkness, and fog shrink NPC detection, never player hardware or weapon range
+// rain, darkness, fog, and blackout relay kills shrink NPC detection, never
+// player hardware or weapon range
 export function npcSightFx(s: SimState, baseCells: number): Fx {
   let v = baseCells << 16;
   if (s.env.rain) v = (v * 3) >> 2;
   if (s.env.tod === TOD_NIGHT) v = (v * 7) >> 3;
   if (s.env.mods & MOD_FOG) v = (v * 5) >> 3;
+  // environment-only callers (tests, previews) pass a state without a mission
+  const dead = (s as { mission?: unknown }).mission ? deadRelays(s) : 0;
+  if (dead > 0) v = ((v * (8 - 2 * dead)) / 8) | 0;
   return v;
 }
 
@@ -516,6 +551,32 @@ function tramUpdate(s: SimState, v: Vehicle): void {
   if (v.state === V_HIJACK) runOver(s, v, TRAM_RUNOVER_DMG);
 }
 
+// another vehicle parked or halted in the next cell blocks the convoy: a
+// roadblock is anything with wheels left in its lane
+function vehicleAhead(s: SimState, v: Vehicle): boolean {
+  for (const o of s.vehicles) {
+    if (o === v || o.kind === VEH_FUEL) continue;
+    // wrecks still occupy the lane, so a burned-out car keeps blocking
+    if (unitAhead(v, o.x, o.z)) return true;
+  }
+  return false;
+}
+
+function convoyUpdate(s: SimState, v: Vehicle): void {
+  const exit = s.mission.convoyExit;
+  if (exit < 0) return;
+  if (cellOfFx(v.x, v.z) === exit) return;
+  if (v.pathI >= v.path.length || s.tick % CONVOY_REPATH_T === 0) {
+    driveTo(s, v, ((exit % MAP_W) << 16) + (1 << 15), (((exit / MAP_W) | 0) << 16) + (1 << 15));
+  }
+  if (v.pathI >= v.path.length) return;
+  vehicleDir(v);
+  if ((s.tick + v.id) % 2 === 0 && vehicleAhead(s, v)) return;
+  moveAlong(v, CONVOY_SPEED);
+  // an armored convoy does not brake for pedestrians
+  runOver(s, v, RUNOVER_DMG);
+}
+
 function updateVehicles(s: SimState, noises: Noise[]): void {
   for (const v of s.vehicles) {
     if (v.state === V_WRECK) continue;
@@ -523,13 +584,31 @@ function updateVehicles(s: SimState, noises: Noise[]): void {
       if (--v.fuseT === 0) {
         v.state = V_WRECK;
         if (v.kind === VEH_FUEL) s.map.obstacle[v.cell] = 0;
-        const dmg = v.kind === VEH_FUEL ? FUEL_BOOM_DMG : v.kind === VEH_TRAM ? TRAM_BOOM_DMG : CAR_BOOM_DMG;
-        const r = v.kind === VEH_FUEL ? FUEL_BOOM_R : v.kind === VEH_TRAM ? TRAM_BOOM_R : CAR_BOOM_R;
+        const dmg =
+          v.kind === VEH_FUEL
+            ? FUEL_BOOM_DMG
+            : v.kind === VEH_TRAM
+              ? TRAM_BOOM_DMG
+              : v.kind === VEH_CONVOY
+                ? CONVOY_BOOM_DMG
+                : CAR_BOOM_DMG;
+        const r =
+          v.kind === VEH_FUEL
+            ? FUEL_BOOM_R
+            : v.kind === VEH_TRAM
+              ? TRAM_BOOM_R
+              : v.kind === VEH_CONVOY
+                ? CONVOY_BOOM_R
+                : CAR_BOOM_R;
         explodeAt(s, v.x, v.z, dmg, r, noises);
       }
       continue;
     }
     if (v.kind === VEH_FUEL || v.state === V_PARKED) continue;
+    if (v.kind === VEH_CONVOY) {
+      convoyUpdate(s, v);
+      continue;
+    }
     if (v.kind === VEH_TRAM) {
       tramUpdate(s, v);
       if (v.driver >= 0) syncDriver(s, v);
@@ -612,7 +691,8 @@ function applyCommand(s: SimState, c: Command): void {
       let offset = 0;
       for (const id of c.ids) {
         const a = s.agents[id];
-        if (!a || !a.alive) continue;
+        if (!a || !a.alive || a.held) continue;
+        a.workKind = WORK_NONE;
         if (a.driving >= 0) {
           const v = s.vehicles[a.driving];
           if (v) driveTo(s, v, c.x, c.z);
@@ -632,7 +712,10 @@ function applyCommand(s: SimState, c: Command): void {
     case 'attack':
       for (const id of c.ids) {
         const a = s.agents[id];
-        if (a && a.alive) a.attackTarget = c.npcId;
+        if (a && a.alive && !a.held) {
+          a.attackTarget = c.npcId;
+          a.workKind = WORK_NONE;
+        }
       }
       break;
     case 'stim':
@@ -645,7 +728,7 @@ function applyCommand(s: SimState, c: Command): void {
       break;
     case 'persuade': {
       const a = s.agents[c.id];
-      if (!a || !a.alive || !a.spec.persuadertron || a.persuadeCd > 0 || a.driving >= 0) break;
+      if (!a || !a.alive || a.held || !a.spec.persuadertron || a.persuadeCd > 0 || a.driving >= 0) break;
       a.persuadeCd = 30;
       const inf = influence(s);
       for (const n of s.npcs) {
@@ -698,7 +781,7 @@ function applyCommand(s: SimState, c: Command): void {
       let user: Agent | null = null;
       for (const id of c.ids) {
         const a = s.agents[id];
-        if (!a || !a.alive) continue;
+        if (!a || !a.alive || a.held) continue;
         if (
           (c.gear === GEAR_CHARGE && a.spec.charges > 0) ||
           (c.gear === GEAR_MEDBAY && a.spec.medbays > 0) ||
@@ -729,7 +812,8 @@ function applyCommand(s: SimState, c: Command): void {
         z: user.z,
         hp: kind === DEP_DRONE ? 40 : 60,
         alive: true,
-        cooldown: kind === DEP_CHARGE ? CHARGE_FUSE : 0,
+        cooldown:
+          kind === DEP_CHARGE ? (s.mission.type === MISSION_SABOTAGE ? SABOTAGE_FUSE : CHARGE_FUSE) : 0,
         charge: kind === DEP_MEDBAY ? 400 : 0,
       });
       break;
@@ -763,7 +847,7 @@ function applyCommand(s: SimState, c: Command): void {
     }
     case 'hijack': {
       const a = s.agents[c.id];
-      if (!a || !a.alive || a.stunT > 0) break;
+      if (!a || !a.alive || a.held || a.stunT > 0) break;
       if (a.driving >= 0) {
         const v = s.vehicles[a.driving];
         if (v) {
@@ -783,7 +867,9 @@ function applyCommand(s: SimState, c: Command): void {
       let best: Fx = HIJACK_RADIUS + 1;
       let pick: Vehicle | null = null;
       for (const v of s.vehicles) {
-        if (v.kind === VEH_FUEL || v.state === V_WRECK || v.fuseT > 0 || v.driver >= 0) continue;
+        // the convoy is armored and crewed; it cannot be commandeered
+        if (v.kind === VEH_FUEL || v.kind === VEH_CONVOY) continue;
+        if (v.state === V_WRECK || v.fuseT > 0 || v.driver >= 0) continue;
         const d = distFx(a.x, a.z, v.x, v.z);
         if (d < best) {
           best = d;
@@ -818,11 +904,61 @@ function applyCommand(s: SimState, c: Command): void {
     case 'abort':
       s.mission.contract.abortArmed = !s.mission.contract.abortArmed;
       break;
+    case 'breach':
+    case 'hack': {
+      const kind = c.type === 'breach' ? WORK_BREACH : WORK_HACK;
+      if (!workTargetValid(s, kind, c.cell)) break;
+      for (const id of c.ids) {
+        const a = s.agents[id];
+        if (!a || !a.alive || a.held || a.driving >= 0) continue;
+        // a repeated identical order confirms the channel, never resets it
+        if (a.workKind === kind && a.workCell === c.cell) continue;
+        a.workKind = kind;
+        a.workCell = c.cell;
+        a.workT = 0;
+        a.attackTarget = -1;
+        a.attackVeh = -1;
+      }
+      break;
+    }
+    case 'carry': {
+      const a = s.agents[c.id];
+      if (!a || !a.alive || a.held || a.driving >= 0) break;
+      const m = s.mission;
+      if (m.carrier === a.id) {
+        m.cargoCell = nearestWalkable(s.map, cellOfFx(a.x, a.z));
+        m.carrier = -1;
+        break;
+      }
+      if (m.carrier >= 0 || m.cargoCell < 0 || m.cargoSecured) break;
+      const [cx, cz] = centerFx(m.cargoCell);
+      if (distFx(a.x, a.z, cx, cz) > CARGO_PICK_RADIUS) break;
+      m.carrier = a.id;
+      m.cargoCell = -1;
+      a.cloakT = 0;
+      break;
+    }
+    case 'drive': {
+      const a = s.agents[c.id];
+      if (!a || !a.alive || a.driving < 0) break;
+      const v = s.vehicles[a.driving];
+      if (v) driveTo(s, v, c.x, c.z);
+      break;
+    }
   }
 }
 
+function workTargetValid(s: SimState, kind: number, cell: number): boolean {
+  if (cell < 0 || cell >= s.map.obstacle.length) return false;
+  if (kind === WORK_BREACH) {
+    return s.map.wallHp[cell]! > 0 || s.mission.assets.some((a) => a.alive && a.cell === cell);
+  }
+  // hack-and-hold only works on marked grid assets
+  return s.mission.type === MISSION_BLACKOUT && s.mission.assets.some((a) => a.alive && a.cell === cell);
+}
+
 function updateAgent(s: SimState, a: Agent, noises: Noise[]): void {
-  if (!a.alive) return;
+  if (!a.alive || a.held) return;
   if (a.cooldown > 0) a.cooldown--;
   if (a.persuadeCd > 0) a.persuadeCd--;
 
@@ -872,8 +1008,12 @@ function updateAgent(s: SimState, a: Agent, noises: Noise[]): void {
   // driving agents are a steering wheel, not a turret; the vehicle moves them
   if (a.driving >= 0) return;
 
+  if (a.workKind !== WORK_NONE && updateWork(s, a, noises)) return;
+
   if (a.moving) {
-    if (moveAlong(a, agentSpeed(a))) a.moving = false;
+    let speed = agentSpeed(a);
+    if (s.mission.carrier === a.id) speed = ((speed * CARRY_SPEED_PCT) / 100) | 0;
+    if (moveAlong(a, speed)) a.moving = false;
   }
 
   loot(s, a.x, a.z, a);
@@ -941,7 +1081,11 @@ function updateAgent(s: SimState, a: Agent, noises: Noise[]): void {
   if (
     tx === null &&
     a.aggression > 0 &&
-    (s.mission.type === MISSION_RAID || s.mission.type === MISSION_HEIST || s.mission.type === MISSION_HQ)
+    (s.mission.type === MISSION_RAID ||
+      s.mission.type === MISSION_HEIST ||
+      s.mission.type === MISSION_HQ ||
+      s.mission.type === MISSION_SABOTAGE ||
+      s.mission.type === MISSION_BLACKOUT)
   ) {
     for (const asset of s.mission.assets) {
       if (!asset.alive) continue;
@@ -983,6 +1127,50 @@ function updateAgent(s: SimState, a: Agent, noises: Noise[]): void {
   }
 }
 
+// returns true while the agent is committed to the channel this tick
+function updateWork(s: SimState, a: Agent, noises: Noise[]): boolean {
+  const kind = a.workKind;
+  const cell = a.workCell;
+  if (!workTargetValid(s, kind, cell)) {
+    a.workKind = WORK_NONE;
+    return false;
+  }
+  const [wx, wz] = centerFx(cell);
+  if (distFx(a.x, a.z, wx, wz) > WORK_RANGE) {
+    // close the gap first; the channel only runs adjacent to the target
+    if ((s.tick + a.id) % 16 === 0 && !a.moving) {
+      if (setPath(s.map, a, nearestWalkable(s.map, cell))) a.moving = true;
+    }
+    if (a.moving) {
+      if (moveAlong(a, agentSpeed(a))) a.moving = false;
+    }
+    return true;
+  }
+  a.moving = false;
+  a.path = [];
+  a.pathI = 0;
+  a.cloakT = 0;
+  if (++a.workT < (kind === WORK_BREACH ? BREACH_TICKS : HACK_TICKS)) return true;
+  const asset = s.mission.assets.find((x) => x.alive && x.cell === cell);
+  if (kind === WORK_BREACH) {
+    if (s.map.wallHp[cell]! > 0) breachWall(s, cell);
+    if (asset) {
+      asset.alive = false;
+      s.map.obstacle[cell] = 0;
+    }
+    // demolition is loud
+    noises.push({ x: wx, z: wz });
+    s.booms++;
+  } else if (asset) {
+    // a hack kills the relay silently; that is the whole point of the verb
+    asset.alive = false;
+    s.map.obstacle[cell] = 0;
+  }
+  a.workKind = WORK_NONE;
+  a.workT = 0;
+  return true;
+}
+
 function loot(s: SimState, x: Fx, z: Fx, a: Agent): void {
   if (s.tick % 5 !== 0) return;
   for (const n of s.npcs) {
@@ -1022,7 +1210,7 @@ function enemySquadMove(s: SimState, n: Npc): void {
   let tz: Fx | null = null;
   let best: Fx = npcSightFx(s, 14);
   for (const a of s.agents) {
-    if (!a.alive || a.cloakT > 0) continue;
+    if (!a.alive || a.held || a.cloakT > 0) continue;
     const d = distFx(n.x, n.z, a.x, a.z);
     if (d < best && losUnits(s, n.x, n.z, a.x, a.z)) {
       best = d;
@@ -1065,12 +1253,15 @@ function enemyPulse(s: SimState, n: Npc): void {
   const swarmDoc = s.mission.doctrine === DOCTRINE_SWARM;
   let fired = false;
   for (const a of s.agents) {
-    if (!a.alive || distFx(n.x, n.z, a.x, a.z) > PERSUADE_RADIUS) continue;
+    if (!a.alive || a.held || distFx(n.x, n.z, a.x, a.z) > PERSUADE_RADIUS) continue;
     fired = true;
     if (!a.spec.persuadeImmune) a.stunT = PULSE_STUN;
   }
   for (const p of s.npcs) {
     if (p.state !== ST_PERSUADED) continue;
+    // the escort asset follows by contract, not persuasion; pulses cannot
+    // strip it or the delivery would fail to an invisible mechanic
+    if (p.vip && s.mission.type === MISSION_ESCORT) continue;
     if (distFx(n.x, n.z, p.x, p.z) > PERSUADE_RADIUS) continue;
     fired = true;
     p.path = [];
@@ -1101,6 +1292,45 @@ function enemyPulse(s: SimState, n: Npc): void {
   if (fired) n.pulseT = swarmDoc ? 180 : 300;
 }
 
+// defense raiders push the held asset; blackout restoration crews push the
+// nearest dead relay instead
+function raiderTargetCell(s: SimState, n: Npc): number {
+  if (s.mission.type === MISSION_BLACKOUT) {
+    let best = -1;
+    let bestD = 1 << 30;
+    for (const a of s.mission.assets) {
+      if (a.alive) continue;
+      const d =
+        Math.abs((a.cell % MAP_W) - (n.x >> 16)) + Math.abs(((a.cell / MAP_W) | 0) - (n.z >> 16));
+      if (d < bestD) {
+        bestD = d;
+        best = a.cell;
+      }
+    }
+    return best;
+  }
+  const held = s.mission.assets[0];
+  return held && held.alive ? held.cell : -1;
+}
+
+// counter-broadcast towers attack the player's signature tool: the swarm.
+// Each pulse strips nearby persuaded units back to the street
+function broadcastPulse(s: SimState, n: Npc): void {
+  if ((s.tick + n.id * 13) % BCAST_PERIOD !== 0) return;
+  for (const p of s.npcs) {
+    if (p.state !== ST_PERSUADED) continue;
+    if (distFx(n.x, n.z, p.x, p.z) > BCAST_RADIUS) continue;
+    p.path = [];
+    p.pathI = 0;
+    if (p.kind === NPC_CIV) {
+      p.state = ST_PANIC;
+      p.panicT = 120;
+    } else {
+      p.state = ST_IDLE;
+    }
+  }
+}
+
 function mobCiv(s: SimState, n: Npc): void {
   const master = s.npcs[n.enemyMaster];
   if (!master || master.state === ST_DEAD || master.state === ST_PERSUADED) {
@@ -1114,7 +1344,7 @@ function mobCiv(s: SimState, n: Npc): void {
   let target: Agent | null = null;
   let best: Fx = 1 << 30;
   for (const a of s.agents) {
-    if (!a.alive || a.cloakT > 0) continue;
+    if (!a.alive || a.held || a.cloakT > 0) continue;
     const d = distFx(n.x, n.z, a.x, a.z);
     if (d < best) {
       best = d;
@@ -1167,11 +1397,12 @@ function updateNpc(s: SimState, n: Npc, noises: Noise[]): void {
     }
   }
   if (n.kind === NPC_ENEMY && (n.state === ST_IDLE || n.state === ST_WALK)) {
-    if (s.mission.doctrine === DOCTRINE_STEALTH) {
+    if (s.mission.doctrine === DOCTRINE_STEALTH && !n.broadcaster) {
       if (n.cloakT > 0) n.cloakT--;
       else if ((s.tick + n.id) % NPC_CLOAK_CADENCE === 0) n.cloakT = NPC_CLOAK_T;
     }
-    enemyPulse(s, n);
+    if (n.broadcaster) broadcastPulse(s, n);
+    else enemyPulse(s, n);
   } else if (n.cloakT > 0) {
     n.cloakT = 0;
   }
@@ -1196,11 +1427,11 @@ function updateNpc(s: SimState, n: Npc, noises: Noise[]): void {
         npcCombat(s, n, noises);
         if (n.raider && n.repathT === 0) {
           n.repathT = 50;
-          const held = s.mission.assets[0];
-          if (held && held.alive && setPath(s.map, n, nearestWalkable(s.map, held.cell))) {
+          const target = raiderTargetCell(s, n);
+          if (target >= 0 && setPath(s.map, n, nearestWalkable(s.map, target))) {
             n.state = ST_WALK;
           }
-        } else if (n.kind === NPC_ENEMY && n.repathT === 0) {
+        } else if (n.kind === NPC_ENEMY && !n.broadcaster && n.repathT === 0) {
           n.repathT = 30 + (n.id % 7);
           enemySquadMove(s, n);
         }
@@ -1307,7 +1538,7 @@ function npcCombat(s: SimState, n: Npc, noises: Noise[]): void {
   let tNpc: Npc | null = null;
   let best: Fx = perception;
   for (const a of s.agents) {
-    if (!a.alive || a.cloakT > 0) continue;
+    if (!a.alive || a.held || a.cloakT > 0) continue;
     const d = distFx(n.x, n.z, a.x, a.z);
     if (d < best && losUnits(s, n.x, n.z, a.x, a.z)) {
       best = d;
@@ -1723,6 +1954,103 @@ function updateHeist(s: SimState): void {
   }
 }
 
+function updateConvoyMission(s: SimState): void {
+  const m = s.mission;
+  if (m.type !== MISSION_CONVOY || m.status !== STATUS_ACTIVE) return;
+  const v = s.vehicles[m.convoyId];
+  // the crate survives the wreck; it appears the moment the convoy stops
+  if (v && v.state === V_WRECK && m.cargoCell < 0 && m.carrier < 0 && !m.cargoSecured) {
+    m.cargoCell = nearestWalkable(s.map, cellOfFx(v.x, v.z));
+  }
+  if (m.carrier >= 0) {
+    const carrier = s.agents[m.carrier];
+    if (!carrier || !carrier.alive) {
+      // dropped where the carrier fell
+      m.cargoCell = carrier ? nearestWalkable(s.map, cellOfFx(carrier.x, carrier.z)) : m.convoyExit;
+      m.carrier = -1;
+    } else if (distFx(carrier.x, carrier.z, m.exfilX, m.exfilZ) <= m.exfilR) {
+      m.cargoSecured = true;
+      m.carrier = -1;
+      m.cargoCell = -1;
+    }
+  }
+}
+
+function updateEscortMission(s: SimState): void {
+  const m = s.mission;
+  if (m.type !== MISSION_ESCORT || m.status !== STATUS_ACTIVE || m.escortDone) return;
+  const escort = s.npcs[m.vipId];
+  if (!escort || escort.state === ST_DEAD) return;
+  const [dx, dz] = centerFx(m.escortCell);
+  if (distFx(escort.x, escort.z, dx, dz) <= ESCORT_ARRIVE_FX) m.escortDone = true;
+}
+
+function updateRecoveryMission(s: SimState): void {
+  const m = s.mission;
+  if (m.type !== MISSION_RECOVERY || m.status !== STATUS_ACTIVE || m.captiveFreed) return;
+  const door = m.assets[0];
+  if (door && door.alive) return;
+  const captive = s.agents[m.captiveId];
+  if (!captive || !captive.alive) return;
+  for (const a of s.agents) {
+    if (!a.alive || a.held) continue;
+    if (distFx(a.x, a.z, captive.x, captive.z) <= FREE_RADIUS) {
+      captive.held = false;
+      m.captiveFreed = true;
+      return;
+    }
+  }
+}
+
+function updateSabotageMission(s: SimState, noises: Noise[]): void {
+  const m = s.mission;
+  if (m.type !== MISSION_SABOTAGE || m.status !== STATUS_ACTIVE) return;
+  if (s.tick % 5 !== 0) return;
+  const spotFx = CHARGE_SPOT_CELLS << 16;
+  for (const d of s.deployables) {
+    if (!d.alive || d.kind !== DEP_CHARGE) continue;
+    for (const n of s.npcs) {
+      if (!hostileToPlayer(n)) continue;
+      const dist = distFx(n.x, n.z, d.x, d.z);
+      if (dist > spotFx) continue;
+      if (!losUnits(s, n.x, n.z, d.x, d.z)) continue;
+      // discovery: the guard calls it in, and site security starts sealing
+      noises.push({ x: d.x, z: d.z });
+      if (dist <= 1 << 16) {
+        // defusal progress rides the unused charge field
+        if (++d.charge >= DEFUSE_TICKS / 5) d.alive = false;
+      }
+      break;
+    }
+  }
+}
+
+function updateBlackoutMission(s: SimState): void {
+  const m = s.mission;
+  if (m.type !== MISSION_BLACKOUT || m.status !== STATUS_ACTIVE) return;
+  const c = m.contract;
+  if (c.garrison > 0) return;
+  if (!m.assets.some((a) => !a.alive)) return;
+  c.garrison = 1;
+  for (let i = 0; i < GARRISON_SIZE; i++) {
+    const edge = s.map.edgeCells[rand(s, s.map.edgeCells.length)]!;
+    const npc = spawnNpc(s, NPC_TACTICAL, edge);
+    npc.raider = true;
+    const target = raiderTargetCell(s, npc);
+    if (target >= 0 && setPath(s.map, npc, nearestWalkable(s.map, target))) npc.state = ST_WALK;
+  }
+}
+
+function updateBroadcastMission(s: SimState): void {
+  const m = s.mission;
+  if (m.type !== MISSION_BROADCAST || m.status !== STATUS_ACTIVE) return;
+  let live = 0;
+  for (const n of s.npcs) {
+    if (n.broadcaster && n.state !== ST_DEAD && n.state !== ST_PERSUADED) live++;
+  }
+  m.saturation = Math.min(SAT_MAX, m.saturation + live);
+}
+
 function updateAlarm(s: SimState, noises: Noise[]): void {
   if (noises.length > 0) {
     // a sensor grid reports every noise twice as hard
@@ -1776,7 +2104,8 @@ export function spawnNpc(s: SimState, kind: number, cell: number): Npc {
 function checkMission(s: SimState): void {
   const m = s.mission;
   if (m.status !== STATUS_ACTIVE) return;
-  const anyAlive = s.agents.some((a) => a.alive);
+  // a still-held captive is not a fielded squad; losing everyone else is a wipe
+  const anyAlive = s.agents.some((a) => a.alive && !a.held);
   if (!anyAlive) {
     failContract(s, FM_SQUAD_WIPED);
     return;
@@ -1841,6 +2170,24 @@ function checkMission(s: SimState): void {
         !(m.assets[0]?.alive ?? true) &&
         s.npcs.every((n) => n.kind !== NPC_ENEMY || n.state === ST_DEAD || n.state === ST_PERSUADED);
       break;
+    case MISSION_SABOTAGE:
+    case MISSION_BLACKOUT:
+      objectiveDone = m.assets.every((a) => !a.alive);
+      break;
+    case MISSION_CONVOY:
+      objectiveDone = m.cargoSecured;
+      break;
+    case MISSION_ESCORT:
+      objectiveDone = m.escortDone;
+      break;
+    case MISSION_RECOVERY:
+      objectiveDone = m.captiveFreed;
+      break;
+    case MISSION_BROADCAST:
+      objectiveDone = s.npcs.every(
+        (n) => !n.broadcaster || n.state === ST_DEAD || n.state === ST_PERSUADED,
+      );
+      break;
   }
   objectiveDone = objectiveDone && expansionSatisfied(s);
   if (!EXFIL_NEED_OBJECTIVE || objectiveDone) {
@@ -1865,6 +2212,12 @@ export function step(state: SimState, commands: Command[]): void {
   updateChemZones(state);
   updateDefense(state);
   updateHeist(state);
+  updateConvoyMission(state);
+  updateEscortMission(state);
+  updateRecoveryMission(state);
+  updateSabotageMission(state, noises);
+  updateBlackoutMission(state);
+  updateBroadcastMission(state);
   updateAlarm(state, noises);
   updateContract(state);
   checkMission(state);

@@ -3,12 +3,18 @@ import { cellIdx, MAP_H, MAP_W, type MapData, type MapParams } from './map';
 import { nearestWalkable } from './path';
 import {
   baseState,
+  MISSION_BLACKOUT,
+  MISSION_BROADCAST,
+  MISSION_CONVOY,
   MISSION_DEFENSE,
+  MISSION_ESCORT,
   MISSION_HEIST,
   MISSION_HQ,
   MISSION_PERSUADE,
   MISSION_PURGE,
   MISSION_RAID,
+  MISSION_RECOVERY,
+  MISSION_SABOTAGE,
   MOD_CHEM,
   MOD_EMP,
   rand,
@@ -21,6 +27,7 @@ import {
   createVehicle,
   isStreetCell,
   VEH_CAR,
+  VEH_CONVOY,
   VEH_FUEL,
   VEH_TRAM,
   V_DRIVE,
@@ -35,6 +42,7 @@ import {
   NPC_CIV,
   NPC_ENEMY,
   NPC_GUARD,
+  ST_PERSUADED,
   type AgentSpec,
 } from './units';
 
@@ -51,6 +59,8 @@ export interface MissionParams {
   weather?: number;
   // MOD_* bitmask; zoned modifiers (chem, EMP) place their areas at setup
   modifiers?: number;
+  // asset recovery: loadout snapshot of the captured agent, taken at capture
+  captiveSpec?: AgentSpec;
   visualTest?: boolean;
   debug?: boolean;
 }
@@ -70,6 +80,20 @@ function markObstacle(s: SimState, cell: number): void {
 }
 
 const FUEL_COUNT = 3;
+
+// scatter marked structure assets around the anchor, raid-style
+function placeStructures(s: SimState, ax: number, az: number, count: number, hp: number, spread: number): void {
+  let placed = 0;
+  for (let r = 0; r < count * 6 && placed < count; r++) {
+    const cx = Math.max(1, Math.min(MAP_W - 2, ax + rand(s, spread * 2 + 1) - spread));
+    const cz = Math.max(1, Math.min(MAP_H - 2, az + rand(s, spread * 2 + 1) - spread));
+    const cell = cellIdx(cx, cz);
+    if (s.map.obstacle[cell] || s.mission.assets.some((asset) => asset.cell === cell)) continue;
+    markObstacle(s, cell);
+    s.mission.assets.push({ cell, hp, maxHp: hp, alive: true });
+    placed++;
+  }
+}
 
 function spawnVehicles(s: SimState): void {
   const total = s.map.obstacle.length;
@@ -315,16 +339,19 @@ export function createMission(
   const ax = anchor % MAP_W;
   const az = (anchor / MAP_W) | 0;
 
-  const baseGuards =
-    missionType === MISSION_PERSUADE
-      ? 6
-      : missionType === MISSION_HEIST
-        ? 7
-        : missionType === MISSION_PURGE
-          ? 3
-          : missionType === MISSION_DEFENSE
-            ? 0
-            : 5;
+  const GUARD_COUNTS: Record<number, number> = {
+    [MISSION_PERSUADE]: 6,
+    [MISSION_HEIST]: 7,
+    [MISSION_PURGE]: 3,
+    [MISSION_DEFENSE]: 0,
+    [MISSION_SABOTAGE]: 6,
+    [MISSION_CONVOY]: 3,
+    [MISSION_ESCORT]: 3,
+    [MISSION_RECOVERY]: 7,
+    [MISSION_BLACKOUT]: 5,
+    [MISSION_BROADCAST]: 4,
+  };
+  const baseGuards = GUARD_COUNTS[missionType] ?? 5;
   const guardCount = baseGuards === 0 ? 0 : baseGuards + extraGuards;
   for (let g = 0; g < guardCount; g++) {
     const gx = Math.max(0, Math.min(MAP_W - 1, ax + rand(s, 11) - 5));
@@ -387,13 +414,68 @@ export function createMission(
     tech.hp = 40;
     s.mission.vipId = tech.id;
     s.mission.lootPrize = 2500 + 500 * extraGuards;
+  } else if (missionType === MISSION_SABOTAGE) {
+    placeStructures(s, ax, az, 3, 200, 6);
+    // client-issued demo kit: sabotage is planted, not shot in
+    for (const a of s.agents) a.spec.charges += 2;
+  } else if (missionType === MISSION_BLACKOUT) {
+    placeStructures(s, ax, az, 3, 140, 12);
+  } else if (missionType === MISSION_BROADCAST) {
+    for (let b = 0; b < 3; b++) {
+      const bx = Math.max(1, Math.min(MAP_W - 2, ax + (b - 1) * 14 + rand(s, 5) - 2));
+      const bz = Math.max(1, Math.min(MAP_H - 2, az + rand(s, 9) - 4));
+      const tower = spawnNpc(s, NPC_ENEMY, nearestWalkable(s.map, cellIdx(bx, bz)));
+      tower.broadcaster = true;
+      tower.missionTarget = true;
+      tower.hp = 160;
+      tower.wid = 3;
+    }
+  } else if (missionType === MISSION_CONVOY) {
+    const lane = 49;
+    const start = cellIdx(2, lane);
+    const v = createVehicle(s.vehicles.length, VEH_CONVOY, start);
+    v.dirX = 1;
+    v.state = V_DRIVE;
+    s.vehicles.push(v);
+    s.mission.convoyId = v.id;
+    s.mission.convoyExit = cellIdx(MAP_W - 2, lane);
+  } else if (missionType === MISSION_ESCORT) {
+    const escortCell = nearestWalkable(s.map, cellIdx(Math.min(MAP_W - 1, sx + 3), sz));
+    const escort = spawnNpc(s, NPC_CIV, escortCell);
+    escort.vip = true;
+    escort.hp = 50;
+    escort.state = ST_PERSUADED;
+    s.mission.vipId = escort.id;
+    s.mission.escortCell = anchor;
+    // seeded ambushes along the route; the city between is the hazard
+    spawnEnemySquads(s, ax, (az + sz) >> 1, 2, 2, doctrine, tier, false);
+  } else if (missionType === MISSION_RECOVERY) {
+    let holdCell = cellIdx(Math.max(1, Math.min(MAP_W - 2, ax)), Math.max(1, Math.min(MAP_H - 2, az)));
+    if (s.map.obstacle[holdCell]) holdCell = nearestWalkable(s.map, holdCell);
+    // the cell door: a breachable asset sealing the captive's holding cell
+    let doorCell = holdCell + 1;
+    if (s.map.obstacle[doorCell]) doorCell = nearestWalkable(s.map, doorCell);
+    if (doorCell === holdCell) doorCell = nearestWalkable(s.map, holdCell - 1);
+    markObstacle(s, doorCell);
+    s.mission.assets.push({ cell: doorCell, hp: 250, maxHp: 250, alive: true });
+    const captive = createAgent(
+      s.agents.length,
+      ((holdCell % MAP_W) << 16) + (1 << 15),
+      (((holdCell / MAP_W) | 0) << 16) + (1 << 15),
+      params.captiveSpec ?? defaultSpec(),
+    );
+    captive.held = true;
+    s.agents.push(captive);
+    s.mission.captiveId = captive.id;
   } else {
     for (let t = 0; t < 2; t++) {
+      // marked targets sit deeper in the district than the guard anchor, so
+      // the flight-to-exit failure is a chase the player can contest (GDD 9.2)
       const cell = nearestWalkable(
         s.map,
         cellIdx(
           Math.max(0, Math.min(MAP_W - 1, ax + rand(s, 7) - 3)),
-          Math.max(0, Math.min(MAP_H - 1, az + rand(s, 7) - 3)),
+          Math.max(0, Math.min(MAP_H - 1, az + 10 + rand(s, 7) - 3)),
         ),
       );
       const target = spawnNpc(s, NPC_CIV, cell);
