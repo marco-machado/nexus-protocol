@@ -40,7 +40,7 @@ Last validated 2026-07-07 against the working tree: `npm test` green (57/57 acro
 | D: City simulation | Vehicles, destructible mid-layer, day/night/weather, GPU crowds | Done |
 | Presentation (R3) | Premium browser mission look; see `docs/presentation-roadmap.md` | Done (DoD 7/7, 2026-07-11; wayfinder map issue #2); R4 AA later |
 | Presentation (R4/R5) | AA density, then browser AAA ship bar; see `docs/presentation-roadmap.md` | Not started |
-| AAA upgrade (GDD v3.0) | R3F migration, contract expansion, uniform assets, region identity, intent cursor and camera, R&D board, narrative layer | In progress (R3F migration stages 1-3 done 2026-07-17, issue #12; contracts milestone A done 2026-07-17, issue #13; other tracks not started) |
+| AAA upgrade (GDD v3.0) | R3F migration, contract expansion, uniform assets, region identity, intent cursor and camera, R&D board, narrative layer | In progress (R3F migration stages 1-3 done 2026-07-17, issue #12; contracts milestones A and B done 2026-07-17, issue #13; other tracks not started) |
 | E: Multiplayer and accounts | Co-op, async PvP, accounts, cloud saves | Not started (groundwork only) |
 | F: Platform and release | Input remap, gamepad, touch, load budget, accessibility audit | Not started |
 
@@ -171,10 +171,10 @@ Approved 2026-07-16; decision record `docs/game-design-aaa-draft.md` (suggestion
 - [x] Refit the 7 existing types to the standard (issue #13 milestone A; type-specific failure modes per GDD 9.2: assassination target flight to district exits with an exit countdown, alarm-driven VIP flight, raid and heist lockdown timers, purge rival squads pursuing their own contract objective, defense asset integrity warning, HQ reinforcement deadline; golden hash re-pinned with rationale in `tests/determinism.test.ts`)
 - [ ] Six new contract types: Sabotage, Convoy Interception, Escort, Asset Recovery, Blackout, Counter-Broadcast
 - [ ] Distinct interaction verbs per objective (breach, hack-and-hold, persuade, carry, place, drive)
-- [ ] Compounding objectives and optional clauses with riders
-- [ ] Doctrine matrix enforced per contract type (at least three of four doctrines viable); intel states district reads
-- [ ] Stim-forward contract modifiers in mission generation
-- [ ] Debrief as performance review (approach metrics, riders, HR-language counterfactual)
+- [x] Compounding objectives and optional clauses with riders (issue #13 milestone B; seeded mid-mission contract amendments in `src/sim/contract.ts` gate the win condition and land as a flat briefing-update comms line; app-side clause generation in `src/app/clauses.ts` always offers a time window against a restraint clause, riders are booked at debrief on fulfilled contracts only)
+- [ ] Doctrine matrix enforced per contract type (at least three of four doctrines viable); intel states district reads (partial: issue #13 milestone B ships the briefing doctrine read and revealed counters on the equip screen; the measured per-doctrine bot probes are milestone C)
+- [x] Stim-forward contract modifiers in mission generation (issue #13 milestone B; fog, chem leaks, EMP zones, sensor grids, and a client execution window with real sim effects in `src/sim/tick.ts`, seeded per contract via `missionConditions`, read back on the briefing and the in-mission card, zones marked in-world and on the minimap in all three palettes)
+- [x] Debrief as performance review (issue #13 milestone B; approach metrics from new sim counters, clause outcomes and riders, HR-language counterfactual line, rendered on the debrief screen)
 
 ### Agents as assets (draft 14 to 16)
 - [ ] Uniform operative chassis, male and female variants; look varies only by loadout and faction trim
