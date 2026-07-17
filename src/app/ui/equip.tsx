@@ -158,9 +158,11 @@ export function EquipScreen({
           {m.agents.map((a, i) => {
             if (!a.alive) {
               return (
-                <div key={i} className={`acard dead ${i === selAgent ? 'sel' : ''}`} onClick={() => { setSelAgent(i); }}>
+                <div key={i} className={`acard dead ${i === selAgent ? 'sel' : ''}`}>
                   <div className="ac-h">
-                    <b className="ac-name">{a.name}</b>
+                    <button type="button" className="ac-name" aria-label={`Select ${a.name}`} onClick={() => setSelAgent(i)}>
+                      {a.name}
+                    </button>
                     <span className="ac-dead">ASSET WRITTEN OFF</span>
                   </div>
                   <button
@@ -184,8 +186,11 @@ export function EquipScreen({
               a.gear[key] ? (
                 <span key={key} className={`chip${cyan ? ' cyan' : ''}`}>
                   {label}
-                  <b
+                  <button
+                    type="button"
+                    className="chipx"
                     title="Return to pool"
+                    aria-label={`Return ${label} to pool`}
                     onClick={stop(() => {
                       if (a.gear[key]) {
                         a.gear[key] = false;
@@ -195,13 +200,15 @@ export function EquipScreen({
                     })}
                   >
                     x
-                  </b>
+                  </button>
                 </span>
               ) : null;
             return (
-              <div key={i} className={`acard ${i === selAgent ? 'sel' : ''}`} onClick={() => setSelAgent(i)}>
+              <div key={i} className={`acard ${i === selAgent ? 'sel' : ''}`}>
                 <div className="ac-h">
-                  <b className="ac-name">{a.name}</b>
+                  <button type="button" className="ac-name" aria-label={`Select ${a.name}`} onClick={() => setSelAgent(i)}>
+                    {a.name}
+                  </button>
                   {agentQuirks(a).map((q) => (
                     <span key={q.name} className="chip gold" title={q.desc}>
                       {q.name}
@@ -232,8 +239,11 @@ export function EquipScreen({
                   {a.loadout.map((wid, li) => (
                     <span key={li} className="chip">
                       {WEAPONS[wid]!.name}
-                      <b
+                      <button
+                        type="button"
+                        className="chipx"
                         title="Return to arsenal"
+                        aria-label={`Return ${WEAPONS[wid]!.name} to arsenal`}
                         onClick={stop(() => {
                           a.loadout.splice(li, 1);
                           m.arsenal[wid] = (m.arsenal[wid] ?? 0) + 1;
@@ -241,7 +251,7 @@ export function EquipScreen({
                         })}
                       >
                         x
-                      </b>
+                      </button>
                     </span>
                   ))}
                   {gearChip('Persuadertron', 'persuadertron', true)}

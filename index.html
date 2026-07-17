@@ -1096,7 +1096,6 @@
         background: #0e1521;
         padding: 9px 12px 10px;
         margin-bottom: 10px;
-        cursor: pointer;
       }
       .acard:hover { border-color: #2c4058; border-left-color: var(--accent); }
       .acard.sel { border-color: var(--accent); border-left-color: var(--accent); background: rgba(0, 229, 255, 0.05); }
@@ -1138,6 +1137,30 @@
       .chip.empty { border-style: dashed; color: #45526b; }
       .chip b { color: #7d8aa0; margin-left: 7px; cursor: pointer; font-weight: normal; }
       .chip b:hover { color: var(--bad); }
+      .panel button.ac-name {
+        background: none;
+        border: 0;
+        padding: 0;
+        margin: 0;
+        color: #e8eef8;
+        letter-spacing: 1.5px;
+        font-size: 13px;
+        font-weight: bold;
+        text-align: left;
+        cursor: pointer;
+      }
+      .panel .acard.dead button.ac-name { color: #7d8aa0; text-decoration: line-through; }
+      .panel .chip button.chipx {
+        background: none;
+        border: 0;
+        padding: 0;
+        margin: 0 0 0 7px;
+        color: #7d8aa0;
+        font-size: inherit;
+        font-weight: normal;
+        cursor: pointer;
+      }
+      .panel .chip button.chipx:hover:not(:disabled) { color: var(--bad); }
       /* armory / equipment / augmentation rows */
       .srow {
         display: grid;

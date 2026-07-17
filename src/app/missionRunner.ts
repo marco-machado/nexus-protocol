@@ -1,4 +1,13 @@
-import { Plane, Raycaster, Vector2, Vector3 } from 'three';
+import {
+  Plane,
+  Raycaster,
+  Texture,
+  Vector2,
+  Vector3,
+  type InstancedMesh,
+  type Material,
+  type Mesh,
+} from 'three';
 import type { WebGPURenderer } from 'three/webgpu';
 import { createRig, rigYawDelta, targetRigYaw, updateRig } from '../render/camera';
 import { NPC_CAP } from '../render/crowd';
@@ -181,7 +190,7 @@ function createMissionSystems(
     : state.env.tod >= 1
       ? 0.95
       : 0.45;
-  installDistrictEnvironment(renderer, gs.scene, state.env.tod, rainOn, envIntensity);
+  const envTex = installDistrictEnvironment(renderer, gs.scene, state.env.tod, rainOn, envIntensity);
   (window as unknown as { __THREE_GAME_DIAGNOSTICS__?: unknown }).__THREE_GAME_DIAGNOSTICS__ = {
     renderer: renderer.info,
     get vehicles() {
@@ -598,6 +607,26 @@ function createMissionSystems(
     arrowLayer.remove();
     setPost(false);
     setRain(false);
+    gs.scene.environment = null;
+    envTex.dispose();
+    const disposeMaterial = (mat: Material) => {
+      for (const v of Object.values(mat)) if (v instanceof Texture) v.dispose();
+      mat.dispose();
+    };
+    // the crowd VAT geometry is baked once at module init and shared across
+    // missions; everything else in the scene is created per mission
+    const sharedGeometry = new Set([gs.crowd.nearMesh.geometry, gs.crowd.farMesh.geometry]);
+    gs.scene.traverse((obj) => {
+      const m = obj as Partial<Mesh>;
+      if (m.geometry && !sharedGeometry.has(m.geometry)) m.geometry.dispose();
+      if (m.material) {
+        for (const mat of Array.isArray(m.material) ? m.material : [m.material]) disposeMaterial(mat);
+      }
+      if ((obj as InstancedMesh).isInstancedMesh) (obj as InstancedMesh).dispose();
+    });
+    gs.scene.clear();
+    delete (window as { __sim?: unknown }).__sim;
+    delete (window as { __THREE_GAME_DIAGNOSTICS__?: unknown }).__THREE_GAME_DIAGNOSTICS__;
   };
 
   const perf = opts.perf ? createPerfOverlay() : null;
@@ -615,12 +644,14 @@ function createMissionSystems(
   const alarmGrade = createAlarmGrade(settings.palette);
   let rainFx: Rain | null = null;
   const setRain = (on: boolean): void => {
-    const want = on && state.env.rain === 1;
+    const want = on && rainOn;
     if (want && !rainFx) {
       rainFx = createRain(rig.cx, rig.cz);
       gs.scene.add(rainFx.mesh);
     } else if (!want && rainFx) {
       gs.scene.remove(rainFx.mesh);
+      rainFx.mesh.geometry.dispose();
+      (rainFx.mesh.material as Material).dispose();
       rainFx = null;
     }
   };

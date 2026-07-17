@@ -73,6 +73,7 @@ export class Game {
 
   dispose(): void {
     this.stopMapTimer();
+    this.globe?.stop();
   }
 
   private menu(): void {

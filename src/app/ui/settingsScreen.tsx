@@ -25,6 +25,7 @@ function VolumeRow({ label, note, volKey }: { label: string; note: string; volKe
         min={0}
         max={100}
         step={5}
+        ariaLabel={`${label} volume`}
         onValue={(v) => {
           settings[volKey] = v / 100;
           saveSettings();
@@ -58,6 +59,7 @@ export function SettingsScreen({ onBack }: { onBack: () => void }) {
             <button
               key={s.label}
               className={settings.simSpeed === s.v ? 'on' : ''}
+              aria-pressed={settings.simSpeed === s.v}
               onClick={() => {
                 settings.simSpeed = snapSimSpeed(s.v);
                 saveSettings();
@@ -77,6 +79,7 @@ export function SettingsScreen({ onBack }: { onBack: () => void }) {
             <button
               key={p}
               className={p === settings.palette ? 'on' : ''}
+              aria-pressed={p === settings.palette}
               onClick={() => {
                 // applied by the PaletteBinding in the canvas host tree,
                 // which reacts to the settings notification

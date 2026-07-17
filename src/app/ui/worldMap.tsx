@@ -155,6 +155,7 @@ function Popover({
             min={10}
             max={50}
             step={5}
+            ariaLabel={`Tax rate for ${shortName(t)}`}
             onValue={(v) => {
               t.taxRate = v;
               saveMeta(m);
@@ -238,6 +239,7 @@ function RdDrawer({ m, open, onToggle, onEdited }: { m: MetaState; open: boolean
         min={0}
         max={100}
         step={10}
+        ariaLabel="R&D allocation to weapons"
         onValue={(v) => {
           m.researchSplit = v;
           saveMeta(m);
@@ -281,16 +283,18 @@ export function WorldMapScreen({
   // globe picks route through a ref so the single onPick registration always
   // sees the latest meta/selection without re-wiring per render
   const pickRef = useRef<(id: number) => void>(() => {});
-  pickRef.current = (id: number) => {
-    if (id < 0) {
-      if (activeTerr !== -1) setSelTerr(-1);
-      return;
-    }
-    const t = m.territories[id];
-    if (!t || t.region >= m.regionsUnlocked) return;
-    setSelRegion(t.region);
-    setSelTerr(id);
-  };
+  useEffect(() => {
+    pickRef.current = (id: number) => {
+      if (id < 0) {
+        if (activeTerr !== -1) setSelTerr(-1);
+        return;
+      }
+      const t = m.territories[id];
+      if (!t || t.region >= m.regionsUnlocked) return;
+      setSelRegion(t.region);
+      setSelTerr(id);
+    };
+  });
   useEffect(() => {
     globe?.onPick((id) => pickRef.current(id));
   }, [globe]);
@@ -317,7 +321,9 @@ export function WorldMapScreen({
   // replay the detail-panel entrance only when the selection actually changes
   const lastDetailTerr = useRef(-1);
   const detailEnter = activeTerr !== -1 && activeTerr !== lastDetailTerr.current;
-  lastDetailTerr.current = activeTerr;
+  useEffect(() => {
+    lastDetailTerr.current = activeTerr;
+  });
 
   const terrs = m.territories.filter((t) => t.region === region);
   const owned = terrs.filter((t) => t.owned).length;

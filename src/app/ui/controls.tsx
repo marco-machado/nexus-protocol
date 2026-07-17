@@ -9,12 +9,14 @@ export function RangeInput({
   min,
   max,
   step,
+  ariaLabel,
   onValue,
 }: {
   value: number;
   min: number;
   max: number;
   step: number;
+  ariaLabel: string;
   onValue: (v: number) => void;
 }) {
   return (
@@ -24,6 +26,7 @@ export function RangeInput({
       max={max}
       step={step}
       value={value}
+      aria-label={ariaLabel}
       style={{ '--fill': `${fillPct(value, min, max)}%` } as CSSProperties}
       onChange={(e) => onValue(Number(e.currentTarget.value))}
     />
@@ -48,7 +51,12 @@ export function ToggleRow({
         {note ? <small>{note}</small> : null}
       </span>
       <label className="toggle">
-        <input type="checkbox" checked={on} onChange={(e) => onToggle(e.currentTarget.checked)} />
+        <input
+          type="checkbox"
+          checked={on}
+          aria-label={label}
+          onChange={(e) => onToggle(e.currentTarget.checked)}
+        />
         <i className="tgl"></i>
         <em className="tglval"></em>
       </label>
