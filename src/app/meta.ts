@@ -524,10 +524,14 @@ export function augLevel(a: MetaAgent, key: AugKey): number {
 
 // Pure: does not mutate the agent. Call ensureAgentVariant / newAgent first
 // so variant is always populated before this is used.
-export function agentAppearance(a: MetaAgent, trimSlot = 0): AppearanceManifest {
+function appearanceWithAugmentLevel(
+  a: MetaAgent,
+  trimSlot: number,
+  prospective?: { slot: AugKey; level: number },
+): AppearanceManifest {
   const levels: Partial<Record<AttachmentSlot, number>> = {};
   for (const slot of AUG_SLOTS) {
-    const lvl = augLevel(a, slot.key);
+    const lvl = prospective?.slot === slot.key ? prospective.level : augLevel(a, slot.key);
     if (lvl > 0) levels[slot.key as AttachmentSlot] = lvl;
   }
   const variant: BodyVariant =
@@ -538,6 +542,21 @@ export function agentAppearance(a: MetaAgent, trimSlot = 0): AppearanceManifest 
     armor: a.gear.armor,
     trimSlot,
   });
+}
+
+export function agentAppearance(a: MetaAgent, trimSlot = 0): AppearanceManifest {
+  return appearanceWithAugmentLevel(a, trimSlot);
+}
+
+// Rebuild from raw augments plus gear so body armor's effective torso step is
+// retained when the prospective purchase itself targets the torso slot.
+export function prospectiveAgentAppearance(
+  a: MetaAgent,
+  slot: AugKey,
+  level: number,
+  trimSlot = 0,
+): AppearanceManifest {
+  return appearanceWithAugmentLevel(a, trimSlot, { slot, level });
 }
 
 // Pure function of loadout, gear, and augment levels. Service Records never

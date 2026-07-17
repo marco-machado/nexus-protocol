@@ -299,12 +299,14 @@ function createMissionSystems(
   const prevNZ = new Float64Array(NPC_CAP);
   const prevVX = new Float64Array(state.vehicles.length);
   const prevVZ = new Float64Array(state.vehicles.length);
+  let prevNpcCount = 0;
   const capturePrev = () => {
     state.agents.forEach((a, i) => {
       prevAX[i] = fromFx(a.x);
       prevAZ[i] = fromFx(a.z);
     });
     const n = Math.min(state.npcs.length, NPC_CAP);
+    prevNpcCount = n;
     for (let i = 0; i < n; i++) {
       prevNX[i] = fromFx(state.npcs[i]!.x);
       prevNZ[i] = fromFx(state.npcs[i]!.z);
@@ -313,6 +315,13 @@ function createMissionSystems(
       prevVX[i] = fromFx(v.x);
       prevVZ[i] = fromFx(v.z);
     });
+  };
+  const seedSpawnedNpcPrev = () => {
+    const n = Math.min(state.npcs.length, NPC_CAP);
+    for (let i = prevNpcCount; i < n; i++) {
+      prevNX[i] = fromFx(state.npcs[i]!.x);
+      prevNZ[i] = fromFx(state.npcs[i]!.z);
+    }
   };
   capturePrev();
 
@@ -1054,6 +1063,7 @@ function createMissionSystems(
       while (acc >= TICK_MS) {
         capturePrev();
         step(state, queue.drain(state.tick));
+        seedSpawnedNpcPrev();
         if (state.events.includes(EV_NO_ROUTE) && state.tick - lastNoRouteTick > 20) {
           lastNoRouteTick = state.tick;
           comms.push('No drivable route to that position. Motor pool suggests a destination with roads.');
@@ -1088,7 +1098,7 @@ function createMissionSystems(
     document.documentElement.style.setProperty('--accent', rgbToCss(alarmGrade.cssAccent));
 
     const alpha = Math.min(1, acc / TICK_MS);
-    syncScene(gs, state, prevAX, prevAZ, prevVX, prevVZ, alpha, selected, rig);
+    syncScene(gs, state, prevAX, prevAZ, prevNX, prevNZ, prevVX, prevVZ, alpha, selected, rig);
     updateDiagnostics();
     gs.crowd.update(state, prevNX, prevNZ, alpha, dt, rig, gs.hideNpc);
     rainFx?.update(dt, rig.cx, rig.cz);
@@ -1161,6 +1171,7 @@ function createMissionSystems(
         for (let i = 0; i < n && state.mission.status === STATUS_ACTIVE; i++) {
           capturePrev();
           step(state, queue.drain(state.tick));
+          seedSpawnedNpcPrev();
         }
         return state.tick;
       },

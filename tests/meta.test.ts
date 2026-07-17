@@ -19,6 +19,7 @@ import {
   nextMissionSeed,
   OFFLINE_CAP_MS,
   processSieges,
+  prospectiveAgentAppearance,
   REGIONS,
   regionUnlocked,
   researchPerCycle,
@@ -332,6 +333,15 @@ describe('agents as uniform assets', () => {
     expect(look.levels.eyes).toBe(2);
     expect(look.levels.torso).toBe(1);
     expect(look.trimSlot).toBe(1);
+  });
+
+  it('keeps body armor in prospective torso augment previews', () => {
+    const a = newAgent(0);
+    a.gear.armor = true;
+
+    expect(prospectiveAgentAppearance(a, 'torso', 1).levels.torso).toBe(2);
+    expect(prospectiveAgentAppearance(a, 'torso', 2).levels.torso).toBe(3);
+    expect(prospectiveAgentAppearance(a, 'torso', 3).levels.torso).toBe(3);
   });
 });
 
