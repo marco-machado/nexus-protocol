@@ -2,7 +2,7 @@ import type { CameraRig } from '../render/camera';
 import { SCENE_COLORS } from '../render/palette';
 import { fromFx } from '../sim/fixed';
 import { MAP_H, MAP_W } from '../sim/map';
-import type { SimState } from '../sim/state';
+import { MOD_CHEM, type SimState } from '../sim/state';
 import { NPC_CIV, ST_DEAD, ST_PERSUADED } from '../sim/units';
 
 const SCALE = 2;
@@ -68,6 +68,27 @@ export function createMinimap(state: SimState, host?: HTMLElement): Minimap {
         ctx.setTransform(zoom, 0, 0, zoom, canvas.width / 2 - cx * zoom, canvas.height / 2 - cz * zoom);
       }
       ctx.drawImage(base, 0, 0);
+
+      // shape carries the distinction, never color alone: chem zones fill,
+      // EMP zones outline only
+      for (const zone of s.zones) {
+        const zx = ((zone.cell % MAP_W) + 0.5) * SCALE;
+        const zz = (((zone.cell / MAP_W) | 0) + 0.5) * SCALE;
+        const zr = zone.r * SCALE;
+        const tint = css(zone.kind === MOD_CHEM ? SCENE_COLORS.chemZone : SCENE_COLORS.empZone);
+        ctx.beginPath();
+        ctx.arc(zx, zz, zr, 0, Math.PI * 2);
+        if (zone.kind === MOD_CHEM) {
+          ctx.save();
+          ctx.globalAlpha = 0.25;
+          ctx.fillStyle = tint;
+          ctx.fill();
+          ctx.restore();
+        }
+        ctx.strokeStyle = tint;
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      }
 
       ctx.strokeStyle = css(SCENE_COLORS.exfil);
       ctx.lineWidth = 1;

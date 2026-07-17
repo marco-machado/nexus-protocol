@@ -26,6 +26,8 @@ export const SCENE_COLORS = {
   alarmClear: new Color(0x00e5ff),
   alarmWarn: new Color(0xffb23a),
   alarmSiege: new Color(0xff2233),
+  chemZone: new Color(0x9ef01a),
+  empZone: new Color(0x7c6cff),
 };
 
 export const PALETTES: Record<PaletteName, PaletteDef> = {
@@ -62,6 +64,8 @@ export const PALETTES: Record<PaletteName, PaletteDef> = {
       alarmClear: 0x00e5ff,
       alarmWarn: 0xffb23a,
       alarmSiege: 0xff2233,
+      chemZone: 0x9ef01a,
+      empZone: 0x7c6cff,
     },
   },
   // Okabe-Ito colorblind-safe set for the red/magenta/orange faction cluster
@@ -99,6 +103,8 @@ export const PALETTES: Record<PaletteName, PaletteDef> = {
       alarmClear: 0x00e5ff,
       alarmWarn: 0xf0e442,
       alarmSiege: 0xd55e00,
+      chemZone: 0xf0e442,
+      empZone: 0x56b4e9,
     },
   },
   contrast: {
@@ -134,6 +140,8 @@ export const PALETTES: Record<PaletteName, PaletteDef> = {
       alarmClear: 0x00ffff,
       alarmWarn: 0xffcc00,
       alarmSiege: 0xff3333,
+      chemZone: 0xccff00,
+      empZone: 0x8899ff,
     },
   },
 };

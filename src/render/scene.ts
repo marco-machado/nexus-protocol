@@ -61,6 +61,7 @@ import {
   DEP_MEDBAY,
   DEP_TRAP,
   DEP_TURRET,
+  MOD_CHEM,
   type SimState,
 } from '../sim/state';
 import { ST_DEAD } from '../sim/units';
@@ -3778,6 +3779,36 @@ export function createGameScene(state: SimState, shadows = true): GameScene {
   }
   loadGeneratedAgentModel(agentRigs);
 
+  // environmental zones (chem, EMP): flat ground markers built once at setup
+  // since zones never move. Chem is a filled disc with a rim; EMP is a pair of
+  // concentric rings, so the two read apart by shape as well as tint.
+  for (const zone of state.zones) {
+    const zx = (zone.cell % MAP_W) + 0.5;
+    const zz = ((zone.cell / MAP_W) | 0) + 0.5;
+    const tint = zone.kind === MOD_CHEM ? SCENE_COLORS.chemZone : SCENE_COLORS.empZone;
+    if (zone.kind === MOD_CHEM) {
+      const fill = new Mesh(
+        new CircleGeometry(zone.r, 32).rotateX(-Math.PI / 2),
+        new MeshBasicMaterial({ color: tint, transparent: true, opacity: 0.12, depthWrite: false }),
+      );
+      fill.position.set(zx, 0.03, zz);
+      scene.add(fill);
+    } else {
+      const inner = new Mesh(
+        new RingGeometry(zone.r * 0.55, zone.r * 0.6, 40).rotateX(-Math.PI / 2),
+        new MeshBasicMaterial({ color: tint, transparent: true, opacity: 0.4, depthWrite: false }),
+      );
+      inner.position.set(zx, 0.03, zz);
+      scene.add(inner);
+    }
+    const rim = new Mesh(
+      new RingGeometry(zone.r - 0.08, zone.r, 40).rotateX(-Math.PI / 2),
+      new MeshBasicMaterial({ color: tint, transparent: true, opacity: 0.55, depthWrite: false }),
+    );
+    rim.position.set(zx, 0.035, zz);
+    scene.add(rim);
+  }
+
   // exfil beacon: a slim additive beam fading to nothing at the top, a small
   // emitter base, and concentric pulse rings; replaces the old 14-unit column
   // and flat zone disc (FR-011). Distinct exfil tint keeps it separable from
@@ -4657,6 +4688,22 @@ export function syncScene(
   state.mission.assets.forEach((asset, i) => {
     gs.assetMeshes[i]!.visible = asset.alive;
   });
+
+  // amendment targets are marked mid-mission, after the creation-time marker
+  // pass; give any late-marked NPC the same cone lazily
+  for (const n of state.npcs) {
+    if (!n.missionTarget || n.vip) continue;
+    if (gs.markerMeshes.some((m) => m.userData.npcId === n.id)) continue;
+    const late = new Mesh(
+      new ConeGeometry(0.3, 0.6, 4),
+      new MeshBasicMaterial({ color: SCENE_COLORS.target }),
+    );
+    late.rotation.x = Math.PI;
+    late.userData.npcId = n.id;
+    late.userData.vip = false;
+    gs.scene.add(late);
+    gs.markerMeshes.push(late);
+  }
 
   const t = performance.now() / 300;
   for (const m of gs.markerMeshes) {
