@@ -83,7 +83,7 @@ Visual and presentation tracks only; the systems and meta tracks of the AAA upgr
 - [ ] Lighting and the single image pipeline (draft 41)
 - [ ] Destruction and VFX render events (draft 42)
 - [ ] Crowd and body fidelity (draft 43; absorbs the R4 mid-field track)
-- [ ] Uniform hero chassis with visible augments (draft 14, 16)
+- [x] Uniform hero chassis with visible augments (draft 14, 16; issue #14 ships the appearance machinery and procedural attachments on the current hero; the two R5 male/female chassis models remain asset production)
 - [ ] Hybrid audio layer (draft 44)
 - [ ] Combat feel pass (draft 46)
 - [ ] Delivery: streaming, budgets, two-tier perf rows (draft 6, 7)

@@ -260,6 +260,8 @@ export interface Crowd {
     alpha: number,
     dtMs: number,
     rig: CameraRig,
+    // optional: 1 at indices rendered as rival agent chassis instead of crowd
+    hideNpc?: Uint8Array,
   ): void;
 }
 
@@ -365,6 +367,7 @@ export function createCrowd(scene: Scene): Crowd {
     alpha: number,
     dtMs: number,
     rig: CameraRig,
+    hideNpc?: Uint8Array,
   ): void => {
     const count = Math.min(state.npcs.length, NPC_CAP);
     const dtSec = dtMs / 1000;
@@ -373,6 +376,7 @@ export function createCrowd(scene: Scene): Crowd {
     let nearCount = 0;
     let farCount = 0;
     for (let i = 0; i < count; i++) {
+      if (hideNpc && hideNpc[i]) continue;
       const n = state.npcs[i]!;
       const px = i < prevNX.length ? prevNX[i]! : fromFx(n.x);
       const pz = i < prevNZ.length ? prevNZ[i]! : fromFx(n.z);

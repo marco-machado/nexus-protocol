@@ -2,9 +2,11 @@ import { MISSION_DEFENSE, MISSION_RECOVERY } from '../sim/state';
 import type { MissionParams } from '../sim/setup';
 import type { AgentSpec } from '../sim/units';
 import type { MissionOptions, MissionResult } from './missionRunner';
+import { buildAppearanceManifest } from '../render/appearance';
 import {
   actOfTerritory,
   advanceTime,
+  agentAppearance,
   applyResult,
   buildSpec,
   campaignWon,
@@ -149,9 +151,10 @@ export class Game {
     this.deps.screen.set({ kind: 'hidden' });
     const roster = this.meta.agents.filter((a) => a.alive);
     const specs = roster.map((a) => buildSpec(a));
-    // codenames travel as a parallel app-layer array so AgentSpec and the
-    // sim boundary stay untouched (FR-017); indices align with state.agents
+    // codenames and appearance travel as parallel app-layer arrays so AgentSpec
+    // and the sim boundary stay untouched; indices align with state.agents
     const codenames = roster.map((a) => a.name);
+    const appearances = roster.map((a, i) => agentAppearance(a, i));
     if (specs.length === 0) {
       this.map();
       return;
@@ -161,7 +164,14 @@ export class Game {
     // one the client supplies a generic contractor to pull out
     const isRecovery = !defense && missionType === MISSION_RECOVERY;
     const captive = isRecovery ? this.meta.captured[0] : undefined;
-    if (isRecovery) codenames.push(captive ? captive.name : 'CONTRACTOR');
+    if (isRecovery) {
+      codenames.push(captive ? captive.name : 'CONTRACTOR');
+      appearances.push(
+        captive
+          ? agentAppearance(captive, roster.length)
+          : buildAppearanceManifest({ variant: 'male', trimSlot: roster.length }),
+      );
+    }
     const act = actOfTerritory(t.id);
     const difficulty = this.meta.territories.filter((x) => x.owned).length - 1;
     const seed = nextMissionSeed(t, this.meta.ngPlus);
@@ -183,6 +193,7 @@ export class Game {
     const result = await this.deps.runMission(seed, missionType, specs, simParams, {
       hints: hintsFor(this.meta, t, missionType),
       codenames,
+      appearances,
     });
     const aliveIdx = this.meta.agents.map((a, i) => (a.alive ? i : -1)).filter((i) => i >= 0);
     const survivors = this.meta.agents.map(() => true);

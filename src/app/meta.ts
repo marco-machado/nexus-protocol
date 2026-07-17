@@ -1,3 +1,11 @@
+import {
+  buildAppearanceManifest,
+  type AppearanceManifest,
+  type AttachmentSlot,
+  type BodyVariant,
+} from '../render/appearance';
+
+export type { BodyVariant };
 import type { MapParams } from '../sim/map';
 import {
   MISSION_ASSASSINATE,
@@ -103,6 +111,8 @@ export interface MetaGear {
 export interface MetaAgent {
   name: string;
   alive: boolean;
+  // male/female chassis key; latent until the two R5 models land
+  variant: BodyVariant;
   augments: Partial<Record<AugKey, number>>;
   kills: number;
   missions: number;
@@ -470,10 +480,24 @@ export function newMeta(now: number = Date.now()): MetaState {
   };
 }
 
+export function pickVariant(i: number, name = ''): BodyVariant {
+  let h = (i + 1) | 0;
+  for (let c = 0; c < name.length; c++) h = (Math.imul(h, 31) + name.charCodeAt(c)) | 0;
+  return (h & 1) === 0 ? 'male' : 'female';
+}
+
+export function ensureAgentVariant(a: MetaAgent, i = 0): BodyVariant {
+  if (a.variant === 'male' || a.variant === 'female') return a.variant;
+  a.variant = pickVariant(i, a.name);
+  return a.variant;
+}
+
 export function newAgent(i: number): MetaAgent {
+  const name = CODENAMES[(i * 5 + ((Math.random() * CODENAMES.length) | 0)) % CODENAMES.length]!;
   return {
-    name: CODENAMES[(i * 5 + ((Math.random() * CODENAMES.length) | 0)) % CODENAMES.length]!,
+    name,
     alive: true,
+    variant: pickVariant(i, name),
     augments: {},
     kills: 0,
     missions: 0,
@@ -498,56 +522,26 @@ export function augLevel(a: MetaAgent, key: AugKey): number {
   return a.augments[key] ?? 0;
 }
 
-export interface Quirk {
-  key: string;
-  name: string;
-  desc: string;
-  earned(a: MetaAgent): boolean;
-  apply(spec: AgentSpec): void;
+// Pure: does not mutate the agent. Call ensureAgentVariant / newAgent first
+// so variant is always populated before this is used.
+export function agentAppearance(a: MetaAgent, trimSlot = 0): AppearanceManifest {
+  const levels: Partial<Record<AttachmentSlot, number>> = {};
+  for (const slot of AUG_SLOTS) {
+    const lvl = augLevel(a, slot.key);
+    if (lvl > 0) levels[slot.key as AttachmentSlot] = lvl;
+  }
+  const variant: BodyVariant =
+    a.variant === 'female' || a.variant === 'male' ? a.variant : pickVariant(trimSlot, a.name);
+  return buildAppearanceManifest({
+    variant,
+    levels,
+    armor: a.gear.armor,
+    trimSlot,
+  });
 }
 
-export const QUIRKS: Quirk[] = [
-  {
-    key: 'steady',
-    name: 'Steady Hands',
-    desc: '+5% accuracy',
-    earned: (a) => a.missions >= 10,
-    apply: (s) => void (s.spreadMul -= 5),
-  },
-  {
-    key: 'scar',
-    name: 'Scar Tissue',
-    desc: '+10 HP',
-    earned: (a) => a.missions >= 20,
-    apply: (s) => void (s.maxHp += 10),
-  },
-  {
-    key: 'marathoner',
-    name: 'Marathoner',
-    desc: '+5% speed',
-    earned: (a) => a.missions >= 30,
-    apply: (s) => void (s.speedMul += 5),
-  },
-  {
-    key: 'cold',
-    name: 'Cold Blood',
-    desc: '+5% fire rate',
-    earned: (a) => a.kills >= 50,
-    apply: (s) => void (s.fireMul -= 5),
-  },
-  {
-    key: 'silver',
-    name: 'Silver Tongue',
-    desc: '-10% stim drain',
-    earned: (a) => a.persuasions >= 25,
-    apply: (s) => void (s.drainMul -= 10),
-  },
-];
-
-export function agentQuirks(a: MetaAgent): Quirk[] {
-  return QUIRKS.filter((q) => q.earned(a));
-}
-
+// Pure function of loadout, gear, and augment levels. Service Records never
+// affect combat stats; identity is the player's build decisions.
 export function buildSpec(a: MetaAgent): AgentSpec {
   const spec = defaultSpec();
   spec.weapons = a.loadout.map((wid): WeaponSlot => ({ wid, ammo: WEAPONS[wid]!.ammoMax }));
@@ -570,7 +564,6 @@ export function buildSpec(a: MetaAgent): AgentSpec {
   spec.drainMul -= [0, 30, 50, 60][augLevel(a, 'brain')]!;
   spec.persuadeImmune = augLevel(a, 'brain') >= 3;
   spec.fireMul -= [0, 15, 30, 45][augLevel(a, 'arms')]!;
-  for (const q of agentQuirks(a)) q.apply(spec);
   return spec;
 }
 
@@ -640,7 +633,6 @@ export function applyResult(
 
   m.agents.forEach((a, i) => {
     if (!a.alive) return;
-    const quirksBefore = new Set(agentQuirks(a).map((q) => q.key));
     a.missions++;
     a.kills += Math.floor(kills / Math.max(1, survivors.length));
     a.persuasions += Math.floor((opts.persuaded ?? 0) / Math.max(1, survivors.length));
@@ -651,12 +643,6 @@ export function applyResult(
         for (let l = 0; l < lvl; l++) salvage += slot.levels[l]!.price >> 1;
       }
       lines.push(`Asset ${a.name} written off. Salvage recovered where applicable.`);
-    } else {
-      for (const q of agentQuirks(a)) {
-        if (!quirksBefore.has(q.key)) {
-          lines.push(`Service record: ${a.name} earns commendation "${q.name}" (${q.desc}).`);
-        }
-      }
     }
   });
   m.credits += salvage;
@@ -774,6 +760,23 @@ export function loadMeta(): MetaState | null {
     const m = JSON.parse(raw) as MetaState;
     if (m.version !== 2) return null;
     m.captured ??= [];
+    // legacy saves predate cosmetic variants; assign once and persist
+    let migrated = false;
+    for (let i = 0; i < m.agents.length; i++) {
+      const a = m.agents[i]!;
+      if (a.variant !== 'male' && a.variant !== 'female') {
+        ensureAgentVariant(a, i);
+        migrated = true;
+      }
+    }
+    for (let i = 0; i < m.captured.length; i++) {
+      const a = m.captured[i]!;
+      if (a.variant !== 'male' && a.variant !== 'female') {
+        ensureAgentVariant(a, i + 100);
+        migrated = true;
+      }
+    }
+    if (migrated) saveMeta(m);
     return m;
   } catch {
     return null;
