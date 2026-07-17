@@ -19,7 +19,9 @@ export function hashState(s: SimState): number {
   const ct = s.mission.contract;
   mix((ct.lossReason + 2) | ((ct.abortArmed ? 1 : 0) << 8) | ((ct.rivalCell + 2) << 9));
   for (const f of ct.failures) mix(f.kind | (f.state << 4) | ((f.countdown + 2) << 6));
-  mix(s.env.tod | (s.env.rain << 4));
+  mix(ct.expansion.state | ((ct.expansion.tick + 2) << 4) | ((ct.expansion.npc + 2) << 16));
+  mix(s.env.tod | (s.env.rain << 4) | (s.env.mods << 8));
+  for (const z of s.zones) mix(z.cell | (z.kind << 16) | (z.r << 24));
   mix(s.projectiles.length);
   mix(s.blasts.length);
   mix(s.smoke.length);

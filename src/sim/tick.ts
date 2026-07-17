@@ -1,5 +1,5 @@
 import { GEAR_CHARGE, GEAR_CLOAK, GEAR_DRONE, GEAR_EMP, GEAR_MEDBAY, type Command } from './commands';
-import { failContract, updateContract } from './contract';
+import { expansionSatisfied, failContract, updateContract } from './contract';
 import { fxDiv, fxLen, fxMul, type Fx } from './fixed';
 import { cellIdx, inBounds, losClear, MAP_W, type MapData } from './map';
 import { findPath, nearestWalkable } from './path';
@@ -23,6 +23,11 @@ import {
   FM_ASSET_LOST,
   FM_SQUAD_WIPED,
   FM_VIP_DOWN,
+  inZone,
+  MOD_CHEM,
+  MOD_EMP,
+  MOD_FOG,
+  MOD_SENSOR,
   SWARM_FLASHMOB,
   SWARM_HOLD,
   TOD_NIGHT,
@@ -135,15 +140,17 @@ function cellOfFx(x: Fx, z: Fx): number {
   return (x >> 16) + (z >> 16) * MAP_W;
 }
 
-// rain and darkness shrink NPC detection, never player hardware or weapon range
+// rain, darkness, and fog shrink NPC detection, never player hardware or weapon range
 export function npcSightFx(s: SimState, baseCells: number): Fx {
   let v = baseCells << 16;
   if (s.env.rain) v = (v * 3) >> 2;
   if (s.env.tod === TOD_NIGHT) v = (v * 7) >> 3;
+  if (s.env.mods & MOD_FOG) v = (v * 5) >> 3;
   return v;
 }
 
 function cloakRevealRange(s: SimState): Fx {
+  if (s.env.mods & MOD_SENSOR) return 6 << 16;
   return s.env.tod === TOD_NIGHT ? 2 << 16 : CLOAK_REVEAL_RANGE;
 }
 
@@ -819,10 +826,19 @@ function updateAgent(s: SimState, a: Agent, noises: Noise[]): void {
   if (a.cooldown > 0) a.cooldown--;
   if (a.persuadeCd > 0) a.persuadeCd--;
 
+  // an EMP field strips powered gear the moment an agent steps inside
+  if (s.env.mods & MOD_EMP && inZone(s, MOD_EMP, a.x, a.z)) {
+    a.cloakT = 0;
+    a.shield = 0;
+    a.shieldT = SHIELD_HIT_LOCKOUT;
+  }
+
   const [c, f, su] = a.stims;
   const totalStim = c + f + su;
   if (totalStim > 0) {
-    a.reserve -= ((totalStim * 2 * a.spec.drainMul) / 100) | 0;
+    const drain = ((totalStim * 2 * a.spec.drainMul) / 100) | 0;
+    a.reserve -= drain;
+    s.stimSpent += drain;
     if (a.reserve <= 0) {
       a.reserve = 0;
       a.stims = [0, 0, 0];
@@ -959,6 +975,7 @@ function updateAgent(s: SimState, a: Agent, noises: Noise[]): void {
       firePellets(s, a.x, a.z, tx, tz, slot.wid, Math.max(10, spreadMul), true, noises);
     }
     slot.ammo--;
+    s.agentShots++;
     a.cloakT = 0;
     let cd = ((w.cooldown * a.spec.fireMul) / 100) | 0;
     if (c > 0) cd = ((cd * (100 - 25 * c)) / 100) | 0;
@@ -1626,6 +1643,27 @@ function updateDeployables(s: SimState, noises: Noise[]): void {
   }
 }
 
+const CHEM_PERIOD = 20;
+const CHEM_AGENT_DMG = 2;
+const CHEM_NPC_DMG = 4;
+
+function updateChemZones(s: SimState): void {
+  if (!(s.env.mods & MOD_CHEM) || s.tick % CHEM_PERIOD !== 0) return;
+  for (const a of s.agents) {
+    if (!a.alive || a.driving >= 0) continue;
+    if (inZone(s, MOD_CHEM, a.x, a.z)) damageAgent(a, CHEM_AGENT_DMG);
+  }
+  for (const n of s.npcs) {
+    if (n.state === ST_DEAD || !inZone(s, MOD_CHEM, n.x, n.z)) continue;
+    n.hp -= CHEM_NPC_DMG;
+    if (n.hp <= 0) killNpc(s, n);
+    else if (n.kind === NPC_CIV && n.state !== ST_PERSUADED) {
+      n.state = ST_PANIC;
+      n.panicT = 120;
+    }
+  }
+}
+
 function updateDefense(s: SimState): void {
   const m = s.mission;
   if (m.type !== MISSION_DEFENSE || m.status !== STATUS_ACTIVE) return;
@@ -1687,7 +1725,9 @@ function updateHeist(s: SimState): void {
 
 function updateAlarm(s: SimState, noises: Noise[]): void {
   if (noises.length > 0) {
-    s.alarm.heat = Math.min(100, s.alarm.heat + noises.length * 2);
+    // a sensor grid reports every noise twice as hard
+    const gain = s.env.mods & MOD_SENSOR ? 4 : 2;
+    s.alarm.heat = Math.min(100, s.alarm.heat + noises.length * gain);
     s.alarm.quietT = 0;
     const n0 = noises[0]!;
     s.alarm.ax = n0.x;
@@ -1707,6 +1747,7 @@ function updateAlarm(s: SimState, noises: Noise[]): void {
     if (s.alarm.quietT > 300 && s.tick % 10 === 0 && s.alarm.heat > 0) s.alarm.heat--;
   }
   s.alarm.level = s.alarm.heat >= 50 ? 2 : s.alarm.heat >= 12 ? 1 : 0;
+  if (s.alarm.level >= 1) s.alarmEver = 1;
   if (s.alarm.spawnT > 0) s.alarm.spawnT--;
   if (s.alarm.level >= 1 && s.alarm.spawnT === 0) {
     const police = s.npcs.filter((n) => n.kind === NPC_POLICE && n.state !== ST_DEAD && n.state !== ST_PERSUADED).length;
@@ -1801,6 +1842,7 @@ function checkMission(s: SimState): void {
         s.npcs.every((n) => n.kind !== NPC_ENEMY || n.state === ST_DEAD || n.state === ST_PERSUADED);
       break;
   }
+  objectiveDone = objectiveDone && expansionSatisfied(s);
   if (!EXFIL_NEED_OBJECTIVE || objectiveDone) {
     const squadOut = s.agents.every(
       (a) => !a.alive || distFx(a.x, a.z, m.exfilX, m.exfilZ) <= m.exfilR,
@@ -1820,6 +1862,7 @@ export function step(state: SimState, commands: Command[]): void {
   updateBlasts(state, noises);
   updateProjectiles(state, noises);
   updateSmoke(state);
+  updateChemZones(state);
   updateDefense(state);
   updateHeist(state);
   updateAlarm(state, noises);

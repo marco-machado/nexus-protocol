@@ -9,6 +9,8 @@ import {
   MISSION_PERSUADE,
   MISSION_PURGE,
   MISSION_RAID,
+  MOD_CHEM,
+  MOD_EMP,
   rand,
   type SimState,
 } from './state';
@@ -47,6 +49,8 @@ export interface MissionParams {
   elite?: boolean;
   tod?: number;
   weather?: number;
+  // MOD_* bitmask; zoned modifiers (chem, EMP) place their areas at setup
+  modifiers?: number;
   visualTest?: boolean;
   debug?: boolean;
 }
@@ -288,6 +292,7 @@ export function createMission(
   s.mission.doctrine = doctrine;
   s.env.tod = params.tod ?? 0;
   s.env.rain = params.weather ?? 0;
+  s.env.mods = params.modifiers ?? 0;
   if (params.visualTest) return setupVisualTestMission(s, specs);
   if (params.debug) return setupDebugMission(s, specs);
 
@@ -403,9 +408,32 @@ export function createMission(
   }
 
   spawnVehicles(s);
+  placeZones(s);
   initContract(s);
 
   return s;
+}
+
+const ZONE_RADIUS = 3;
+const ZONES_PER_KIND = 2;
+
+function placeZones(s: SimState): void {
+  const exfil = cellIdx(s.mission.exfilX >> 16, s.mission.exfilZ >> 16);
+  for (const kind of [MOD_CHEM, MOD_EMP]) {
+    if (!(s.env.mods & kind)) continue;
+    for (let i = 0; i < ZONES_PER_KIND; i++) {
+      let cell = s.map.walkable[rand(s, s.map.walkable.length)]!;
+      // keep the drop zone and exfil pad livable; a bounded reroll keeps the
+      // rand stream length independent of map luck
+      for (let tries = 0; tries < 8; tries++) {
+        const dx = Math.abs((cell % MAP_W) - (exfil % MAP_W));
+        const dz = Math.abs(((cell / MAP_W) | 0) - ((exfil / MAP_W) | 0));
+        if (Math.max(dx, dz) > ZONE_RADIUS + 6) break;
+        cell = s.map.walkable[rand(s, s.map.walkable.length)]!;
+      }
+      s.zones.push({ kind, cell, r: ZONE_RADIUS });
+    }
+  }
 }
 
 export { npcHp };

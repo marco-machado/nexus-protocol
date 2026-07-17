@@ -3,6 +3,10 @@ import { fxLen } from './fixed';
 import { MAP_W, type MapData } from './map';
 import { nearestWalkable } from './path';
 import {
+  EXP_ANNOUNCED,
+  EXP_DONE,
+  EXP_NONE,
+  EXP_PENDING,
   FAIL_FIRED,
   FAIL_LATENT,
   FAIL_WARNING,
@@ -15,6 +19,8 @@ import {
   FM_TARGET_ESCAPED,
   FM_VIP_DOWN,
   FM_VIP_ESCAPED,
+  FM_WINDOW_CLOSED,
+  MOD_WINDOW,
   MISSION_ASSASSINATE,
   MISSION_DEFENSE,
   MISSION_HEIST,
@@ -38,6 +44,10 @@ export const RIVAL_WORK_TICKS = 600;
 export const RIVAL_RADIUS_FX = 2 << 16;
 export const FLEE_TICKS_PER_CELL = 6;
 export const VIP_WARN_HP = 20;
+export const WINDOW_TICKS = 6000;
+export const WINDOW_WARN_TICKS = 1200;
+export const EXP_TICK_BASE = 600;
+export const EXP_TICK_SPREAD = 600;
 
 export function initContract(s: SimState): void {
   const m = s.mission;
@@ -74,7 +84,19 @@ export function initContract(s: SimState): void {
       failures.push({ kind: FM_REINFORCED, state: FAIL_LATENT, countdown: HQ_DEADLINE_TICKS });
       break;
   }
+  if (s.env.mods & MOD_WINDOW) {
+    failures.push({ kind: FM_WINDOW_CLOSED, state: FAIL_LATENT, countdown: WINDOW_TICKS });
+  }
   m.contract.failures = failures;
+  // compounding expansion: defense holds fixed waves and HQ is already a
+  // deadline siege, so only field contracts can be amended mid-mission
+  if (m.type !== MISSION_DEFENSE && m.type !== MISSION_HQ && rand(s, 2) === 0) {
+    m.contract.expansion = {
+      state: EXP_PENDING,
+      tick: EXP_TICK_BASE + rand(s, EXP_TICK_SPREAD),
+      npc: -1,
+    };
+  }
 }
 
 export function contractFailures(s: SimState): readonly FailureMode[] {
@@ -87,6 +109,18 @@ export function contractLossReason(s: SimState): number {
 
 export function abortArmed(s: SimState): boolean {
   return s.mission.contract.abortArmed;
+}
+
+export function contractExpansion(s: SimState): Readonly<import('./state').ExpansionState> {
+  return s.mission.contract.expansion;
+}
+
+// pending amendments never block the win; only an announced, unfinished one does
+export function expansionSatisfied(s: SimState): boolean {
+  const e = s.mission.contract.expansion;
+  if (e.state !== EXP_ANNOUNCED) return true;
+  const n = s.npcs[e.npc];
+  return !n || n.state === ST_DEAD;
 }
 
 export function failureOf(s: SimState, kind: number): FailureMode | undefined {
@@ -157,6 +191,10 @@ export function contractProgress(s: SimState): ContractProgress {
 // objective completeness alone; winning additionally requires the squad
 // (and the persuade VIP) inside the exfil zone
 export function objectiveComplete(s: SimState): boolean {
+  return baseObjectiveComplete(s) && expansionSatisfied(s);
+}
+
+function baseObjectiveComplete(s: SimState): boolean {
   if (s.map.visualTest) return false;
   const m = s.mission;
   switch (m.type) {
@@ -366,11 +404,54 @@ function updateDeadline(s: SimState): void {
   fm.state = fm.countdown <= HQ_DEADLINE_WARN_TICKS ? FAIL_WARNING : FAIL_LATENT;
 }
 
+function updateWindow(s: SimState): void {
+  const fm = failureOf(s, FM_WINDOW_CLOSED);
+  if (!fm || fm.state === FAIL_FIRED || fm.countdown < 0) return;
+  if (--fm.countdown <= 0) {
+    failContract(s, FM_WINDOW_CLOSED);
+    return;
+  }
+  fm.state = fm.countdown <= WINDOW_WARN_TICKS ? FAIL_WARNING : FAIL_LATENT;
+}
+
+function updateExpansion(s: SimState): void {
+  const e = s.mission.contract.expansion;
+  if (e.state === EXP_ANNOUNCED) {
+    const n = s.npcs[e.npc];
+    if (!n || n.state === ST_DEAD) e.state = EXP_DONE;
+    return;
+  }
+  if (e.state !== EXP_PENDING || s.tick < e.tick) return;
+  if (baseObjectiveComplete(s)) {
+    // the client cannot amend a closed objective; the offer lapses
+    e.state = EXP_NONE;
+    e.tick = -1;
+    return;
+  }
+  const eligible: number[] = [];
+  for (const n of s.npcs) {
+    if (n.kind !== NPC_CIV || n.vip || n.missionTarget || n.escaped) continue;
+    if (n.state === ST_DEAD || n.state === ST_PERSUADED) continue;
+    eligible.push(n.id);
+  }
+  if (eligible.length === 0) {
+    e.state = EXP_NONE;
+    e.tick = -1;
+    return;
+  }
+  const pick = s.npcs[eligible[rand(s, eligible.length)]!]!;
+  pick.missionTarget = true;
+  e.state = EXP_ANNOUNCED;
+  e.npc = pick.id;
+}
+
 export function updateContract(s: SimState): void {
   const m = s.mission;
   if (m.status !== STATUS_ACTIVE || s.map.visualTest) return;
   updateSquadWarning(s);
   updateAbandonment(s);
+  updateWindow(s);
+  updateExpansion(s);
   switch (m.type) {
     case MISSION_ASSASSINATE:
       updateAssassination(s);

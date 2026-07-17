@@ -27,11 +27,11 @@ const CHECKPOINT_EVERY = 200;
 
 // If this hash changes, sim behavior changed: either the change was an
 // intentional gameplay edit (update the constant) or determinism broke.
-// Re-pinned for the contracts-track milestone A (issue #13): the contract
-// read model joined SimState and hashState, mission setup consumes extra RNG
-// for the purge rival objective, and assassination targets and the
-// acquisition VIP now flee toward district exits under alarm.
-const GOLDEN_FINAL_HASH = 0x55c7e1ef;
+// Re-pinned for the contracts-track milestone B (issue #13): initContract now
+// rolls a seeded compounding-expansion offer on every field contract (extra
+// RNG consumption at setup), the expansion and env-modifier fields joined
+// hashState, and an announced amendment gates the win condition.
+const GOLDEN_FINAL_HASH = 0xdaaeaa2d;
 
 function specs() {
   const lead = defaultSpec();
@@ -159,7 +159,8 @@ describe('phase B mission determinism', () => {
 
 describe('phase D environment', () => {
   it('scales NPC sight exactly in fixed point', () => {
-    const env = (tod: number, rain: number) => ({ env: { tod, rain } }) as Parameters<typeof npcSightFx>[0];
+    const env = (tod: number, rain: number, mods = 0) =>
+      ({ env: { tod, rain, mods } }) as Parameters<typeof npcSightFx>[0];
     expect(npcSightFx(env(0, 0), 12)).toBe(12 << 16);
     expect(npcSightFx(env(0, 1), 12)).toBe(9 << 16);
     expect(npcSightFx(env(2, 0), 12)).toBe(((12 << 16) * 7) >> 3);
@@ -182,7 +183,7 @@ describe('phase D environment', () => {
   it('rain changes combat dynamics, not just the hashed env fields', () => {
     const finalWith = (weather: number) => {
       const s = runReplay(SEED, MISSION_ASSASSINATE, specs(), script, TOTAL_TICKS, undefined, { weather });
-      s.env = { tod: 0, rain: 0 };
+      s.env = { tod: 0, rain: 0, mods: 0 };
       return hashState(s);
     };
     expect(finalWith(1)).not.toBe(finalWith(0));

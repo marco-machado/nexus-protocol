@@ -1,4 +1,4 @@
-import type { Fx } from './fixed';
+import { fxLen, type Fx } from './fixed';
 import { generateMap, MAP_H, MAP_W, type MapData, type MapParams } from './map';
 import { seedFrom } from './prng';
 import { WEAPONS } from './weapons';
@@ -42,6 +42,28 @@ export const FM_LOCKDOWN = 5;
 export const FM_RIVAL_CONTRACT = 6;
 export const FM_ASSET_LOST = 7;
 export const FM_REINFORCED = 8;
+export const FM_WINDOW_CLOSED = 9;
+
+// environmental modifier bits carried in EnvState.mods
+export const MOD_FOG = 1;
+export const MOD_CHEM = 2;
+export const MOD_EMP = 4;
+export const MOD_SENSOR = 8;
+export const MOD_WINDOW = 16;
+
+// contract expansion (compounding objective) lifecycle
+export const EXP_NONE = 0;
+export const EXP_PENDING = 1;
+export const EXP_ANNOUNCED = 2;
+export const EXP_DONE = 3;
+
+export interface ExpansionState {
+  state: number;
+  // seeded trigger tick while pending; -1 once resolved or never armed
+  tick: number;
+  // npc id of the amendment target once announced
+  npc: number;
+}
 
 export interface FailureMode {
   kind: number;
@@ -55,6 +77,15 @@ export interface ContractState {
   lossReason: number;
   abortArmed: boolean;
   rivalCell: number;
+  expansion: ExpansionState;
+}
+
+// a static area modifier placed at setup; cell is the zone center
+export interface Zone {
+  kind: number;
+  cell: number;
+  // radius in whole cells
+  r: number;
 }
 
 export interface Asset {
@@ -132,6 +163,7 @@ export interface SwarmState {
 export interface EnvState {
   tod: number;
   rain: number;
+  mods: number;
 }
 
 export const TOD_DAY = 0;
@@ -154,12 +186,18 @@ export interface SimState {
   alarm: AlarmState;
   swarm: SwarmState;
   env: EnvState;
+  zones: Zone[];
   mission: MissionState;
   breaches: number[];
   kills: number;
   civKills: number;
   // cumulative presentation counters; deterministic but excluded from hashState
   shotsByWid: number[];
+  // cumulative bookkeeping counters; deterministic but excluded from hashState
+  // because they never feed back into sim behavior
+  agentShots: number;
+  stimSpent: number;
+  alarmEver: number;
   fleshHits: number;
   booms: number;
   // per-tick presentation events; cleared at the start of each step, excluded from hashState
@@ -167,6 +205,16 @@ export interface SimState {
 }
 
 export const EV_NO_ROUTE = 1;
+
+export function inZone(s: SimState, kind: number, x: Fx, z: Fx): boolean {
+  for (const zn of s.zones) {
+    if (zn.kind !== kind) continue;
+    const cx = ((zn.cell % MAP_W) << 16) + (1 << 15);
+    const cz = (((zn.cell / MAP_W) | 0) << 16) + (1 << 15);
+    if (fxLen(x - cx, z - cz) <= zn.r << 16) return true;
+  }
+  return false;
+}
 
 export function rand(s: SimState, n: number): number {
   let x = s.rng | 0;
@@ -193,7 +241,8 @@ export function baseState(seed: number, mapSeed: number, mapParams?: MapParams):
     smokeGrid: new Uint8Array(MAP_W * MAP_H),
     alarm: { heat: 0, level: 0, quietT: 0, spawnT: 0, ax: 0, az: 0, policeBudget: 6, tacticalBudget: 3 },
     swarm: { mode: 0, x: 0, z: 0 },
-    env: { tod: TOD_DAY, rain: 0 },
+    env: { tod: TOD_DAY, rain: 0, mods: 0 },
+    zones: [],
     mission: {
       type: 0,
       status: 0,
@@ -212,12 +261,21 @@ export function baseState(seed: number, mapSeed: number, mapParams?: MapParams):
       trapBudget: 0,
       loot: 0,
       lootPrize: 0,
-      contract: { failures: [], lossReason: REASON_NONE, abortArmed: false, rivalCell: -1 },
+      contract: {
+        failures: [],
+        lossReason: REASON_NONE,
+        abortArmed: false,
+        rivalCell: -1,
+        expansion: { state: EXP_NONE, tick: -1, npc: -1 },
+      },
     },
     breaches: [],
     kills: 0,
     civKills: 0,
     shotsByWid: WEAPONS.map(() => 0),
+    agentShots: 0,
+    stimSpent: 0,
+    alarmEver: 0,
     fleshHits: 0,
     booms: 0,
     events: [],
