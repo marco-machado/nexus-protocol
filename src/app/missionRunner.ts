@@ -45,6 +45,7 @@ import { NPC_CIV, NPC_ENEMY, ST_DEAD, ST_PERSUADED, type AgentSpec } from '../si
 import { V_WRECK } from '../sim/vehicles';
 import { WEAPONS } from '../sim/weapons';
 import { audio } from './audio';
+import type { CanvasHost } from './canvasHost';
 import { createComms } from './comms';
 import {
   clampSimSpeed,
@@ -81,6 +82,9 @@ export interface MissionOptions {
   codenames?: string[];
   // flavor operation name for the HUD top bar
   opName?: string;
+  // R3F canvas wrap (stage 2): the mission scene mounts into the persistent
+  // fiber root for its lifetime; loop ownership stays here
+  host?: CanvasHost;
 }
 
 // agent card portraits: /portraits/a{n}.png when present, else a generated
@@ -141,6 +145,7 @@ export function runMission(
   return new Promise((resolve) => {
     const state = createMission(seed, missionType, specs, { ...simParams, civCount: opts.civCount ?? simParams.civCount });
     const gs = createGameScene(state, settings.shadows);
+    opts.host?.setMissionScene(gs.scene);
     // night-oriented PMREM so wet PBR asphalt and Standard concrete pick up neon IBL
     const rainOn = state.env.rain === 1 || !!state.map.visualTest;
     const envIntensity = rainOn
@@ -539,6 +544,7 @@ export function runMission(
     window.addEventListener('resize', onResize);
 
     const cleanup = () => {
+      opts.host?.setMissionScene(null);
       window.removeEventListener('pointerdown', onPointerDown);
       window.removeEventListener('pointermove', onPointerMove);
       window.removeEventListener('pointerup', onPointerUp);
