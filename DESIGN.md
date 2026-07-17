@@ -228,7 +228,7 @@ The in-game shell is intentionally sharp. Current production UI uses square pane
 - **Do** use the existing token colors from `index.html` and `src/render/palette.ts` before introducing new colors.
 - **Do** preserve accessibility palette support: every gameplay-critical color must work in default, deuteranopia-safe, and high-contrast modes.
 - **Do** keep sim and render concerns separate. DESIGN.md guides presentation; it must not imply simulation-side styling state.
-- **Do** use `innerHTML` templates plus delegated `data-*` handlers for app screens, matching `src/app/screens.ts`.
+- **Do** build app screens as React components under `src/app/ui/`, rendered from the Game controller's observable screen state (`src/app/screenState.ts`); the in-mission HUD remains imperative DOM with delegated `data-*` handlers.
 - **Do** keep copy clipped, uppercase, and operational: `OPEN CONTRACT`, `R&D REQUIRED`, `REPEL TAKEOVER`, `ASSET WRITTEN OFF`.
 - **Don't** soften live game UI with rounded marketing cards, gradients, large shadows, emoji, or playful illustration styles.
 - **Don't** use red/green as the only indicator for critical state; pair color with text, borders, labels, or icon/shape changes.

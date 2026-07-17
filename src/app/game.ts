@@ -1,7 +1,7 @@
-import type { WebGPURenderer } from 'three/webgpu';
 import { MISSION_DEFENSE } from '../sim/state';
 import type { MissionParams } from '../sim/setup';
-import { runMission } from './missionRunner';
+import type { AgentSpec } from '../sim/units';
+import type { MissionOptions, MissionResult } from './missionRunner';
 import {
   actOfTerritory,
   advanceTime,
@@ -18,10 +18,8 @@ import {
   type MetaState,
   type Territory,
 } from './meta';
-import { Screens } from './screens';
-import { settings } from './settings';
+import { ScreenStore, type GlobeHandle } from './screenState';
 import { hintsFor } from './tutorial';
-import { WorldGlobe } from '../render/globe';
 
 const OBJECTIVES = [
   'Eliminate marked targets, then exfiltrate',
@@ -33,21 +31,35 @@ const OBJECTIVES = [
   'Purge the arcology garrison and destroy the HQ core, then exfiltrate',
 ];
 
+// everything the flow controller needs from the outside world, injected so
+// headless tests can drive the full screen flow with stubs (no renderer, no
+// globe, no Three.js module loads)
+export interface GameDeps {
+  screen: ScreenStore;
+  runMission: (
+    seed: number,
+    missionType: number,
+    specs: AgentSpec[],
+    objectiveText: string,
+    simParams: MissionParams,
+    opts: MissionOptions,
+  ) => Promise<MissionResult>;
+  createGlobe: () => GlobeHandle | null;
+}
+
 export class Game {
   private meta: MetaState = newMeta();
-  private mapTimer = 0;
-  private globe: WorldGlobe | null = null;
+  private mapTimer: ReturnType<typeof setInterval> | 0 = 0;
+  private globe: GlobeHandle | null = null;
+  private globeMade = false;
+  private mapRev = 0;
 
-  constructor(
-    private renderer: WebGPURenderer,
-    private screens: Screens,
-    private hud: HTMLElement,
-  ) {}
+  constructor(private deps: GameDeps) {}
 
-  private ensureGlobe(): WorldGlobe {
-    if (!this.globe) {
-      this.globe = new WorldGlobe(this.renderer, { postFx: settings.postFx });
-      this.screens.setGlobe(this.globe);
+  private ensureGlobe(): GlobeHandle | null {
+    if (!this.globeMade) {
+      this.globeMade = true;
+      this.globe = this.deps.createGlobe();
     }
     return this.globe;
   }
@@ -55,15 +67,28 @@ export class Game {
   start(): void {
     this.stopMapTimer();
     this.globe?.stop();
-    this.screens.menu((fresh) => {
-      this.meta = fresh ? newMeta() : (loadMeta() ?? newMeta());
-      const before = this.meta.credits;
-      advanceTime(this.meta, Date.now());
-      if (this.meta.credits > before) {
-        this.meta.log.unshift(`Ledger reconciled: +${this.meta.credits - before}cr accrued while offline.`);
-      }
-      saveMeta(this.meta);
-      this.map();
+    this.menu();
+  }
+
+  dispose(): void {
+    this.stopMapTimer();
+  }
+
+  private menu(): void {
+    this.deps.screen.set({
+      kind: 'menu',
+      hasSave: loadMeta() !== null,
+      onStart: (fresh) => {
+        this.meta = fresh ? newMeta() : (loadMeta() ?? newMeta());
+        const before = this.meta.credits;
+        advanceTime(this.meta, Date.now());
+        if (this.meta.credits > before) {
+          this.meta.log.unshift(`Ledger reconciled: +${this.meta.credits - before}cr accrued while offline.`);
+        }
+        saveMeta(this.meta);
+        this.map();
+      },
+      onSettings: () => this.deps.screen.set({ kind: 'settings', onBack: () => this.menu() }),
     });
   }
 
@@ -74,47 +99,61 @@ export class Game {
     }
   }
 
+  private setMapScreen(): void {
+    this.deps.screen.set({
+      kind: 'worldMap',
+      meta: this.meta,
+      rev: this.mapRev++,
+      globe: this.ensureGlobe(),
+      onContract: (t, defense) => this.equip(t, defense),
+    });
+  }
+
   private map(): void {
     this.stopMapTimer();
     advanceTime(this.meta, Date.now());
     saveMeta(this.meta);
     if (campaignWon(this.meta)) {
       this.globe?.stop();
-      this.screens.victory(
-        this.meta,
-        () => {
+      this.deps.screen.set({
+        kind: 'victory',
+        meta: this.meta,
+        onNgPlus: () => {
           startNgPlus(this.meta);
           saveMeta(this.meta);
           this.map();
         },
-        () => this.start(),
-      );
+        onNewGame: () => this.start(),
+      });
       return;
     }
-    this.ensureGlobe().start();
-    this.screens.worldMap(this.meta, (t, defense) => this.equip(t, defense));
-    this.mapTimer = window.setInterval(() => {
+    this.ensureGlobe()?.start();
+    this.setMapScreen();
+    this.mapTimer = setInterval(() => {
       advanceTime(this.meta, Date.now());
       saveMeta(this.meta);
-      this.screens.worldMap(this.meta, (t, defense) => this.equip(t, defense));
+      // same screen, new rev: the world map re-renders from state instead of
+      // the old wholesale repaint, so selection state survives the tick
+      if (this.deps.screen.get().kind === 'worldMap') this.setMapScreen();
     }, 60_000);
   }
 
   private equip(t: Territory, defense = false): void {
     this.stopMapTimer();
     this.globe?.stop();
-    this.screens.equip(
-      this.meta,
-      t,
-      () => void this.launch(t, defense),
-      () => this.map(),
+    this.deps.screen.set({
+      kind: 'equip',
+      meta: this.meta,
+      territory: t,
       defense,
-    );
+      onLaunch: () => void this.launch(t, defense),
+      onBack: () => this.map(),
+    });
   }
 
   private async launch(t: Territory, defense = false): Promise<void> {
     this.globe?.stop();
-    this.screens.hide();
+    this.deps.screen.set({ kind: 'hidden' });
     const roster = this.meta.agents.filter((a) => a.alive);
     const specs = roster.map((a) => buildSpec(a));
     // codenames travel as a parallel app-layer array so AgentSpec and the
@@ -141,12 +180,10 @@ export class Game {
       tod: cond.tod,
       weather: cond.rain,
     };
-    const result = await runMission(
-      this.renderer,
+    const result = await this.deps.runMission(
       seed,
       missionType,
       specs,
-      this.hud,
       OBJECTIVES[missionType] ?? 'Contract',
       simParams,
       { hints: hintsFor(this.meta, t, missionType), codenames },
@@ -163,6 +200,6 @@ export class Game {
       persuaded: result.persuaded,
     });
     saveMeta(this.meta);
-    this.screens.debrief(info, this.meta, () => this.map());
+    this.deps.screen.set({ kind: 'debrief', info, meta: this.meta, onContinue: () => this.map() });
   }
 }

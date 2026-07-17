@@ -49,10 +49,28 @@ function load(): Settings {
 
 export const settings: Settings = load();
 
+// subscribe mechanism for the React screens: every mutation site already
+// calls saveSettings(), so persisting doubles as the change notification.
+// Imperative consumers keep reading the mutable singleton directly.
+const listeners = new Set<() => void>();
+let version = 0;
+
+export function subscribeSettings(fn: () => void): () => void {
+  listeners.add(fn);
+  return () => listeners.delete(fn);
+}
+
+// monotonic snapshot for useSyncExternalStore; bumped by saveSettings
+export function settingsVersion(): number {
+  return version;
+}
+
 export function saveSettings(): void {
+  version++;
   try {
     localStorage.setItem(KEY, JSON.stringify(settings));
   } catch {
     // storage may be unavailable; settings simply won't persist
   }
+  for (const fn of [...listeners]) fn();
 }

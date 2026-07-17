@@ -1,9 +1,11 @@
 import { createRenderer } from './render/renderer';
 import { applyPalette } from './render/palette';
+import { WorldGlobe } from './render/globe';
 import { audio } from './app/audio';
 import { Game } from './app/game';
 import { runMission } from './app/missionRunner';
-import { Screens } from './app/screens';
+import { ScreenStore } from './app/screenState';
+import { mountScreenRoot } from './app/ui/root';
 import { settings } from './app/settings';
 import { defaultSpec } from './sim/units';
 
@@ -89,7 +91,14 @@ async function main(): Promise<void> {
     return;
   }
 
-  const game = new Game(renderer, new Screens(screenEl), hud);
+  const store = new ScreenStore();
+  mountScreenRoot(screenEl, store);
+  const game = new Game({
+    screen: store,
+    runMission: (seed, missionType, specs, objectiveText, simParams, opts) =>
+      runMission(renderer, seed, missionType, specs, hud, objectiveText, simParams, opts),
+    createGlobe: () => new WorldGlobe(renderer, { postFx: settings.postFx }),
+  });
   game.start();
 }
 
