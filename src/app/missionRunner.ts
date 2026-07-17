@@ -827,6 +827,7 @@ function createMissionSystems(
   let prevAlarmLevel = state.alarm.level;
   let prevDone = false;
   const prevFailStates: number[] = contractFailures(state).map((f) => f.state);
+  const prevFailTimers: number[] = contractFailures(state).map((f) => f.countdown);
   let prevWave = state.mission.wave;
   let prevDriving = false;
   let prevWrecks = 0;
@@ -859,11 +860,16 @@ function createMissionSystems(
     // contract warnings and failures mirror the card as captioned comms lines
     contractFailures(state).forEach((f, i) => {
       const prev = prevFailStates[i] ?? 0;
+      const prevT = prevFailTimers[i] ?? -1;
       if (f.state !== prev) {
         if (f.state === FAIL_WARNING) comms.push(warningLine(f.kind, f.countdown));
         else if (f.state === FAIL_FIRED) comms.push(firedLine(f.kind));
         prevFailStates[i] = f.state;
+      } else if (f.state === FAIL_WARNING && f.countdown >= 0 && prevT < 0) {
+        // an untimed warning turned into a live countdown (VIP flight starts)
+        comms.push(warningLine(f.kind, f.countdown));
       }
+      prevFailTimers[i] = f.countdown;
     });
     const drivingNow = state.agents.some((a) => a.alive && a.driving >= 0);
     if (drivingNow && !prevDriving) {
@@ -1142,10 +1148,10 @@ function renderHud(
       </div>`;
     })
     .join('');
-  const bullets: string[] = [];
   const m = state.mission;
-  bullets.push(objectiveTitle(m.type));
-  bullets.push(successLine(state));
+  const bullets: string[] = cardTitle
+    ? [cardTitle]
+    : [objectiveTitle(m.type), successLine(state)];
   if (m.type === 4) {
     const relay = m.assets[0];
     bullets.push(`RELAY INTEGRITY ${relay?.alive ? relay.hp : 0}/${relay?.maxHp ?? 0}`);
@@ -1167,7 +1173,6 @@ function renderHud(
     const vip = state.npcs[m.vipId];
     if (vip && vip.state === ST_PERSUADED) bullets.push('VIP acquired: reach exfil');
   }
-  if (cardTitle) bullets.splice(0, 2, cardTitle);
   if (state.mission.status === STATUS_ACTIVE && objectiveComplete(state)) {
     bullets.push('Proceed to exfil');
   }

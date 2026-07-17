@@ -41,146 +41,125 @@ export function objectiveTitle(missionType: number): string {
   return TITLES[missionType] ?? 'Contract';
 }
 
+const PROGRESS_LABELS: Record<number, string> = {
+  [MISSION_ASSASSINATE]: 'TARGETS ELIMINATED',
+  [MISSION_PERSUADE]: 'VIP SECURED',
+  [MISSION_RAID]: 'ASSETS DESTROYED',
+  [MISSION_PURGE]: 'HOSTILE UNITS NEUTRALIZED',
+  [MISSION_DEFENSE]: 'WAVES HELD',
+  [MISSION_HEIST]: 'STAGES CLEARED',
+  [MISSION_HQ]: 'GARRISON AND CORE',
+};
+
 export function successLine(state: SimState): string {
+  const label = PROGRESS_LABELS[state.mission.type];
+  if (!label) return '';
   const p = contractProgress(state);
-  switch (state.mission.type) {
-    case MISSION_ASSASSINATE:
-      return `TARGETS ELIMINATED ${p.done}/${p.total}`;
-    case MISSION_PERSUADE:
-      return `VIP SECURED ${p.done}/${p.total}`;
-    case MISSION_RAID:
-      return `ASSETS DESTROYED ${p.done}/${p.total}`;
-    case MISSION_PURGE:
-      return `HOSTILE UNITS NEUTRALIZED ${p.done}/${p.total}`;
-    case MISSION_DEFENSE:
-      return `WAVES HELD ${p.done}/${p.total}`;
-    case MISSION_HEIST:
-      return `STAGES CLEARED ${p.done}/${p.total}`;
-    case MISSION_HQ:
-      return `GARRISON AND CORE ${p.done}/${p.total}`;
-  }
-  return '';
+  return `${label} ${p.done}/${p.total}`;
 }
 
+interface FailureText {
+  // card row label
+  label: string;
+  // comms line on latent -> warning; {t} is the countdown where timed
+  warn: string;
+  // second warning wording once a flight countdown starts (VIP flight only)
+  warnTimed?: string;
+  // comms line when the mode fires
+  fired: string;
+  // top-bar status when this reason is the latched loss
+  status: string;
+  // debrief cause line
+  debrief: string;
+}
+
+const FAILURE_TEXT: Record<number, FailureText> = {
+  [FM_SQUAD_WIPED]: {
+    label: 'SQUAD WRITE-OFF',
+    warn: 'Squad viability critical. Underwriting recommends recall.',
+    fired: 'All field assets written off. The ledger will reflect this.',
+    status: 'SQUAD WRITTEN OFF',
+    debrief: 'Cause of loss: full squad write-off in the field.',
+  },
+  [FM_ABANDONED]: {
+    label: 'CONTRACT ABANDONMENT',
+    warn: 'Recall order logged. Reach the exfiltration zone to book the contract as failed.',
+    fired: 'Contract abandoned. Recovered assets retained; the fee is not.',
+    status: 'CONTRACT ABANDONED',
+    debrief:
+      'Cause of loss: contract abandoned by recall order. Surviving assets and salvage retained.',
+  },
+  [FM_TARGET_ESCAPED]: {
+    label: 'TARGET EXIT',
+    warn: 'Target is running for a district exit. Projected exit in {t}.',
+    fired: 'Target has left the district. The client has been notified and debited.',
+    status: 'TARGET ESCAPED',
+    debrief: 'Cause of loss: marked target exited the district.',
+  },
+  [FM_VIP_DOWN]: {
+    label: 'VIP WRITE-OFF',
+    warn: 'VIP integrity degraded. Damaged goods are billed at full rate.',
+    fired: 'VIP written off. Acquisition is void.',
+    status: 'VIP WRITTEN OFF',
+    debrief: 'Cause of loss: VIP written off before acquisition.',
+  },
+  [FM_VIP_ESCAPED]: {
+    label: 'VIP FLIGHT',
+    warn: 'VIP is spooked. Further alarm escalation will trigger flight.',
+    warnTimed: 'VIP in flight toward a district exit. Projected exit in {t}.',
+    fired: 'VIP has left the district. Acquisition is void.',
+    status: 'VIP ESCAPED',
+    debrief: 'Cause of loss: VIP exited the district before acquisition.',
+  },
+  [FM_LOCKDOWN]: {
+    label: 'SITE LOCKDOWN',
+    warn: 'Site lockdown initiated. Marked assets seal in {t}.',
+    fired: 'Lockdown complete. Marked assets are sealed.',
+    status: 'SITE SEALED',
+    debrief: 'Cause of loss: site lockdown sealed the marked assets.',
+  },
+  [FM_RIVAL_CONTRACT]: {
+    label: 'RIVAL CONTRACT',
+    warn: 'Rival unit is executing its own contract. Completion in {t} unless interrupted.',
+    fired: 'Rival contract closed first. Ours is void.',
+    status: 'OUTBID BY RIVAL',
+    debrief: 'Cause of loss: a rival unit closed its contract first.',
+  },
+  [FM_ASSET_LOST]: {
+    label: 'ASSET INTEGRITY',
+    warn: 'Defended asset integrity below 40 percent.',
+    fired: 'Defended asset destroyed.',
+    status: 'RELAY LOST',
+    debrief: 'Cause of loss: the defended asset was destroyed.',
+  },
+  [FM_REINFORCED]: {
+    label: 'REINFORCEMENT DEADLINE',
+    warn: 'Garrison reinforcement en route. Siege window closes in {t}.',
+    fired: 'Reinforcements have arrived. The siege window is closed.',
+    status: 'SIEGE WINDOW CLOSED',
+    debrief: 'Cause of loss: garrison reinforcements arrived on schedule.',
+  },
+};
+
 export function failureLabel(kind: number): string {
-  switch (kind) {
-    case FM_SQUAD_WIPED:
-      return 'SQUAD WRITE-OFF';
-    case FM_ABANDONED:
-      return 'CONTRACT ABANDONMENT';
-    case FM_TARGET_ESCAPED:
-      return 'TARGET EXIT';
-    case FM_VIP_DOWN:
-      return 'VIP WRITE-OFF';
-    case FM_VIP_ESCAPED:
-      return 'VIP FLIGHT';
-    case FM_LOCKDOWN:
-      return 'SITE LOCKDOWN';
-    case FM_RIVAL_CONTRACT:
-      return 'RIVAL CONTRACT';
-    case FM_ASSET_LOST:
-      return 'ASSET INTEGRITY';
-    case FM_REINFORCED:
-      return 'REINFORCEMENT DEADLINE';
-  }
-  return 'FAILURE';
+  return FAILURE_TEXT[kind]?.label ?? 'FAILURE';
 }
 
 export function warningLine(kind: number, countdown: number): string {
-  const t = countdown >= 0 ? fmtTicks(countdown) : '';
-  switch (kind) {
-    case FM_SQUAD_WIPED:
-      return 'Squad viability critical. Underwriting recommends recall.';
-    case FM_ABANDONED:
-      return 'Recall order logged. Reach the exfiltration zone to book the contract as failed.';
-    case FM_TARGET_ESCAPED:
-      return `Target is running for a district exit. Projected exit in ${t}.`;
-    case FM_VIP_DOWN:
-      return 'VIP integrity degraded. Damaged goods are billed at full rate.';
-    case FM_VIP_ESCAPED:
-      return countdown >= 0
-        ? `VIP in flight toward a district exit. Projected exit in ${t}.`
-        : 'VIP is spooked. Further alarm escalation will trigger flight.';
-    case FM_LOCKDOWN:
-      return `Site lockdown initiated. Marked assets seal in ${t}.`;
-    case FM_RIVAL_CONTRACT:
-      return `Rival unit is executing its own contract. Completion in ${t} unless interrupted.`;
-    case FM_ASSET_LOST:
-      return 'Defended asset integrity below 40 percent.';
-    case FM_REINFORCED:
-      return `Garrison reinforcement en route. Siege window closes in ${t}.`;
-  }
-  return '';
+  const text = FAILURE_TEXT[kind];
+  if (!text) return '';
+  const line = countdown >= 0 && text.warnTimed ? text.warnTimed : text.warn;
+  return line.replace('{t}', fmtTicks(countdown));
 }
 
 export function firedLine(kind: number): string {
-  switch (kind) {
-    case FM_SQUAD_WIPED:
-      return 'All field assets written off. The ledger will reflect this.';
-    case FM_ABANDONED:
-      return 'Contract abandoned. Recovered assets retained; the fee is not.';
-    case FM_TARGET_ESCAPED:
-      return 'Target has left the district. The client has been notified and debited.';
-    case FM_VIP_DOWN:
-      return 'VIP written off. Acquisition is void.';
-    case FM_VIP_ESCAPED:
-      return 'VIP has left the district. Acquisition is void.';
-    case FM_LOCKDOWN:
-      return 'Lockdown complete. Marked assets are sealed.';
-    case FM_RIVAL_CONTRACT:
-      return 'Rival contract closed first. Ours is void.';
-    case FM_ASSET_LOST:
-      return 'Defended asset destroyed.';
-    case FM_REINFORCED:
-      return 'Reinforcements have arrived. The siege window is closed.';
-  }
-  return '';
+  return FAILURE_TEXT[kind]?.fired ?? '';
 }
 
 export function lossStatusText(reason: number): string {
-  switch (reason) {
-    case FM_SQUAD_WIPED:
-      return 'SQUAD WRITTEN OFF';
-    case FM_ABANDONED:
-      return 'CONTRACT ABANDONED';
-    case FM_TARGET_ESCAPED:
-      return 'TARGET ESCAPED';
-    case FM_VIP_DOWN:
-      return 'VIP WRITTEN OFF';
-    case FM_VIP_ESCAPED:
-      return 'VIP ESCAPED';
-    case FM_LOCKDOWN:
-      return 'SITE SEALED';
-    case FM_RIVAL_CONTRACT:
-      return 'OUTBID BY RIVAL';
-    case FM_ASSET_LOST:
-      return 'RELAY LOST';
-    case FM_REINFORCED:
-      return 'SIEGE WINDOW CLOSED';
-  }
-  return 'CONTRACT UNFULFILLED';
+  return FAILURE_TEXT[reason]?.status ?? 'CONTRACT UNFULFILLED';
 }
 
 export function lossDebriefLine(reason: number): string {
-  switch (reason) {
-    case FM_SQUAD_WIPED:
-      return 'Cause of loss: full squad write-off in the field.';
-    case FM_ABANDONED:
-      return 'Cause of loss: contract abandoned by recall order. Surviving assets and salvage retained.';
-    case FM_TARGET_ESCAPED:
-      return 'Cause of loss: marked target exited the district.';
-    case FM_VIP_DOWN:
-      return 'Cause of loss: VIP written off before acquisition.';
-    case FM_VIP_ESCAPED:
-      return 'Cause of loss: VIP exited the district before acquisition.';
-    case FM_LOCKDOWN:
-      return 'Cause of loss: site lockdown sealed the marked assets.';
-    case FM_RIVAL_CONTRACT:
-      return 'Cause of loss: a rival unit closed its contract first.';
-    case FM_ASSET_LOST:
-      return 'Cause of loss: the defended asset was destroyed.';
-    case FM_REINFORCED:
-      return 'Cause of loss: garrison reinforcements arrived on schedule.';
-  }
-  return '';
+  return FAILURE_TEXT[reason]?.debrief ?? '';
 }
