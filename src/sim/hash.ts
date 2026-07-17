@@ -16,6 +16,9 @@ export function hashState(s: SimState): number {
   mix(s.alarm.level);
   mix(s.mission.status);
   mix(s.mission.stage | (s.mission.wave << 4) | (s.mission.crackT << 8));
+  const ct = s.mission.contract;
+  mix((ct.lossReason + 2) | ((ct.abortArmed ? 1 : 0) << 8) | ((ct.rivalCell + 2) << 9));
+  for (const f of ct.failures) mix(f.kind | (f.state << 4) | ((f.countdown + 2) << 6));
   mix(s.env.tod | (s.env.rain << 4));
   mix(s.projectiles.length);
   mix(s.blasts.length);
@@ -39,6 +42,7 @@ export function hashState(s: SimState): number {
     mix(n.hp | (n.state << 16) | (n.kind << 20));
     mix(n.stunT | ((n.raider ? 1 : 0) << 8));
     mix(n.cloakT | ((n.enemyMaster + 1) << 9));
+    mix((n.fleeCell + 2) | ((n.escaped ? 1 : 0) << 15));
   }
   for (const d of s.deployables) {
     mix(d.x);

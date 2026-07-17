@@ -1,4 +1,5 @@
 import { GEAR_CHARGE, GEAR_CLOAK, GEAR_DRONE, GEAR_EMP, GEAR_MEDBAY, type Command } from './commands';
+import { failContract, updateContract } from './contract';
 import { fxDiv, fxLen, fxMul, type Fx } from './fixed';
 import { cellIdx, inBounds, losClear, MAP_W, type MapData } from './map';
 import { findPath, nearestWalkable } from './path';
@@ -6,7 +7,6 @@ import {
   rand,
   SimState,
   STATUS_ACTIVE,
-  STATUS_LOST,
   STATUS_WON,
   MISSION_ASSASSINATE,
   MISSION_PERSUADE,
@@ -20,6 +20,9 @@ import {
   DEP_MEDBAY,
   DEP_TRAP,
   DEP_TURRET,
+  FM_ASSET_LOST,
+  FM_SQUAD_WIPED,
+  FM_VIP_DOWN,
   SWARM_FLASHMOB,
   SWARM_HOLD,
   TOD_NIGHT,
@@ -805,6 +808,9 @@ function applyCommand(s: SimState, c: Command): void {
       }
       break;
     }
+    case 'abort':
+      s.mission.contract.abortArmed = !s.mission.contract.abortArmed;
+      break;
   }
 }
 
@@ -1009,6 +1015,14 @@ function enemySquadMove(s: SimState, n: Npc): void {
   }
   if (tx !== null && tz !== null) {
     if (setPath(s.map, n, nearestWalkable(s.map, cellOfFx(tx, tz)))) n.state = ST_WALK;
+  } else if (s.mission.type === MISSION_PURGE && s.mission.contract.rivalCell >= 0) {
+    // the rival squad runs its own contract: leaders push to the objective
+    // site unless a player agent is in sight
+    const rc = s.mission.contract.rivalCell;
+    const [rx, rz] = centerFx(rc);
+    if (distFx(n.x, n.z, rx, rz) > 1 << 16) {
+      if (setPath(s.map, n, rc)) n.state = ST_WALK;
+    }
   } else if (s.alarm.heat >= 12 && (s.alarm.ax || s.alarm.az)) {
     if (setPath(s.map, n, nearestWalkable(s.map, cellOfFx(s.alarm.ax, s.alarm.az)))) n.state = ST_WALK;
   } else {
@@ -1117,6 +1131,24 @@ function updateNpc(s: SimState, n: Npc, noises: Noise[]): void {
   }
   if (n.cooldown > 0) n.cooldown--;
   if (n.repathT > 0) n.repathT--;
+  if (n.kind === NPC_CIV && n.fleeCell >= 0) {
+    if (n.state === ST_PERSUADED) {
+      n.fleeCell = -1;
+    } else {
+      if (n.escaped) return;
+      if (n.repathT === 0 && (n.pathI >= n.path.length || n.path[n.path.length - 1] !== n.fleeCell)) {
+        n.repathT = 30;
+        setPath(s.map, n, n.fleeCell);
+      }
+      moveAlong(n, PANIC_SPEED);
+      if (cellOfFx(n.x, n.z) === n.fleeCell) {
+        n.escaped = true;
+        n.path = [];
+        n.pathI = 0;
+      }
+      return;
+    }
+  }
   if (n.kind === NPC_ENEMY && (n.state === ST_IDLE || n.state === ST_WALK)) {
     if (s.mission.doctrine === DOCTRINE_STEALTH) {
       if (n.cloakT > 0) n.cloakT--;
@@ -1701,7 +1733,7 @@ function checkMission(s: SimState): void {
   if (m.status !== STATUS_ACTIVE) return;
   const anyAlive = s.agents.some((a) => a.alive);
   if (!anyAlive) {
-    m.status = STATUS_LOST;
+    failContract(s, FM_SQUAD_WIPED);
     return;
   }
   let objectiveDone = false;
@@ -1712,7 +1744,7 @@ function checkMission(s: SimState): void {
     case MISSION_PERSUADE: {
       const vip = s.npcs[m.vipId];
       if (!vip || vip.state === ST_DEAD) {
-        m.status = STATUS_LOST;
+        failContract(s, FM_VIP_DOWN);
         return;
       }
       objectiveDone =
@@ -1730,7 +1762,7 @@ function checkMission(s: SimState): void {
     case MISSION_DEFENSE: {
       const held = m.assets[0];
       if (!held || !held.alive) {
-        m.status = STATUS_LOST;
+        failContract(s, FM_ASSET_LOST);
         return;
       }
       if (m.wave >= m.wavesTotal) {
@@ -1787,6 +1819,7 @@ export function step(state: SimState, commands: Command[]): void {
   updateDefense(state);
   updateHeist(state);
   updateAlarm(state, noises);
+  updateContract(state);
   checkMission(state);
   state.tick++;
 }

@@ -27,9 +27,40 @@ export const SWARM_FOLLOW = 0;
 export const SWARM_HOLD = 1;
 export const SWARM_FLASHMOB = 2;
 
+export const FAIL_LATENT = 0;
+export const FAIL_WARNING = 1;
+export const FAIL_FIRED = 2;
+
+export const REASON_NONE = -1;
+// failure-mode kinds double as loss reason codes
+export const FM_SQUAD_WIPED = 0;
+export const FM_ABANDONED = 1;
+export const FM_TARGET_ESCAPED = 2;
+export const FM_VIP_DOWN = 3;
+export const FM_VIP_ESCAPED = 4;
+export const FM_LOCKDOWN = 5;
+export const FM_RIVAL_CONTRACT = 6;
+export const FM_ASSET_LOST = 7;
+export const FM_REINFORCED = 8;
+
+export interface FailureMode {
+  kind: number;
+  state: number;
+  // ticks remaining while timed; -1 when untimed or not yet running
+  countdown: number;
+}
+
+export interface ContractState {
+  failures: FailureMode[];
+  lossReason: number;
+  abortArmed: boolean;
+  rivalCell: number;
+}
+
 export interface Asset {
   cell: number;
   hp: number;
+  maxHp: number;
   alive: boolean;
 }
 
@@ -74,6 +105,7 @@ export interface MissionState {
   turretBudget: number;
   trapBudget: number;
   loot: number;
+  contract: ContractState;
 }
 
 export interface AlarmState {
@@ -175,6 +207,7 @@ export function baseState(seed: number, mapSeed: number, mapParams?: MapParams):
       turretBudget: 0,
       trapBudget: 0,
       loot: 0,
+      contract: { failures: [], lossReason: REASON_NONE, abortArmed: false, rivalCell: -1 },
     },
     breaches: [],
     kills: 0,

@@ -107,6 +107,8 @@ export interface Npc {
   raider: boolean;
   cloakT: number;
   enemyMaster: number;
+  fleeCell: number;
+  escaped: boolean;
 }
 
 export interface Projectile {
@@ -219,6 +221,8 @@ export function createNpc(id: number, kind: number, cell: number, mapW: number):
     raider: false,
     cloakT: 0,
     enemyMaster: -1,
+    fleeCell: -1,
+    escaped: false,
     ammo: 999,
     cooldown: 0,
     panicT: 0,

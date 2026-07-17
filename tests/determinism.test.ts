@@ -27,7 +27,11 @@ const CHECKPOINT_EVERY = 200;
 
 // If this hash changes, sim behavior changed: either the change was an
 // intentional gameplay edit (update the constant) or determinism broke.
-const GOLDEN_FINAL_HASH = 0x913f91e4;
+// Re-pinned for the contracts-track milestone A (issue #13): the contract
+// read model joined SimState and hashState, mission setup consumes extra RNG
+// for the purge rival objective, and assassination targets and the
+// acquisition VIP now flee toward district exits under alarm.
+const GOLDEN_FINAL_HASH = 0x55c7e1ef;
 
 function specs() {
   const lead = defaultSpec();

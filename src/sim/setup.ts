@@ -1,3 +1,4 @@
+import { initContract } from './contract';
 import { cellIdx, MAP_H, MAP_W, type MapData, type MapParams } from './map';
 import { nearestWalkable } from './path';
 import {
@@ -235,6 +236,7 @@ function setupDebugMission(s: SimState, specs: AgentSpec[]): SimState {
     const cz = (cell / MAP_W) | 0;
     s.agents.push(createAgent(i, (cx << 16) + (1 << 15), (cz << 16) + (1 << 15), squad[i]!));
   }
+  initContract(s);
   return s;
 }
 
@@ -338,7 +340,7 @@ export function createMission(
       const cell = cellIdx(cx, cz);
       if (s.map.obstacle[cell] || s.mission.assets.some((asset) => asset.cell === cell)) continue;
       markObstacle(s, cell);
-      s.mission.assets.push({ cell, hp: 120, alive: true });
+      s.mission.assets.push({ cell, hp: 120, maxHp: 120, alive: true });
       placed++;
     }
   } else if (missionType === MISSION_PURGE) {
@@ -350,14 +352,14 @@ export function createMission(
     let coreCell = cellIdx(Math.max(1, Math.min(MAP_W - 2, ax)), Math.max(1, Math.min(MAP_H - 2, az)));
     if (s.map.obstacle[coreCell]) coreCell = nearestWalkable(s.map, coreCell);
     markObstacle(s, coreCell);
-    s.mission.assets.push({ cell: coreCell, hp: 800, alive: true });
+    s.mission.assets.push({ cell: coreCell, hp: 800, maxHp: 800, alive: true });
   } else if (missionType === MISSION_DEFENSE) {
     const cx = Math.max(1, Math.min(MAP_W - 2, ax));
     const cz = Math.max(1, Math.min(MAP_H - 2, az + 20));
     let cell = cellIdx(cx, cz);
     if (s.map.obstacle[cell]) cell = nearestWalkable(s.map, cell);
     markObstacle(s, cell);
-    s.mission.assets.push({ cell, hp: 500, alive: true });
+    s.mission.assets.push({ cell, hp: 500, maxHp: 500, alive: true });
     s.mission.wavesTotal = 4 + Math.min(2, extraGuards);
     s.mission.waveT = 500;
     s.mission.turretBudget = 3;
@@ -368,12 +370,12 @@ export function createMission(
     let powerCell = cellIdx(px, pz);
     if (s.map.obstacle[powerCell]) powerCell = nearestWalkable(s.map, powerCell);
     markObstacle(s, powerCell);
-    s.mission.assets.push({ cell: powerCell, hp: 150, alive: true });
+    s.mission.assets.push({ cell: powerCell, hp: 150, maxHp: 150, alive: true });
 
     let vaultCell = cellIdx(Math.max(1, Math.min(MAP_W - 2, ax)), Math.max(1, Math.min(MAP_H - 2, az)));
     if (s.map.obstacle[vaultCell] || vaultCell === powerCell) vaultCell = nearestWalkable(s.map, vaultCell);
     markObstacle(s, vaultCell);
-    s.mission.assets.push({ cell: vaultCell, hp: 600, alive: true });
+    s.mission.assets.push({ cell: vaultCell, hp: 600, maxHp: 600, alive: true });
 
     const tech = spawnNpc(s, NPC_CIV, nearestWalkable(s.map, cellIdx(ax + 2, az + 2)));
     tech.vip = true;
@@ -401,6 +403,7 @@ export function createMission(
   }
 
   spawnVehicles(s);
+  initContract(s);
 
   return s;
 }

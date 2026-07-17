@@ -72,6 +72,10 @@ export interface AttackVehCommand {
   vehId: number;
 }
 
+export interface AbortCommand {
+  type: 'abort';
+}
+
 export type Command =
   | MoveCommand
   | AttackCommand
@@ -83,7 +87,8 @@ export type Command =
   | UseCommand
   | PlaceCommand
   | HijackCommand
-  | AttackVehCommand;
+  | AttackVehCommand
+  | AbortCommand;
 
 export class CommandQueue {
   private byTick = new Map<number, Command[]>();
