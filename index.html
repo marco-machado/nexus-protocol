@@ -261,9 +261,22 @@
         color: #55627a;
       }
       .railbox h4:not(:first-child) { margin-top: 8px; }
-      .hud-obj { top: 44px; left: 12px; min-width: 180px; }
+      .hud-obj { top: 44px; left: 12px; min-width: 180px; max-width: 240px; }
       .hud-obj ul { margin: 0; padding: 0 0 0 14px; color: #c7d2e4; }
       .hud-obj li { margin: 2px 0; }
+      .hud-obj h4:not(:first-child) { margin-top: 8px; }
+      .fmodes { list-style: none; }
+      .hud-obj ul.fmodes { padding-left: 0; }
+      .fmodes .fm { letter-spacing: 0.5px; }
+      .fmodes .fm em { font-style: normal; color: #55627a; }
+      .fmodes .fm b { color: inherit; }
+      .fmodes .fm0 { color: #55627a; }
+      .fmodes .fm1 { color: var(--warn); }
+      .fmodes .fm1 em { color: var(--warn); }
+      .fmodes .fm2 { color: var(--bad); }
+      .fmodes .fm2 em { color: var(--bad); }
+      #hud .abortbtn { margin-top: 8px; width: 100%; }
+      #hud .abortbtn.on { border-color: var(--warn); color: var(--warn); }
       .hud-sys { left: 12px; bottom: 34px; width: 200px; }
       .syswave {
         display: block;

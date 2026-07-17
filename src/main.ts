@@ -39,9 +39,8 @@ async function main(): Promise<void> {
       0,
       specs,
       hud,
-      'VISUAL TEST: cars and agents',
       { visualTest: true, tod: 2, weather: 0 },
-      { civCount: 0, host },
+      { civCount: 0, cardTitle: 'VISUAL TEST: cars and agents', host },
     );
     return;
   }
@@ -63,11 +62,11 @@ async function main(): Promise<void> {
       0,
       specs,
       hud,
-      'PERF STRESS',
       { extraGuards: 4, tod: Number.isFinite(tod) ? tod : 2, weather: rain === 1 ? 1 : 0 },
       {
         civCount,
         perf: true,
+        cardTitle: 'PERF STRESS',
         host,
       },
     );
@@ -87,9 +86,8 @@ async function main(): Promise<void> {
       0,
       specs,
       hud,
-      'DEBUG: map and agents',
       { debug: true, tod: 2, weather: 0 },
-      { civCount: 0, host },
+      { civCount: 0, cardTitle: 'DEBUG: map and agents', host },
     );
     return;
   }
@@ -98,8 +96,8 @@ async function main(): Promise<void> {
   mountScreenRoot(screenEl, store);
   const game = new Game({
     screen: store,
-    runMission: (seed, missionType, specs, objectiveText, simParams, opts) =>
-      runMission(renderer, seed, missionType, specs, hud, objectiveText, simParams, { ...opts, host }),
+    runMission: (seed, missionType, specs, simParams, opts) =>
+      runMission(renderer, seed, missionType, specs, hud, simParams, { ...opts, host }),
     createGlobe: () => new WorldGlobe(renderer, { postFx: settings.postFx }),
   });
   game.start();

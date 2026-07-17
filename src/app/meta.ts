@@ -548,6 +548,9 @@ export interface ResultOptions {
   loot?: number;
   defense?: boolean;
   persuaded?: number;
+  // stated cause of a lost contract, in debrief diction; supplied by the app
+  // layer from the sim's latched loss reason
+  lossLine?: string;
 }
 
 export function applyResult(
@@ -623,6 +626,7 @@ export function applyResult(
   } else if (!won) {
     lines.push('Contract unfulfilled. The board has noted this.');
   }
+  if (!won && opts.lossLine) lines.push(opts.lossLine);
 
   const collateralFine = civKills * 60;
   if (collateralFine > 0) {

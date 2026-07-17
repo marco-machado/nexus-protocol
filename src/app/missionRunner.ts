@@ -20,11 +20,11 @@ import {
   applyAlarmGrade,
   createGameScene,
   installDistrictEnvironment,
-  objectiveDone,
   syncScene,
   updateSun,
   vehicleRenderDiagnostics,
 } from '../render/scene';
+import { abortArmed, contractFailures, contractLossReason, objectiveComplete } from '../sim/contract';
 import { fromFx, toFx } from '../sim/fixed';
 import {
   CommandQueue,
@@ -42,6 +42,8 @@ import {
   DEP_TRAP,
   DEP_TURRET,
   EV_NO_ROUTE,
+  FAIL_FIRED,
+  FAIL_WARNING,
   MISSION_DEFENSE,
   SWARM_FLASHMOB,
   SWARM_FOLLOW,
@@ -50,12 +52,21 @@ import {
   STATUS_WON,
 } from '../sim/state';
 import { influence, step, TICK_MS } from '../sim/tick';
-import { NPC_CIV, NPC_ENEMY, ST_DEAD, ST_PERSUADED, type AgentSpec } from '../sim/units';
+import { NPC_CIV, ST_DEAD, ST_PERSUADED, type AgentSpec } from '../sim/units';
 import { V_WRECK } from '../sim/vehicles';
 import { WEAPONS } from '../sim/weapons';
 import { audio } from './audio';
 import type { CanvasHost, MissionHandle } from './canvasHost';
 import { createComms } from './comms';
+import {
+  failureLabel,
+  firedLine,
+  fmtTicks,
+  lossStatusText,
+  objectiveTitle,
+  successLine,
+  warningLine,
+} from './contractCard';
 import {
   clampSimSpeed,
   commandForAction,
@@ -73,6 +84,8 @@ import type { TutorialHint } from './tutorial';
 
 export interface MissionResult {
   won: boolean;
+  // latched failure-mode kind when lost; REASON_NONE otherwise
+  lossReason: number;
   kills: number;
   civKills: number;
   persuaded: number;
@@ -87,6 +100,8 @@ export interface MissionOptions {
   civCount?: number;
   perf?: boolean;
   hints?: TutorialHint[];
+  // staging scenes (visual test, perf, debug) override the read-model title
+  cardTitle?: string;
   // roster codenames parallel to specs; slots fall back to A1-A4 (FR-017)
   codenames?: string[];
   // flavor operation name for the HUD top bar
@@ -148,7 +163,6 @@ export function runMission(
   missionType: number,
   specs: AgentSpec[],
   hud: HTMLElement,
-  objectiveText: string,
   simParams: MissionParams,
   opts: MissionOptions,
 ): Promise<MissionResult> {
@@ -157,7 +171,7 @@ export function runMission(
     // starting a mission is mounting it: the component's mount effect runs
     // createMissionSystems, its unmount disposes the returned handle
     host.setMission(() =>
-      createMissionSystems(renderer, seed, missionType, specs, hud, objectiveText, simParams, opts, (result) => {
+      createMissionSystems(renderer, seed, missionType, specs, hud, simParams, opts, (result) => {
         host.setMission(null);
         resolve(result);
       }),
@@ -174,7 +188,6 @@ function createMissionSystems(
   missionType: number,
   specs: AgentSpec[],
   hud: HTMLElement,
-  objectiveText: string,
   simParams: MissionParams,
   opts: MissionOptions,
   onEnd: (result: MissionResult) => void,
@@ -772,6 +785,8 @@ function createMissionSystems(
             : { type: 'aggro', ids, level: 0 },
         );
       }
+    } else if (act === 'abort') {
+      send({ type: 'abort' });
     } else if (act.startsWith('sys:')) {
       sysTab = act.slice(4);
       for (const b of Array.from(
@@ -811,6 +826,7 @@ function createMissionSystems(
 
   let prevAlarmLevel = state.alarm.level;
   let prevDone = false;
+  const prevFailStates: number[] = contractFailures(state).map((f) => f.state);
   let prevWave = state.mission.wave;
   let prevDriving = false;
   let prevWrecks = 0;
@@ -835,11 +851,20 @@ function createMissionSystems(
         comms.push(`Asset A${i + 1} has been written off. HR will notify next of kin.`);
       }
     });
-    const done = objectiveDone(state);
+    const done = objectiveComplete(state);
     if (done && !prevDone && state.mission.status === STATUS_ACTIVE) {
       comms.push('Objective closed. Proceed to the marked exfiltration zone.');
     }
     prevDone = done;
+    // contract warnings and failures mirror the card as captioned comms lines
+    contractFailures(state).forEach((f, i) => {
+      const prev = prevFailStates[i] ?? 0;
+      if (f.state !== prev) {
+        if (f.state === FAIL_WARNING) comms.push(warningLine(f.kind, f.countdown));
+        else if (f.state === FAIL_FIRED) comms.push(firedLine(f.kind));
+        prevFailStates[i] = f.state;
+      }
+    });
     const drivingNow = state.agents.some((a) => a.alive && a.driving >= 0);
     if (drivingNow && !prevDriving) {
       comms.push('Vehicle requisitioned. Fleet insurance does not cover pedestrians.');
@@ -886,7 +911,7 @@ function createMissionSystems(
     if (el) el.style.display = 'none';
   };
   const updateArrows = () => {
-    const done = objectiveDone(state);
+    const done = objectiveComplete(state);
     for (const n of state.npcs) {
       if (!n.missionTarget && !n.vip) continue;
       const key = `n${n.id}`;
@@ -1016,7 +1041,7 @@ function createMissionSystems(
     hudT += dt;
     if (hudT > 200) {
       hudT = 0;
-      renderHud(hudDynamic, state, selected, objectiveText, paused, placeMode, codenames, opts.opName ?? 'NIGHTWIRE');
+      renderHud(hudDynamic, state, selected, paused, placeMode, codenames, opts.opName ?? 'NIGHTWIRE', opts.cardTitle);
       refreshControls();
       pollEvents();
       for (let i = pendingHints.length - 1; i >= 0; i--) {
@@ -1034,6 +1059,7 @@ function createMissionSystems(
       ended = true;
       onEnd({
         won: state.mission.status === STATUS_WON,
+        lossReason: contractLossReason(state),
         kills: state.kills,
         civKills: state.civKills,
         persuaded: influence(state),
@@ -1070,11 +1096,11 @@ function renderHud(
   hud: HTMLElement,
   state: import('../sim/state').SimState,
   selected: boolean[],
-  objectiveText: string,
   paused: boolean,
   placeMode: boolean,
   codenames: string[] = [],
   opName = 'NIGHTWIRE',
+  cardTitle?: string,
 ): void {
   const inf = influence(state);
   const agents = state.agents
@@ -1116,23 +1142,13 @@ function renderHud(
       </div>`;
     })
     .join('');
-  let objective = objectiveText;
   const bullets: string[] = [];
   const m = state.mission;
-  if (m.type === 2) {
-    const left = m.assets.filter((a) => a.alive).length;
-    objective += ` (${left} left)`;
-  } else if (m.type === 0) {
-    const left = state.npcs.filter((n) => n.missionTarget && n.state !== ST_DEAD).length;
-    objective += ` (${left} left)`;
-  } else if (m.type === 3) {
-    const left = state.npcs.filter(
-      (n) => n.kind === NPC_ENEMY && n.state !== ST_DEAD && n.state !== ST_PERSUADED,
-    ).length;
-    objective += ` (${left} left)`;
-  } else if (m.type === 4) {
+  bullets.push(objectiveTitle(m.type));
+  bullets.push(successLine(state));
+  if (m.type === 4) {
     const relay = m.assets[0];
-    bullets.push(`WAVE ${m.wave}/${m.wavesTotal} | RELAY ${relay?.alive ? relay.hp : 0}`);
+    bullets.push(`RELAY INTEGRITY ${relay?.alive ? relay.hp : 0}/${relay?.maxHp ?? 0}`);
     if (placeMode)
       bullets.push(
         `PLACING: click turret (${m.turretBudget}), shift-click trap (${m.trapBudget}), Enter done`,
@@ -1151,18 +1167,24 @@ function renderHud(
     const vip = state.npcs[m.vipId];
     if (vip && vip.state === ST_PERSUADED) bullets.push('VIP acquired: reach exfil');
   }
-  bullets.unshift(objective);
-  if (state.mission.status === STATUS_ACTIVE && objectiveDone(state)) {
+  if (cardTitle) bullets.splice(0, 2, cardTitle);
+  if (state.mission.status === STATUS_ACTIVE && objectiveComplete(state)) {
     bullets.push('Proceed to exfil');
   }
+  const armed = abortArmed(state);
+  const failRows = contractFailures(state)
+    .map((f) => {
+      const chip = f.state === FAIL_FIRED ? 'FAILED' : f.state === FAIL_WARNING ? 'WARNING' : 'LATENT';
+      const timer = f.countdown >= 0 ? ` <b>${fmtTicks(f.countdown)}</b>` : '';
+      return `<li class="fm fm${f.state}">${failureLabel(f.kind)}${timer} <em>[${chip}]</em></li>`;
+    })
+    .join('');
   const status =
     state.mission.status === STATUS_ACTIVE
       ? ''
       : state.mission.status === STATUS_WON
         ? 'CONTRACT FULFILLED'
-        : m.type === 4 && m.assets[0] && !m.assets[0].alive
-          ? 'RELAY LOST'
-          : 'SQUAD WRITTEN OFF';
+        : lossStatusText(contractLossReason(state));
   const clock = new Date(state.tick * TICK_MS).toISOString().slice(11, 19);
   hud.innerHTML = `
     <div class="hud-top">
@@ -1179,8 +1201,14 @@ function renderHud(
       <button class="icobtn" data-act="ui:menu" title="COMMAND UPLINK OFFLINE UNTIL MISSION END" disabled>${UI_ICONS.menu}</button>
     </div>
     <div class="hud-obj panel-box">
-      <h4>OBJECTIVES</h4>
+      <h4>CONTRACT</h4>
       <ul>${bullets.map((b) => `<li>${b}</li>`).join('')}</ul>
+      ${failRows ? `<h4>FAILURE MODES</h4><ul class="fmodes">${failRows}</ul>` : ''}
+      ${
+        failRows
+          ? `<button class="abortbtn${armed ? ' on' : ''}" data-act="abort">${armed ? 'CANCEL RECALL' : 'ABORT CONTRACT'}</button>`
+          : ''
+      }
     </div>
     <div class="hud-agents">${agents}</div>
     <div class="hud-help">

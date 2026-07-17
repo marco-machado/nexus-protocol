@@ -52,6 +52,7 @@ import { color as tslColor, dot, normalView, oneMinus, positionViewDirection, po
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { clone as skeletonClone } from 'three/examples/jsm/utils/SkeletonUtils.js';
+import { objectiveComplete } from '../sim/contract';
 import { fromFx } from '../sim/fixed';
 import { BLOCK, MAP_W, STREET } from '../sim/map';
 import { PROJ_SUBSTEPS } from '../sim/weapons';
@@ -60,12 +61,9 @@ import {
   DEP_MEDBAY,
   DEP_TRAP,
   DEP_TURRET,
-  MISSION_DEFENSE,
-  MISSION_HQ,
-  MISSION_PURGE,
   type SimState,
 } from '../sim/state';
-import { NPC_ENEMY, ST_DEAD, ST_PERSUADED } from '../sim/units';
+import { ST_DEAD } from '../sim/units';
 import { VEH_CAR, VEH_FUEL, VEH_TRAM, V_WRECK } from '../sim/vehicles';
 
 import {
@@ -3982,29 +3980,6 @@ export function applyAlarmGrade(gs: GameScene, g: AlarmGrade, tSec: number): voi
   }
 }
 
-export function objectiveDone(state: SimState): boolean {
-  if (state.map.visualTest) return false;
-  const m = state.mission;
-  if (m.type === 2) return m.assets.every((a) => !a.alive);
-  if (m.type === 0) return state.npcs.every((n) => !n.missionTarget || n.state === ST_DEAD);
-  if (m.type === MISSION_PURGE)
-    return state.npcs.every(
-      (n) => n.kind !== NPC_ENEMY || n.state === ST_DEAD || n.state === ST_PERSUADED,
-    );
-  if (m.type === MISSION_DEFENSE)
-    return (
-      m.wave >= m.wavesTotal &&
-      !state.npcs.some((n) => n.raider && n.state !== ST_DEAD && n.state !== ST_PERSUADED)
-    );
-  if (m.type === 5) return !(m.assets[1]?.alive ?? true);
-  if (m.type === MISSION_HQ)
-    return (
-      !(m.assets[0]?.alive ?? true) &&
-      state.npcs.every((n) => n.kind !== NPC_ENEMY || n.state === ST_DEAD || n.state === ST_PERSUADED)
-    );
-  const vip = state.npcs[m.vipId];
-  return vip !== undefined && vip.state === ST_PERSUADED;
-}
 
 export function syncScene(
   gs: GameScene,
@@ -4707,7 +4682,7 @@ export function syncScene(
 
   // exfil beacon: idle pulses slowly; objective-complete brightens and
   // quickens. Tint tracks the palette-aware exfil entry every frame.
-  const done = objectiveDone(state);
+  const done = objectiveComplete(state);
   const beamMat = gs.exfilBeam.material as MeshBasicMaterial;
   beamMat.color.copy(SCENE_COLORS.exfil).multiplyScalar(done ? 1.8 : 1.1);
   beamMat.opacity = (done ? 0.8 : 0.45) + Math.sin(t * (done ? 2.4 : 0.9)) * 0.1;

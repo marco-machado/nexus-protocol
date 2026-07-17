@@ -7,6 +7,7 @@ import type { MissionResult } from '../src/app/missionRunner';
 function okResult(specCount: number): MissionResult {
   return {
     won: true,
+    lossReason: -1,
     kills: 3,
     civKills: 0,
     persuaded: 2,

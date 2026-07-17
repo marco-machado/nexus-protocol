@@ -18,18 +18,9 @@ import {
   type MetaState,
   type Territory,
 } from './meta';
+import { lossDebriefLine } from './contractCard';
 import { ScreenStore, type GlobeHandle } from './screenState';
 import { hintsFor } from './tutorial';
-
-const OBJECTIVES = [
-  'Eliminate marked targets, then exfiltrate',
-  'Persuade the VIP (needs influence 8) and escort to exfil',
-  'Destroy all marked assets, then exfiltrate',
-  'Purge the rival squads (needs influence 15 to persuade them)',
-  'Hold the Nexus relay against all waves',
-  'Cut power, persuade the technician, open the vault, exfiltrate',
-  'Purge the arcology garrison and destroy the HQ core, then exfiltrate',
-];
 
 // everything the flow controller needs from the outside world, injected so
 // headless tests can drive the full screen flow with stubs (no renderer, no
@@ -40,7 +31,6 @@ export interface GameDeps {
     seed: number,
     missionType: number,
     specs: AgentSpec[],
-    objectiveText: string,
     simParams: MissionParams,
     // the canvas host is main.ts's concern; the flow controller never sees it
     opts: Omit<MissionOptions, 'host'>,
@@ -182,14 +172,10 @@ export class Game {
       tod: cond.tod,
       weather: cond.rain,
     };
-    const result = await this.deps.runMission(
-      seed,
-      missionType,
-      specs,
-      OBJECTIVES[missionType] ?? 'Contract',
-      simParams,
-      { hints: hintsFor(this.meta, t, missionType), codenames },
-    );
+    const result = await this.deps.runMission(seed, missionType, specs, simParams, {
+      hints: hintsFor(this.meta, t, missionType),
+      codenames,
+    });
     const aliveIdx = this.meta.agents.map((a, i) => (a.alive ? i : -1)).filter((i) => i >= 0);
     const survivors = this.meta.agents.map(() => true);
     aliveIdx.forEach((metaIdx, specIdx) => {
@@ -200,6 +186,7 @@ export class Game {
       loot: result.loot,
       defense,
       persuaded: result.persuaded,
+      lossLine: result.won ? undefined : lossDebriefLine(result.lossReason),
     });
     saveMeta(this.meta);
     this.deps.screen.set({ kind: 'debrief', info, meta: this.meta, onContinue: () => this.map() });
