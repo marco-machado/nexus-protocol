@@ -98,58 +98,84 @@ export interface ContractProgress {
   total: number;
 }
 
+function countMarkedTargets(s: SimState): ContractProgress {
+  let done = 0;
+  let total = 0;
+  for (const n of s.npcs) {
+    if (!n.missionTarget || n.kind !== NPC_CIV) continue;
+    total++;
+    if (n.state === ST_DEAD) done++;
+  }
+  return { done, total };
+}
+
+function countRivals(s: SimState): ContractProgress {
+  let done = 0;
+  let total = 0;
+  for (const n of s.npcs) {
+    if (n.kind !== NPC_ENEMY) continue;
+    total++;
+    if (n.state === ST_DEAD || n.state === ST_PERSUADED) done++;
+  }
+  return { done, total };
+}
+
+function countAssetsDown(s: SimState): ContractProgress {
+  let done = 0;
+  for (const a of s.mission.assets) if (!a.alive) done++;
+  return { done, total: s.mission.assets.length };
+}
+
 export function contractProgress(s: SimState): ContractProgress {
   const m = s.mission;
   switch (m.type) {
-    case MISSION_ASSASSINATE: {
-      const targets = s.npcs.filter((n) => n.missionTarget && n.kind === NPC_CIV);
-      return { done: targets.filter((n) => n.state === ST_DEAD).length, total: targets.length };
-    }
+    case MISSION_ASSASSINATE:
+      return countMarkedTargets(s);
     case MISSION_PERSUADE: {
       const vip = s.npcs[m.vipId];
       return { done: vip && vip.state === ST_PERSUADED ? 1 : 0, total: 1 };
     }
     case MISSION_RAID:
-      return { done: m.assets.filter((a) => !a.alive).length, total: m.assets.length };
-    case MISSION_PURGE: {
-      const rivals = s.npcs.filter((n) => n.kind === NPC_ENEMY);
-      return {
-        done: rivals.filter((n) => n.state === ST_DEAD || n.state === ST_PERSUADED).length,
-        total: rivals.length,
-      };
-    }
+      return countAssetsDown(s);
+    case MISSION_PURGE:
+      return countRivals(s);
     case MISSION_DEFENSE:
       return { done: m.wave, total: m.wavesTotal };
     case MISSION_HEIST:
       return { done: Math.min(m.stage, 2), total: 2 };
     case MISSION_HQ: {
-      const rivals = s.npcs.filter((n) => n.kind === NPC_ENEMY);
-      const down = rivals.filter((n) => n.state === ST_DEAD || n.state === ST_PERSUADED).length;
-      return { done: down + (m.assets[0]?.alive === false ? 1 : 0), total: rivals.length + 1 };
+      const rivals = countRivals(s);
+      return {
+        done: rivals.done + (m.assets[0]?.alive === false ? 1 : 0),
+        total: rivals.total + 1,
+      };
     }
   }
   return { done: 0, total: 1 };
 }
 
-// what the offscreen arrows, the abort booking, and the "proceed to exfil"
-// card line consider done; the win check in tick.ts additionally requires the
-// squad (and the persuade VIP) inside the exfil zone
+// objective completeness alone; winning additionally requires the squad
+// (and the persuade VIP) inside the exfil zone
 export function objectiveComplete(s: SimState): boolean {
   if (s.map.visualTest) return false;
   const m = s.mission;
   switch (m.type) {
-    case MISSION_ASSASSINATE:
-      return s.npcs.every((n) => !n.missionTarget || n.state === ST_DEAD);
+    case MISSION_ASSASSINATE: {
+      const t = countMarkedTargets(s);
+      return t.done >= t.total;
+    }
     case MISSION_PERSUADE: {
       const vip = s.npcs[m.vipId];
       return vip !== undefined && vip.state === ST_PERSUADED;
     }
-    case MISSION_RAID:
-      return m.assets.every((a) => !a.alive);
-    case MISSION_PURGE:
-      return s.npcs.every(
-        (n) => n.kind !== NPC_ENEMY || n.state === ST_DEAD || n.state === ST_PERSUADED,
-      );
+    case MISSION_RAID: {
+      const a = countAssetsDown(s);
+      return a.done >= a.total;
+    }
+    case MISSION_PURGE: {
+      const r = countRivals(s);
+      return r.done >= r.total;
+    }
     case MISSION_DEFENSE:
       return (
         m.wave >= m.wavesTotal &&
@@ -157,11 +183,10 @@ export function objectiveComplete(s: SimState): boolean {
       );
     case MISSION_HEIST:
       return !(m.assets[1]?.alive ?? true);
-    case MISSION_HQ:
-      return (
-        !(m.assets[0]?.alive ?? true) &&
-        s.npcs.every((n) => n.kind !== NPC_ENEMY || n.state === ST_DEAD || n.state === ST_PERSUADED)
-      );
+    case MISSION_HQ: {
+      const r = countRivals(s);
+      return !(m.assets[0]?.alive ?? true) && r.done >= r.total;
+    }
   }
   return false;
 }
@@ -231,7 +256,11 @@ function updateAbandonment(s: SimState): void {
   const c = s.mission.contract;
   const fm = failureOf(s, FM_ABANDONED);
   setState(fm, c.abortArmed ? FAIL_WARNING : FAIL_LATENT);
-  if (c.abortArmed && !objectiveComplete(s) && squadAtExfil(s)) failContract(s, FM_ABANDONED);
+  // a dead squad satisfies squadAtExfil vacuously; that loss is a wipe, not a recall
+  const anyAlive = s.agents.some((a) => a.alive);
+  if (c.abortArmed && anyAlive && !objectiveComplete(s) && squadAtExfil(s)) {
+    failContract(s, FM_ABANDONED);
+  }
 }
 
 function updateAssassination(s: SimState): void {

@@ -334,6 +334,23 @@ describe('universal failure modes', () => {
     expect(s.agents.every((a) => a.alive)).toBe(true);
   });
 
+  it('a wipe with the recall armed books as a wipe, not an abandonment', () => {
+    const s = mission(MISSION_ASSASSINATE);
+    for (const a of s.agents) {
+      a.x = toFx(48.5);
+      a.z = toFx(40.5);
+    }
+    step(s, [{ type: 'abort' }]);
+    expect(s.mission.status).toBe(STATUS_ACTIVE);
+    for (const a of s.agents) {
+      a.alive = false;
+      a.hp = 0;
+    }
+    step(s, []);
+    expect(s.mission.status).toBe(STATUS_LOST);
+    expect(contractLossReason(s)).toBe(FM_SQUAD_WIPED);
+  });
+
   it('squad viability warns before the wipe fires', () => {
     const s = mission(MISSION_ASSASSINATE);
     for (const a of s.agents.slice(1)) {

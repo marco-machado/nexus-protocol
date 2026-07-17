@@ -588,7 +588,9 @@ export function applyResult(
   });
   m.credits += salvage;
 
-  const loot = won ? (opts.loot ?? 0) : 0;
+  // the mission result decides what loot was actually secured (an abandoned
+  // contract keeps it per GDD 9.1); this seam only books what it is handed
+  const loot = opts.loot ?? 0;
   if (loot > 0) {
     m.credits += loot;
     lines.push(`Vault contents liquidated: +${loot}cr.`);
