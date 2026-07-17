@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from 'react';
-import { applyPalette, PALETTES, type PaletteName } from '../../render/palette';
+import { PALETTES, type PaletteName } from '../../render/palette';
 import {
   SIM_SPEED_FAST,
   SIM_SPEED_NORMAL,
@@ -78,8 +78,9 @@ export function SettingsScreen({ onBack }: { onBack: () => void }) {
               key={p}
               className={p === settings.palette ? 'on' : ''}
               onClick={() => {
+                // applied by the PaletteBinding in the canvas host tree,
+                // which reacts to the settings notification
                 settings.palette = p;
-                applyPalette(settings.palette);
                 saveSettings();
               }}
             >
