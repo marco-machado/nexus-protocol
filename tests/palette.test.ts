@@ -3,7 +3,7 @@ import { PALETTES, SCENE_COLORS } from '../src/render/palette';
 
 // Principle VI: every gameplay marker has an entry in all palettes. The
 // contracts track added the milestone C marker set.
-const MILESTONE_C_MARKERS = ['convoy', 'relay', 'broadcaster', 'escort', 'cargo', 'captive'] as const;
+const MILESTONE_C_MARKERS = ['convoy', 'relay', 'broadcaster', 'escort', 'cargo', 'captive', 'charge'] as const;
 
 describe('palette coverage for contract markers', () => {
   it('defines every milestone C marker in the canonical scene colors', () => {

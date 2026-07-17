@@ -390,3 +390,33 @@ describe('phase D mission conditions', () => {
     expect(varies).toBe(true);
   });
 });
+
+describe('debrief-time territory settlement', () => {
+  it('flips an unowned territory to Nexus on a won offensive contract', () => {
+    const m = newMeta(0);
+    const t = m.territories[1]!;
+    expect(t.owned).toBe(false);
+    const info = applyResult(m, t, true, 3, 0, [true, true, true, true]);
+    expect(t.owned).toBe(true);
+    expect(t.rival).toBe(-1);
+    expect(info.lines.some((l) => l.includes('transferred to Nexus management'))).toBe(true);
+  });
+
+  it('keeps an unowned territory with its rival on a lost offensive contract', () => {
+    const m = newMeta(0);
+    const t = m.territories[1]!;
+    const rival = t.rival;
+    applyResult(m, t, false, 0, 0, [false, false, false, false]);
+    expect(t.owned).toBe(false);
+    expect(t.rival).toBe(rival);
+  });
+
+  it('strikes an owned territory from the ledger on a lost defense contract', () => {
+    const m = newMeta(0);
+    const t = m.territories[0]!;
+    expect(t.owned).toBe(true);
+    applyResult(m, t, false, 0, 2, [true, true, true, true], { defense: true });
+    expect(t.owned).toBe(false);
+    expect(t.unrest).toBe(40);
+  });
+});

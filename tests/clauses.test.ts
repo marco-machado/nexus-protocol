@@ -3,6 +3,7 @@ import {
   briefingIntel,
   buildReview,
   CLAUSE_LOW_AMMO,
+  CLAUSE_METHOD,
   CLAUSE_NO_ALARM,
   CLAUSE_NO_COLLATERAL,
   CLAUSE_TIME,
@@ -25,7 +26,7 @@ function facts(over: Partial<ClauseFacts> = {}): ClauseFacts {
     ticks: 1200,
     civKills: 0,
     alarmRaised: false,
-    roundsFired: 10,
+    roundsFired: 0,
     survivors: [true, true, true, true],
     ...over,
   };
@@ -42,7 +43,7 @@ describe('clause generation', () => {
   });
 
   it('always pairs the time window against a restraint clause (mutual tension)', () => {
-    const restraints = [CLAUSE_NO_ALARM, CLAUSE_NO_COLLATERAL, CLAUSE_LOW_AMMO];
+    const restraints = [CLAUSE_NO_ALARM, CLAUSE_NO_COLLATERAL, CLAUSE_LOW_AMMO, CLAUSE_METHOD];
     for (let seed = 1; seed < 200; seed++) {
       const kinds = generateClauses(seed, 2000).map((c) => c.kind);
       expect(kinds).toContain(CLAUSE_TIME);

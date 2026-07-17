@@ -34,6 +34,7 @@ export const SCENE_COLORS = {
   escort: new Color(0x7fffd4),
   cargo: new Color(0xffe066),
   captive: new Color(0x9ad0ff),
+  charge: new Color(0xff3344),
 };
 
 export const PALETTES: Record<PaletteName, PaletteDef> = {
@@ -78,6 +79,7 @@ export const PALETTES: Record<PaletteName, PaletteDef> = {
       escort: 0x7fffd4,
       cargo: 0xffe066,
       captive: 0x9ad0ff,
+      charge: 0xff3344,
     },
   },
   // Okabe-Ito colorblind-safe set for the red/magenta/orange faction cluster
@@ -123,6 +125,7 @@ export const PALETTES: Record<PaletteName, PaletteDef> = {
       escort: 0x56b4e9,
       cargo: 0xf0e442,
       captive: 0x0072b2,
+      charge: 0x009e73,
     },
   },
   contrast: {
@@ -166,6 +169,7 @@ export const PALETTES: Record<PaletteName, PaletteDef> = {
       escort: 0x66ffee,
       cargo: 0xffee44,
       captive: 0x99ccff,
+      charge: 0xff3333,
     },
   },
 };

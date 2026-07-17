@@ -1,4 +1,4 @@
-import { MOD_CHEM, MOD_EMP, MOD_FOG, MOD_SENSOR, MOD_WINDOW, TOD_NIGHT } from '../sim/state';
+import { MISSION_CONVOY, MOD_CHEM, MOD_EMP, MOD_FOG, MOD_SENSOR, MOD_WINDOW, TOD_NIGHT } from '../sim/state';
 import { TICK_RATE } from '../sim/tick';
 import { DOCTRINE_BRUTE, DOCTRINE_STEALTH, DOCTRINE_SWARM } from '../sim/units';
 import type { MissionConditions } from './meta';
@@ -8,6 +8,7 @@ export const CLAUSE_NO_COLLATERAL = 1;
 export const CLAUSE_NO_ALARM = 2;
 export const CLAUSE_LOW_AMMO = 3;
 export const CLAUSE_NO_LOSSES = 4;
+export const CLAUSE_METHOD = 5;
 
 export const LOW_AMMO_LIMIT = 40;
 
@@ -64,7 +65,7 @@ function fmtLimit(ticks: number): string {
   return `${min} minute${min === 1 ? '' : 's'}`;
 }
 
-const RESTRAINTS = [CLAUSE_NO_ALARM, CLAUSE_NO_COLLATERAL, CLAUSE_LOW_AMMO];
+const RESTRAINTS = [CLAUSE_NO_ALARM, CLAUSE_NO_COLLATERAL, CLAUSE_LOW_AMMO, CLAUSE_METHOD];
 
 function makeClause(kind: number, baseIncome: number, timeLimit: number): Clause {
   switch (kind) {
@@ -100,6 +101,14 @@ function makeClause(kind: number, baseIncome: number, timeLimit: number): Clause
         rider: rider(baseIncome, 350),
         limit: LOW_AMMO_LIMIT,
       };
+    case CLAUSE_METHOD:
+      return {
+        kind,
+        label: 'SPECIFIED METHOD',
+        desc: 'client mandates a nonballistic close: zero rounds expended',
+        rider: rider(baseIncome, 450),
+        limit: 0,
+      };
     default:
       return {
         kind: CLAUSE_NO_LOSSES,
@@ -134,6 +143,8 @@ export function clauseMet(c: Clause, f: ClauseFacts): boolean {
       return !f.alarmRaised;
     case CLAUSE_LOW_AMMO:
       return f.roundsFired <= c.limit;
+    case CLAUSE_METHOD:
+      return f.roundsFired === 0;
     case CLAUSE_NO_LOSSES:
       return f.survivors.every(Boolean);
   }
@@ -206,10 +217,14 @@ export interface BriefingIntel {
 
 // the doctrine read and revealed counters shown on the equip screen; derived
 // from the modifier mix and the rival doctrine so provisioning is informed
-export function briefingIntel(cond: MissionConditions, rivalDoctrine: number): BriefingIntel {
+export function briefingIntel(cond: MissionConditions, rivalDoctrine: number, missionType = -1): BriefingIntel {
   const favored = new Set<string>();
   const resisted = new Set<string>();
   const counters: string[] = [];
+  if (missionType === MISSION_CONVOY) {
+    favored.add(DOC_VEHICULAR);
+    counters.push('The convoy is armored against small-arms fire. Demolition charges or a hijack detail are advised.');
+  }
   if (cond.tod === TOD_NIGHT || cond.mods & MOD_FOG) favored.add(DOC_GHOST);
   if (cond.mods & MOD_SENSOR) {
     resisted.add(DOC_GHOST);

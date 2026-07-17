@@ -654,7 +654,7 @@ export function applyResult(
     } else {
       for (const q of agentQuirks(a)) {
         if (!quirksBefore.has(q.key)) {
-          lines.push(`Service commendation: ${a.name} earns "${q.name}" (${q.desc}).`);
+          lines.push(`Service record: ${a.name} earns commendation "${q.name}" (${q.desc}).`);
         }
       }
     }

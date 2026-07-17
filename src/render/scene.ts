@@ -4662,7 +4662,7 @@ export function syncScene(
     else if (ki === 1) depColor.copy(SCENE_COLORS.asset);
     else if (ki === 2)
       // armed charges blink
-      depColor.copy(SCENE_COLORS.target).multiplyScalar((state.tick & 8) !== 0 ? 1.6 : 0.9);
+      depColor.copy(SCENE_COLORS.charge).multiplyScalar((state.tick & 8) !== 0 ? 1.6 : 0.9);
     else if (ki === 3) depColor.copy(SCENE_COLORS.exfil);
     else depColor.copy(SCENE_COLORS.vip);
     dummy.position.set(x, ki === 4 ? 3 + Math.sin(performance.now() / 400) * 0.3 : 0, z);

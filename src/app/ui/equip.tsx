@@ -126,7 +126,7 @@ export function EquipScreen({
   if (cond.rain === 1) condNotes.push('counterparty sensor performance degraded 25%; umbrellas are not reimbursable');
   if (cond.tod === 2) condNotes.push('low light favors cloak fields');
   const rivalId = defense && t.siege ? t.siege.rival : t.rival;
-  const intel = briefingIntel(cond, rivalId >= 0 ? m.syndicates[rivalId]!.doctrine : -1);
+  const intel = briefingIntel(cond, rivalId >= 0 ? m.syndicates[rivalId]!.doctrine : -1, defense ? -1 : t.missionType);
   const clauses = generateClauses(seed, t.baseIncome);
   const aliveN = m.agents.filter((a) => a.alive).length;
 
