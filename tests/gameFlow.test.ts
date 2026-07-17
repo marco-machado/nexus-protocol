@@ -15,6 +15,9 @@ function okResult(specCount: number): MissionResult {
     ticks: 1200,
     finalHash: 0,
     loot: 150,
+    roundsFired: 24,
+    stimSpent: 0,
+    alarmRaised: false,
   };
 }
 

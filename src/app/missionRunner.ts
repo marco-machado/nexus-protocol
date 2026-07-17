@@ -24,7 +24,13 @@ import {
   updateSun,
   vehicleRenderDiagnostics,
 } from '../render/scene';
-import { abortArmed, contractFailures, contractLossReason, objectiveComplete } from '../sim/contract';
+import {
+  abortArmed,
+  contractExpansion,
+  contractFailures,
+  contractLossReason,
+  objectiveComplete,
+} from '../sim/contract';
 import { fromFx, toFx } from '../sim/fixed';
 import {
   CommandQueue,
@@ -42,6 +48,8 @@ import {
   DEP_TRAP,
   DEP_TURRET,
   EV_NO_ROUTE,
+  EXP_ANNOUNCED,
+  EXP_DONE,
   FAIL_FIRED,
   FAIL_WARNING,
   FM_ABANDONED,
@@ -60,6 +68,10 @@ import { audio } from './audio';
 import type { CanvasHost, MissionHandle } from './canvasHost';
 import { createComms } from './comms';
 import {
+  conditionsLine,
+  EXPANSION_ANNOUNCED_LINE,
+  EXPANSION_CARD_ROW,
+  EXPANSION_DONE_LINE,
   failureLabel,
   firedLine,
   fmtTicks,
@@ -68,6 +80,7 @@ import {
   successLine,
   warningLine,
 } from './contractCard';
+import { modNames } from './clauses';
 import {
   clampSimSpeed,
   commandForAction,
@@ -94,6 +107,10 @@ export interface MissionResult {
   ticks: number;
   finalHash: number;
   loot: number;
+  // clause-evaluation counters mirrored from the sim at mission end
+  roundsFired: number;
+  stimSpent: number;
+  alarmRaised: boolean;
 }
 
 
@@ -830,6 +847,7 @@ function createMissionSystems(
   const prevFailStates: number[] = contractFailures(state).map((f) => f.state);
   const prevFailTimers: number[] = contractFailures(state).map((f) => f.countdown);
   let prevWave = state.mission.wave;
+  let prevExpansion = contractExpansion(state).state;
   let prevDriving = false;
   let prevWrecks = 0;
   const prevAlive = state.agents.map((a) => a.alive);
@@ -872,6 +890,12 @@ function createMissionSystems(
       }
       prevFailTimers[i] = f.countdown;
     });
+    const expNow = contractExpansion(state).state;
+    if (expNow !== prevExpansion) {
+      if (expNow === EXP_ANNOUNCED) comms.push(EXPANSION_ANNOUNCED_LINE);
+      else if (expNow === EXP_DONE && prevExpansion === EXP_ANNOUNCED) comms.push(EXPANSION_DONE_LINE);
+      prevExpansion = expNow;
+    }
     const drivingNow = state.agents.some((a) => a.alive && a.driving >= 0);
     if (drivingNow && !prevDriving) {
       comms.push('Vehicle requisitioned. Fleet insurance does not cover pedestrians.');
@@ -1073,6 +1097,9 @@ function createMissionSystems(
         survivors: state.agents.map((a) => a.alive),
         ticks: state.tick,
         finalHash: hashState(state),
+        roundsFired: state.agentShots,
+        stimSpent: state.stimSpent,
+        alarmRaised: state.alarmEver === 1,
         // secured loot survives a win or a booked abandonment, never a wipe
         loot:
           state.mission.status === STATUS_WON || contractLossReason(state) === FM_ABANDONED
@@ -1157,6 +1184,11 @@ function renderHud(
   const bullets: string[] = cardTitle
     ? [cardTitle]
     : [objectiveTitle(m.type), successLine(state)];
+  if (!cardTitle) {
+    const cond = conditionsLine(state, modNames(state.env.mods));
+    if (cond) bullets.push(cond);
+    if (contractExpansion(state).state === EXP_ANNOUNCED) bullets.push(EXPANSION_CARD_ROW);
+  }
   if (m.type === 4) {
     const relay = m.assets[0];
     bullets.push(`RELAY INTEGRITY ${relay?.alive ? relay.hp : 0}/${relay?.maxHp ?? 0}`);

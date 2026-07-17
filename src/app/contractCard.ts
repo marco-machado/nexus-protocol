@@ -9,6 +9,7 @@ import {
   FM_TARGET_ESCAPED,
   FM_VIP_DOWN,
   FM_VIP_ESCAPED,
+  FM_WINDOW_CLOSED,
   MISSION_ASSASSINATE,
   MISSION_DEFENSE,
   MISSION_HEIST,
@@ -139,7 +140,25 @@ const FAILURE_TEXT: Record<number, FailureText> = {
     status: 'SIEGE WINDOW CLOSED',
     debrief: 'Cause of loss: garrison reinforcements arrived on schedule.',
   },
+  [FM_WINDOW_CLOSED]: {
+    label: 'CLIENT WINDOW',
+    warn: 'Client execution window closing. Contract voids in {t}.',
+    fired: 'The client window has closed. The contract is void.',
+    status: 'WINDOW CLOSED',
+    debrief: 'Cause of loss: the client execution window elapsed.',
+  },
 };
+
+export const EXPANSION_ANNOUNCED_LINE =
+  'Briefing update: the client has amended the contract. Additional target marked. Compensation unchanged.';
+export const EXPANSION_DONE_LINE = 'Amendment closed. The client thanks you for your flexibility.';
+export const EXPANSION_CARD_ROW = 'AMENDMENT: eliminate the marked additional target';
+
+export function conditionsLine(state: SimState, names: string[]): string {
+  const parts = [...names];
+  if (state.env.rain) parts.unshift('RAIN');
+  return parts.length > 0 ? `CONDITIONS: ${parts.join(' · ')}` : '';
+}
 
 export function failureLabel(kind: number): string {
   return FAILURE_TEXT[kind]?.label ?? 'FAILURE';

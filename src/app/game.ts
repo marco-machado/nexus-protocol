@@ -18,6 +18,7 @@ import {
   type MetaState,
   type Territory,
 } from './meta';
+import { buildReview, evaluateClauses, generateClauses } from './clauses';
 import { lossDebriefLine } from './contractCard';
 import { ScreenStore, type GlobeHandle } from './screenState';
 import { hintsFor } from './tutorial';
@@ -171,6 +172,7 @@ export class Game {
       map: REGIONS[t.region]!.mapParams,
       tod: cond.tod,
       weather: cond.rain,
+      modifiers: cond.mods,
     };
     const result = await this.deps.runMission(seed, missionType, specs, simParams, {
       hints: hintsFor(this.meta, t, missionType),
@@ -182,11 +184,20 @@ export class Game {
       survivors[metaIdx] = result.survivors[specIdx] ?? false;
     });
     advanceTime(this.meta, Date.now());
+    // clauses must be priced from the same seed the briefing was generated
+    // against, or the debrief would settle offers the player never saw
+    const outcomes = evaluateClauses(generateClauses(seed, t.baseIncome), result);
+    const review = buildReview(outcomes, result, {
+      stimSpent: result.stimSpent,
+      persuaded: result.persuaded,
+      kills: result.kills,
+    });
     const info = applyResult(this.meta, t, result.won, result.kills, result.civKills, survivors, {
       loot: result.loot,
       defense,
       persuaded: result.persuaded,
       lossLine: result.won ? undefined : lossDebriefLine(result.lossReason),
+      review,
     });
     saveMeta(this.meta);
     this.deps.screen.set({ kind: 'debrief', info, meta: this.meta, onContinue: () => this.map() });

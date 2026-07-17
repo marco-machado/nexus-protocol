@@ -1,5 +1,6 @@
 import { useReducer, useState, type MouseEvent, type ReactNode } from 'react';
 import { WEAPONS } from '../../sim/weapons';
+import { briefingIntel, generateClauses, modNames } from '../clauses';
 import {
   agentQuirks,
   AUG_SLOTS,
@@ -119,10 +120,14 @@ export function EquipScreen({
   };
 
   const needsPersuadertron = !defense && t.missionType === 1 && !m.agents.some((a) => a.alive && a.gear.persuadertron);
-  const cond = missionConditions(nextMissionSeed(t, m.ngPlus));
+  const seed = nextMissionSeed(t, m.ngPlus);
+  const cond = missionConditions(seed);
   const condNotes: string[] = [];
   if (cond.rain === 1) condNotes.push('counterparty sensor performance degraded 25%; umbrellas are not reimbursable');
   if (cond.tod === 2) condNotes.push('low light favors cloak fields');
+  const rivalId = defense && t.siege ? t.siege.rival : t.rival;
+  const intel = briefingIntel(cond, rivalId >= 0 ? m.syndicates[rivalId]!.doctrine : -1);
+  const clauses = generateClauses(seed, t.baseIncome);
   const aliveN = m.agents.filter((a) => a.alive).length;
 
   return (
@@ -145,10 +150,46 @@ export function EquipScreen({
       <div className="condbar">
         <span className="cchip">{CONDITION_NAMES[cond.tod]}</span>
         {cond.rain === 1 ? <span className="cchip">RAIN</span> : null}
+        {modNames(cond.mods).map((name) => (
+          <span key={name} className="cchip">
+            {name}
+          </span>
+        ))}
         <span className="condnote">{condNotes.length > 0 ? condNotes.join('; ') : 'standard operating conditions'}</span>
         {needsPersuadertron ? (
           <span className="alertline">COMPANY ISSUE: this contract requires a Persuadertron. Equip one before launch.</span>
         ) : null}
+      </div>
+      <div className="intelbar">
+        <div className="intelrow">
+          <label>DOCTRINE READ</label>
+          <span>
+            FAVORED: <b>{intel.favored.join(' · ')}</b>
+            {intel.resisted.length > 0 ? (
+              <>
+                {' '}
+                · RESISTED: <b>{intel.resisted.join(' · ')}</b>
+              </>
+            ) : null}
+          </span>
+        </div>
+        {intel.counters.map((line, i) => (
+          <div key={i} className="intelrow">
+            <label>COUNTER INTEL</label>
+            <span>{line}</span>
+          </div>
+        ))}
+        <div className="intelrow">
+          <label>OPTIONAL CLAUSES</label>
+          <span>
+            {clauses.map((c, i) => (
+              <span key={c.kind}>
+                {i > 0 ? ' · ' : ''}
+                {c.label} ({c.desc}) <b>+{c.rider}cr</b>
+              </span>
+            ))}
+          </span>
+        </div>
       </div>
       <div className="cols">
         <div className="col squad">

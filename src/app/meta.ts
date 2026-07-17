@@ -1,5 +1,5 @@
 import type { MapParams } from '../sim/map';
-import { MISSION_HQ } from '../sim/state';
+import { MISSION_HQ, MOD_CHEM, MOD_EMP, MOD_FOG, MOD_SENSOR, MOD_WINDOW } from '../sim/state';
 import {
   defaultSpec,
   DOCTRINE_BRUTE,
@@ -215,9 +215,21 @@ export function nextMissionSeed(t: Territory, ngPlus: number): number {
   return (t.seed ^ Math.imul(t.attempts + 1, 0x9e3779b9) ^ (ngPlus << 8)) | 0;
 }
 
-export function missionConditions(seed: number): { tod: number; rain: number } {
+const MOD_ROLL = [MOD_FOG, MOD_CHEM, MOD_EMP, MOD_SENSOR, MOD_WINDOW];
+
+export interface MissionConditions {
+  tod: number;
+  rain: number;
+  mods: number;
+}
+
+export function missionConditions(seed: number): MissionConditions {
   const h = Math.imul(seed ^ 0x51ed270b, 0x85ebca6b);
-  return { tod: (h >>> 8) % 3, rain: (h >>> 16) % 100 < 35 ? 1 : 0 };
+  const h2 = Math.imul(seed ^ 0x2545f491, 0xc2b2ae35);
+  let mods = 0;
+  if ((h2 >>> 3) % 100 < 70) mods |= MOD_ROLL[(h2 >>> 10) % MOD_ROLL.length]!;
+  if ((h2 >>> 15) % 100 < 35) mods |= MOD_ROLL[(h2 >>> 20) % MOD_ROLL.length]!;
+  return { tod: (h >>> 8) % 3, rain: (h >>> 16) % 100 < 35 ? 1 : 0, mods };
 }
 
 export const CONDITION_NAMES = ['DAYLIGHT', 'DUSK', 'NIGHT'];
@@ -542,6 +554,7 @@ export interface DebriefInfo {
   salvage: number;
   loot: number;
   lines: string[];
+  review?: import('./clauses').PerformanceReview;
 }
 
 export interface ResultOptions {
@@ -551,6 +564,8 @@ export interface ResultOptions {
   // stated cause of a lost contract, in debrief diction; supplied by the app
   // layer from the sim's latched loss reason
   lossLine?: string;
+  // clause outcomes and approach metrics; riders inside are booked here
+  review?: import('./clauses').PerformanceReview;
 }
 
 export function applyResult(
@@ -630,6 +645,19 @@ export function applyResult(
   }
   if (!won && opts.lossLine) lines.push(opts.lossLine);
 
+  const review = opts.review;
+  if (review) {
+    for (const o of review.outcomes) {
+      if (o.met && won) {
+        lines.push(`Clause cleared: ${o.clause.label}. Rider booked: +${o.clause.rider}cr.`);
+      } else if (!o.met) {
+        lines.push(`Clause missed: ${o.clause.label}. The rider lapses.`);
+      }
+    }
+    m.credits += review.riderTotal;
+    lines.push(review.counterfactual);
+  }
+
   const collateralFine = civKills * 60;
   if (collateralFine > 0) {
     m.credits -= collateralFine;
@@ -643,7 +671,7 @@ export function applyResult(
 
   updateRegionUnlocks(m);
 
-  const info: DebriefInfo = { won, territory: t, collateralFine, salvage, loot, lines };
+  const info: DebriefInfo = { won, territory: t, collateralFine, salvage, loot, lines, review };
   m.log.unshift(...lines);
   m.log.length = Math.min(m.log.length, 12);
   return info;
