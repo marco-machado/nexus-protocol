@@ -13,20 +13,19 @@ import {
   missionConditions,
   newAgent,
   nextMissionSeed,
+  prospectiveAgentAppearance,
   saveMeta,
   weaponTierUnlocked,
+  type AugKey,
   type MetaAgent,
   type MetaState,
   type Territory,
 } from '../meta';
+import { ChassisPreview } from './chassisPreview';
 
-function appearancePreview(m: AppearanceManifest, prospective?: { slot: string; next: number }): string {
+function appearancePreview(m: AppearanceManifest): string {
   const parts: string[] = [];
-  const levels = { ...m.levels };
-  if (prospective && prospective.next > 0) {
-    const key = prospective.slot as keyof typeof levels;
-    if (key in levels) levels[key] = prospective.next;
-  }
+  const levels = m.levels;
   if (levels.legs > 0) parts.push(`LEG STRUTS V${levels.legs}`);
   if (levels.arms > 0) parts.push(`ARM PLATE V${levels.arms}`);
   if (levels.torso > 0) parts.push(`TORSO ARMOR V${levels.torso}`);
@@ -86,6 +85,8 @@ function ShopRow({
   name,
   detail,
   stock,
+  onPreview,
+  previewing,
   children,
 }: {
   tier: string;
@@ -94,10 +95,16 @@ function ShopRow({
   name: string;
   detail: string;
   stock: ReactNode;
+  onPreview?: () => void;
+  previewing?: boolean;
   children: ReactNode;
 }) {
   return (
-    <div className={`srow${locked ? ' locked' : ''}`}>
+    <div
+      className={`srow${locked ? ' locked' : ''}${previewing ? ' previewing' : ''}`}
+      onMouseEnter={onPreview}
+      onFocusCapture={onPreview}
+    >
       <span className={`tier${tierClass ? ` ${tierClass}` : ''}`}>{tier}</span>
       <span className="s-name">
         {name}
@@ -123,6 +130,11 @@ export function EquipScreen({
   onBack: () => void;
 }) {
   const [selAgent, setSelAgent] = useState(0);
+  const [previewAug, setPreviewAug] = useState<{
+    agent: number;
+    slot: AugKey;
+    next: number;
+  } | null>(null);
   const [, bump] = useReducer((x: number) => x + 1, 0);
   const commit = () => {
     saveMeta(m);
@@ -130,6 +142,17 @@ export function EquipScreen({
   };
   const sel = m.agents[selAgent]!;
   const selFull = sel.alive && slotsUsed(sel) >= SLOT_CAP;
+  const activePreview =
+    previewAug?.agent === selAgent &&
+    sel.alive &&
+    augLevel(sel, previewAug.slot) + 1 === previewAug.next
+      ? previewAug
+      : null;
+  const selectedLook = sel.alive ? agentAppearance(sel, selAgent) : null;
+  const previewLook =
+    selectedLook && activePreview
+      ? prospectiveAgentAppearance(sel, activePreview.slot, activePreview.next, selAgent)
+      : selectedLook;
 
   const stop = (fn: () => void) => (e: MouseEvent) => {
     e.stopPropagation();
@@ -455,6 +478,19 @@ export function EquipScreen({
           <h3>
             AUGMENTATION<span className="h3tag">INSTALL TARGET: {sel.alive ? sel.name : 'NO ACTIVE ASSET'}</span>
           </h3>
+          {previewLook ? (
+            <ChassisPreview
+              manifest={previewLook}
+              label={
+                activePreview
+                  ? `PROSPECTIVE ${activePreview.slot.toUpperCase()} V${activePreview.next}`
+                  : 'INSTALLED CONFIGURATION'
+              }
+              detail={appearancePreview(previewLook)}
+            />
+          ) : (
+            <div className="chassis-preview empty">NO ACTIVE ASSET AVAILABLE FOR CHASSIS REVIEW</div>
+          )}
           {AUG_SLOTS.map((slot) => {
             const lvl = sel.alive ? augLevel(sel, slot.key) : 0;
             const pips = (
@@ -464,7 +500,6 @@ export function EquipScreen({
                 ))}
               </span>
             );
-            const look = sel.alive ? agentAppearance(sel, selAgent) : null;
             if (lvl >= 3) {
               return (
                 <ShopRow key={slot.key} tier="V3" tierClass="t5" locked={false} name={slot.name} detail="fully augmented" stock={pips}>
@@ -474,9 +509,12 @@ export function EquipScreen({
             }
             const def = slot.levels[lvl]!;
             const locked = !augLevelUnlocked(m, lvl + 1);
-            const preview = look
-              ? appearancePreview(look, { slot: slot.key, next: lvl + 1 })
-              : '';
+            const prospective = sel.alive
+              ? prospectiveAgentAppearance(sel, slot.key, lvl + 1, selAgent)
+              : null;
+            const preview = prospective ? appearancePreview(prospective) : '';
+            const showPreview = () =>
+              setPreviewAug({ agent: selAgent, slot: slot.key, next: lvl + 1 });
             return (
               <ShopRow
                 key={slot.key}
@@ -486,9 +524,16 @@ export function EquipScreen({
                 name={slot.name}
                 detail={`${def.desc}${preview ? ` · reads: ${preview}` : ''}`}
                 stock={pips}
+                onPreview={showPreview}
+                previewing={activePreview?.slot === slot.key}
               >
                 <button
-                  className="wide"
+                  type="button"
+                  onClick={showPreview}
+                >
+                  PREVIEW
+                </button>
+                <button
                   disabled={m.credits < def.price || !sel.alive}
                   onClick={() => {
                     const cur = augLevel(sel, slot.key);

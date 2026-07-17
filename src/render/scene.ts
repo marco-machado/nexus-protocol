@@ -25,6 +25,7 @@ import {
   LatheGeometry,
   LinearSRGBColorSpace,
   LoopOnce,
+  type Material,
   Matrix4,
   Mesh,
   MeshBasicMaterial,
@@ -65,12 +66,13 @@ import {
   MOD_CHEM,
   type SimState,
 } from '../sim/state';
-import { NPC_ENEMY, ST_DEAD } from '../sim/units';
+import { ST_DEAD } from '../sim/units';
 import { VEH_CAR, VEH_CONVOY, VEH_FUEL, VEH_TRAM, V_WRECK } from '../sim/vehicles';
 
 import {
   buildRig,
   CLIP_IDLE,
+  CLIP_PERSUADED,
   CLIP_RUN,
   CLIP_WALK,
   CLIPS,
@@ -78,6 +80,7 @@ import {
   FRAMES,
   type Crowd,
   type Joints,
+  NPC_CAP,
   pose,
 } from './crowd';
 import type { CameraRig } from './camera';
@@ -89,6 +92,12 @@ import {
   type AppearanceManifest,
 } from './appearance';
 import { SCENE_COLORS } from './palette';
+import {
+  interpolateNpcAxis,
+  rivalChassisState,
+  shouldUseRivalChassis,
+} from './rivalChassis';
+import { reparentPreservingWorldTransform } from './transform';
 import {
   createParkedVehicleDress,
   createPropScatter,
@@ -239,6 +248,8 @@ export interface GameScene {
   agentRigs: AgentRig[];
   // missionTarget rival operatives on the shared chassis (after player slots)
   rivalRigs: AgentRig[];
+  // shared dress applied to setup-time rivals and later siege wave spawns
+  rivalLook: AppearanceManifest;
   // npc indices suppressed in the crowd so rival chassis is not doubled
   hideNpc: Uint8Array;
   ringMeshes: Mesh[];
@@ -1099,7 +1110,7 @@ function createAgentRig(
   scene: Scene,
   slot = 0,
   manifest?: AppearanceManifest,
-  opts: { rival?: boolean; npcIndex?: number } = {},
+  opts: { rival?: boolean; npcIndex?: number; preview?: boolean } = {},
 ): AgentRig {
   const { segs, joints } = buildRig();
   const rival = opts.rival === true;
@@ -1109,17 +1120,22 @@ function createAgentRig(
   const bodyBase = rival ? SCENE_COLORS.enemy.clone() : SCENE_COLORS.agent.clone();
   // agents get a subtle specular pop the Lambert crowd doesn't have, plus a
   // view-dependent faction rim so silhouettes separate from the dark grade
-  const bodyMat = new MeshPhongNodeMaterial({
+  const bodyOpts = {
     color: bodyBase,
     emissive: rival ? 0x2a0810 : 0x0a3540,
     specular: 0x333333,
     shininess: 36,
     transparent: true,
-  });
-  const rimUniform = createRimUniform();
+  };
+  const bodyMat: AgentRig['bodyMat'] = opts.preview
+    ? new MeshPhongMaterial(bodyOpts)
+    : new MeshPhongNodeMaterial(bodyOpts);
+  const rimUniform = opts.preview ? null : createRimUniform();
   // emissiveNode exists on every node material at runtime; the installed
   // typings only declare it on MeshStandardNodeMaterial
-  (bodyMat as unknown as { emissiveNode: unknown }).emissiveNode = agentRimEmissive(rimUniform);
+  if (rimUniform) {
+    (bodyMat as unknown as { emissiveNode: unknown }).emissiveNode = agentRimEmissive(rimUniform);
+  }
   const rimColor: { value: Color } | null = rimUniform;
   for (const m of segs) m.material = bodyMat;
   // faint cool self-light keeps the authored gear (pack, pads, antenna, gun)
@@ -1199,16 +1215,50 @@ function createAgentRig(
 // root so dress stays visible (frozen at rest pose relative to the root).
 function reparentAugmentsToRoot(rig: AgentRig): void {
   const root = rig.joints.root;
-  root.updateMatrixWorld(true);
-  const wp = new Vector3();
   for (const m of rig.augMeshes) {
-    m.getWorldPosition(wp);
-    root.worldToLocal(wp);
-    m.parent?.remove(m);
-    m.position.copy(wp);
-    m.rotation.set(0, 0, 0);
-    root.add(m);
+    reparentPreservingWorldTransform(root, m);
   }
+}
+
+export interface AgentPreviewModel {
+  root: Object3D;
+  update(timeSec: number, reducedMotion: boolean): void;
+  dispose(): void;
+}
+
+// Equip renders this exact procedural chassis and attachment dresser. The
+// field uses the same rig as its always-available fallback beneath the GLB.
+export function createAgentPreviewModel(
+  scene: Scene,
+  manifest: AppearanceManifest,
+): AgentPreviewModel {
+  const rig = createAgentRig(scene, manifest.trimSlot, manifest, { preview: true });
+  const root = rig.joints.root;
+  const baseYaw = Math.PI * 0.16;
+  return {
+    root,
+    update(timeSec, reducedMotion) {
+      pose(rig.joints, CLIP_IDLE, reducedMotion ? 0.15 : (timeSec * 0.18) % 1);
+      root.rotation.set(0, reducedMotion ? baseYaw : baseYaw + timeSec * 0.32, 0);
+    },
+    dispose() {
+      root.removeFromParent();
+      const geometries = new Set<BufferGeometry>();
+      const materials = new Set<Material>();
+      root.traverse((obj) => {
+        const mesh = obj as Mesh;
+        if (!mesh.isMesh) return;
+        geometries.add(mesh.geometry);
+        if (Array.isArray(mesh.material)) {
+          for (const material of mesh.material) materials.add(material);
+        } else {
+          materials.add(mesh.material);
+        }
+      });
+      for (const geometry of geometries) geometry.dispose();
+      for (const material of materials) material.dispose();
+    },
+  };
 }
 
 // hero agent GLB (user-generated via Tripo): loaded like the car model with
@@ -3998,8 +4048,9 @@ export function createGameScene(
   }
 
   // Rival peer squads (purge / HQ / siege): same chassis, rival trim, tiered
-  // augment reads. Hide those NPCs in the crowd so the chassis is not doubled.
-  const hideNpc = new Uint8Array(state.npcs.length);
+  // augment reads. The fixed-size mask also covers agents appended by siege
+  // waves after scene creation.
+  const hideNpc = new Uint8Array(NPC_CAP);
   const rivalRigs: AgentRig[] = [];
   const rivalLook = buildAppearanceManifest({
     variant: 'male',
@@ -4007,9 +4058,9 @@ export function createGameScene(
     faction: 'rival',
     trimSlot: 0,
   });
-  for (let ni = 0; ni < state.npcs.length; ni++) {
+  for (let ni = 0; ni < Math.min(state.npcs.length, NPC_CAP); ni++) {
     const n = state.npcs[ni]!;
-    if (!n.missionTarget || n.kind !== NPC_ENEMY) continue;
+    if (!shouldUseRivalChassis(n)) continue;
     hideNpc[ni] = 1;
     rivalRigs.push(
       createAgentRig(scene, rivalRigs.length, rivalLook, { rival: true, npcIndex: ni }),
@@ -4215,6 +4266,7 @@ export function createGameScene(
     billboard,
     agentRigs,
     rivalRigs,
+    rivalLook,
     hideNpc,
     ringMeshes,
     blobMeshes,
@@ -4263,6 +4315,8 @@ export function syncScene(
   state: SimState,
   prevAX: Float64Array,
   prevAZ: Float64Array,
+  prevNX: Float64Array,
+  prevNZ: Float64Array,
   prevVX: Float64Array,
   prevVZ: Float64Array,
   alpha: number,
@@ -4759,6 +4813,23 @@ export function syncScene(
     (blob.material as MeshBasicMaterial).opacity = 0.32 * op;
   });
 
+  // Siege waves append after scene creation. Assign every newly observed
+  // enemy raider a peer rig before the crowd update runs, then load all rigs
+  // from that render sample as one GLB group.
+  const appendedRigs: AgentRig[] = [];
+  for (let ni = 0; ni < Math.min(state.npcs.length, NPC_CAP); ni++) {
+    const n = state.npcs[ni]!;
+    if (gs.hideNpc[ni] || !shouldUseRivalChassis(n)) continue;
+    gs.hideNpc[ni] = 1;
+    const peer = createAgentRig(gs.scene, gs.rivalRigs.length, gs.rivalLook, {
+      rival: true,
+      npcIndex: ni,
+    });
+    gs.rivalRigs.push(peer);
+    appendedRigs.push(peer);
+  }
+  if (appendedRigs.length > 0) loadGeneratedAgentModel(appendedRigs);
+
   // rival peer chassis: same locomotion path as agents, driven from NPC state
   for (let ri = 0; ri < gs.rivalRigs.length; ri++) {
     const rig = gs.rivalRigs[ri]!;
@@ -4788,10 +4859,14 @@ export function syncScene(
       continue;
     }
     rig.downed = false;
-    const trim = new Color(rig.trimHex);
-    rig.bodyMat.color.copy(SCENE_COLORS.enemy);
-    if (rig.rimColor) rig.rimColor.value.copy(SCENE_COLORS.enemy).lerp(trim, 0.35);
-    else rig.bodyMat.emissive.copy(SCENE_COLORS.enemy).multiplyScalar(0.25);
+    const persuaded = rivalChassisState(n) === 'persuaded';
+    const faction = persuaded ? SCENE_COLORS.persuaded : SCENE_COLORS.enemy;
+    const trim = persuaded ? SCENE_COLORS.persuaded.clone() : new Color(rig.trimHex);
+    rig.bodyMat.color.copy(faction);
+    if (rig.rimColor) rig.rimColor.value.copy(faction).lerp(trim, persuaded ? 0.7 : 0.35);
+    else rig.bodyMat.emissive.copy(faction).multiplyScalar(persuaded ? 0.4 : 0.25);
+    rig.gearMat.color.set(0x232c3d).lerp(trim, persuaded ? 0.32 : 0.22);
+    rig.gearMat.emissive.copy(faction).multiplyScalar(persuaded ? 0.08 : 0.04);
     rig.visorMat.color.copy(trim).lerp(white, 0.25).multiplyScalar(1.4);
     rig.stripeMat.color.copy(trim).multiplyScalar(1.8);
     const op = n.cloakT > 0 ? 0.3 : 1;
@@ -4800,16 +4875,17 @@ export function syncScene(
     rig.visorMat.opacity = op;
     rig.stripeMat.opacity = op;
     for (const m of rig.modelMats) {
-      m.color.copy(agentModelBase).lerp(trim, 0.35);
+      m.color.copy(agentModelBase).lerp(trim, persuaded ? 0.55 : 0.35);
       m.opacity = op;
     }
     for (const m of rig.augMeshes) {
       const mat = m.material as MeshPhongMaterial | MeshBasicMaterial;
       mat.opacity = op;
     }
-    // rival NPCs are crowd-side in the sim; interpolate from last render sample
-    const x = fromFx(n.x);
-    const z = fromFx(n.z);
+    // Match the crowd path: interpolate from the pre-tick NPC snapshot rather
+    // than jumping the replacement chassis to each 20 Hz simulation sample.
+    const x = interpolateNpcAxis(prevNX, ni, fromFx(n.x), alpha);
+    const z = interpolateNpcAxis(prevNZ, ni, fromFx(n.z), alpha);
     if (!rig.seen) {
       rig.seen = true;
       rig.lastX = x;
@@ -4828,7 +4904,13 @@ export function syncScene(
       const maxTurn = 12 * dtSec;
       rig.heading += Math.max(-maxTurn, Math.min(maxTurn, turn));
     }
-    const clip = !moving ? CLIP_IDLE : Math.sqrt(dist2) / dtSec > 3 ? CLIP_RUN : CLIP_WALK;
+    const clip = persuaded
+      ? CLIP_PERSUADED
+      : !moving
+        ? CLIP_IDLE
+        : Math.sqrt(dist2) / dtSec > 3
+          ? CLIP_RUN
+          : CLIP_WALK;
     const def = CLIPS[clip]!;
     const adv = def.stride > 0 ? Math.sqrt(dist2) * def.stride : dtSec * def.fps;
     rig.phase = (rig.phase + adv / FRAMES) % 1;
