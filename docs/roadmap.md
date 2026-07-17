@@ -40,7 +40,7 @@ Last validated 2026-07-07 against the working tree: `npm test` green (57/57 acro
 | D: City simulation | Vehicles, destructible mid-layer, day/night/weather, GPU crowds | Done |
 | Presentation (R3) | Premium browser mission look; see `docs/presentation-roadmap.md` | Done (DoD 7/7, 2026-07-11; wayfinder map issue #2); R4 AA later |
 | Presentation (R4/R5) | AA density, then browser AAA ship bar; see `docs/presentation-roadmap.md` | Not started |
-| AAA upgrade (GDD v3.0) | R3F migration, contract expansion, uniform assets, region identity, intent cursor and camera, R&D board, narrative layer | In progress (R3F migration stages 1-3 done 2026-07-17, issue #12; contracts milestones A and B done 2026-07-17, issue #13; other tracks not started) |
+| AAA upgrade (GDD v3.0) | R3F migration, contract expansion, uniform assets, region identity, intent cursor and camera, R&D board, narrative layer | In progress (R3F migration stages 1-3 done 2026-07-17, issue #12; contracts milestones A to C done 2026-07-17, issue #13; other tracks not started) |
 | E: Multiplayer and accounts | Co-op, async PvP, accounts, cloud saves | Not started (groundwork only) |
 | F: Platform and release | Input remap, gamepad, touch, load budget, accessibility audit | Not started |
 
