@@ -65,7 +65,7 @@ import {
   MOD_CHEM,
   type SimState,
 } from '../sim/state';
-import { ST_DEAD } from '../sim/units';
+import { NPC_ENEMY, ST_DEAD } from '../sim/units';
 import { VEH_CAR, VEH_CONVOY, VEH_FUEL, VEH_TRAM, V_WRECK } from '../sim/vehicles';
 
 import {
@@ -82,6 +82,12 @@ import {
 } from './crowd';
 import type { CameraRig } from './camera';
 import type { AlarmGrade } from './alarmScript';
+import {
+  buildAppearanceManifest,
+  chassisUrl,
+  rivalAugmentLevels,
+  type AppearanceManifest,
+} from './appearance';
 import { SCENE_COLORS } from './palette';
 import {
   createParkedVehicleDress,
@@ -157,6 +163,12 @@ export interface AgentRig {
   // actual sim velocity so feet grip the ground instead of gliding
   walkClipSpeed: number;
   procMeshes: Mesh[];
+  // augment attachment meshes: shape/placement reads, stay visible on GLB path
+  augMeshes: Mesh[];
+  // chassis GLB URL for this rig (data-swap table in appearance.ts)
+  chassisUrl: string;
+  // rival field agents track an NPC index; player agents use -1
+  npcIndex: number;
   trimHex: number;
   heading: number;
   phase: number;
@@ -164,6 +176,14 @@ export interface AgentRig {
   lastZ: number;
   seen: boolean;
   downed: boolean;
+}
+
+export interface SceneAppearanceOpts {
+  // parallel to state.agents; missing slots fall back to blank recruit look
+  agentManifests?: AppearanceManifest[];
+  // rival squad dress for purge/HQ/siege missionTarget enemies
+  rivalElite?: boolean;
+  rivalLoadoutTier?: number;
 }
 
 export interface GameScene {
@@ -217,6 +237,10 @@ export interface GameScene {
   streaks: StreakHandles | null;
   billboard: BillboardHandles | null;
   agentRigs: AgentRig[];
+  // missionTarget rival operatives on the shared chassis (after player slots)
+  rivalRigs: AgentRig[];
+  // npc indices suppressed in the crowd so rival chassis is not doubled
+  hideNpc: Uint8Array;
   ringMeshes: Mesh[];
   blobMeshes: Mesh[];
   assetMeshes: Mesh[];
@@ -930,14 +954,164 @@ function agentModelEmissive(rimUniform: AgentRimUniform, map: Texture | null): u
   return map ? rim.add(tslTexture(map).rgb.mul(0.32)) : rim.add(tslColor(0x0a3540));
 }
 
-function createAgentRig(scene: Scene, slot = 0): AgentRig {
+// Augment dress is shape-and-placement first so it survives all three palettes
+// without new palette entries. Faction trim and persuasion still outrank it.
+function attachAugments(rig: AgentRig, manifest: AppearanceManifest): void {
+  const disposed = new Set<object>();
+  for (const m of rig.augMeshes) {
+    m.parent?.remove(m);
+    m.geometry.dispose();
+    const mat = m.material as MeshPhongMaterial;
+    if (!disposed.has(mat)) {
+      disposed.add(mat);
+      mat.dispose?.();
+    }
+  }
+  rig.augMeshes = [];
+
+  const metal = new MeshPhongMaterial({
+    color: 0x4a5568,
+    emissive: 0x0a1018,
+    specular: 0x666666,
+    shininess: 48,
+    transparent: true,
+  });
+  const hard = new MeshPhongMaterial({
+    color: 0x2c3544,
+    emissive: 0x080c14,
+    specular: 0x444444,
+    shininess: 36,
+    transparent: true,
+  });
+  // additive-ish basic so eye glow stays a shape read (strip / dual lens), not
+  // a pure color cue under deuteranopia/high-contrast palettes
+  const glow = new MeshBasicMaterial({
+    color: 0xddeeff,
+    transparent: true,
+    opacity: 0.95,
+  });
+
+  const add = (parent: Object3D, mesh: Mesh): void => {
+    mesh.castShadow = true;
+    parent.add(mesh);
+    rig.augMeshes.push(mesh);
+  };
+
+  const levels = manifest.levels;
+  if (levels.legs > 0) {
+    const s = 0.7 + levels.legs * 0.18;
+    for (const shin of [rig.joints.shinL, rig.joints.shinR]) {
+      const strut = new Mesh(new CylinderGeometry(0.018 * s, 0.022 * s, 0.34 * s, 5), metal);
+      strut.position.set(0.07, -0.18, 0.02);
+      add(shin, strut);
+      if (levels.legs >= 2) {
+        const bar = new Mesh(new BoxGeometry(0.08 * s, 0.04 * s, 0.06 * s), hard);
+        bar.position.set(0.06, -0.08, 0.04);
+        add(shin, bar);
+      }
+      if (levels.legs >= 3) {
+        const cuff = new Mesh(new BoxGeometry(0.14 * s, 0.05 * s, 0.14 * s), metal);
+        cuff.position.set(0, -0.32, 0.02);
+        add(shin, cuff);
+      }
+    }
+  }
+  if (levels.arms > 0) {
+    const s = 0.7 + levels.arms * 0.18;
+    for (const arm of [rig.joints.forearmL, rig.joints.forearmR]) {
+      const plate = new Mesh(new BoxGeometry(0.12 * s, 0.18 * s, 0.08 * s), hard);
+      plate.position.set(0, -0.12, 0.06);
+      add(arm, plate);
+    }
+    if (levels.arms >= 2) {
+      for (const side of [-1, 1]) {
+        const shoulder = new Mesh(new BoxGeometry(0.12 * s, 0.08 * s, 0.14 * s), metal);
+        shoulder.position.set(side * 0.28, 0.4, 0);
+        add(rig.joints.torso, shoulder);
+      }
+    }
+    if (levels.arms >= 3) {
+      for (const arm of [rig.joints.armL, rig.joints.armR]) {
+        const sleeve = new Mesh(new BoxGeometry(0.14 * s, 0.2 * s, 0.14 * s), hard);
+        sleeve.position.set(0, -0.08, 0);
+        add(arm, sleeve);
+      }
+    }
+  }
+  if (levels.torso > 0) {
+    const s = 0.75 + levels.torso * 0.2;
+    const chest = new Mesh(new BoxGeometry(0.36 * s, 0.22 * s, 0.12 * s), hard);
+    chest.position.set(0, 0.28, 0.12);
+    add(rig.joints.torso, chest);
+    if (levels.torso >= 2) {
+      const sideL = new Mesh(new BoxGeometry(0.08 * s, 0.2 * s, 0.16 * s), metal);
+      sideL.position.set(0.2, 0.26, 0);
+      add(rig.joints.torso, sideL);
+      const sideR = sideL.clone();
+      sideR.position.x = -0.2;
+      add(rig.joints.torso, sideR);
+    }
+    if (levels.torso >= 3) {
+      const collar = new Mesh(new BoxGeometry(0.28 * s, 0.08 * s, 0.18 * s), metal);
+      collar.position.set(0, 0.44, 0.04);
+      add(rig.joints.torso, collar);
+    }
+  }
+  if (levels.eyes > 0) {
+    const s = 0.8 + levels.eyes * 0.15;
+    glow.opacity = 0.55 + levels.eyes * 0.15;
+    if (levels.eyes === 1) {
+      const strip = new Mesh(new BoxGeometry(0.16 * s, 0.03 * s, 0.03 * s), glow);
+      strip.position.set(0, 0.16, 0.12);
+      add(rig.joints.head, strip);
+    } else if (levels.eyes === 2) {
+      const strip = new Mesh(new BoxGeometry(0.2 * s, 0.04 * s, 0.035 * s), glow);
+      strip.position.set(0, 0.16, 0.13);
+      add(rig.joints.head, strip);
+    } else {
+      for (const side of [-1, 1]) {
+        const lens = new Mesh(new CylinderGeometry(0.03 * s, 0.03 * s, 0.03 * s, 6), glow);
+        lens.rotation.x = Math.PI / 2;
+        lens.position.set(side * 0.05, 0.16, 0.13);
+        add(rig.joints.head, lens);
+      }
+    }
+  }
+  if (levels.brain > 0) {
+    const node = new Mesh(
+      new SphereGeometry(0.03 + levels.brain * 0.008, 6, 4),
+      metal,
+    );
+    node.position.set(-0.08, 0.22, -0.06);
+    add(rig.joints.head, node);
+  }
+  if (levels.heart > 0) {
+    const core = new Mesh(
+      new BoxGeometry(0.06 + levels.heart * 0.02, 0.06 + levels.heart * 0.02, 0.04),
+      metal,
+    );
+    core.position.set(0, 0.22, 0.14);
+    add(rig.joints.torso, core);
+  }
+}
+
+function createAgentRig(
+  scene: Scene,
+  slot = 0,
+  manifest?: AppearanceManifest,
+  opts: { rival?: boolean; npcIndex?: number } = {},
+): AgentRig {
   const { segs, joints } = buildRig();
-  const trimHex = AGENT_TRIM[slot % AGENT_TRIM.length]!;
+  const rival = opts.rival === true;
+  const trimHex = rival
+    ? SCENE_COLORS.enemy.getHex()
+    : AGENT_TRIM[slot % AGENT_TRIM.length]!;
+  const bodyBase = rival ? SCENE_COLORS.enemy.clone() : SCENE_COLORS.agent.clone();
   // agents get a subtle specular pop the Lambert crowd doesn't have, plus a
   // view-dependent faction rim so silhouettes separate from the dark grade
   const bodyMat = new MeshPhongNodeMaterial({
-    color: SCENE_COLORS.agent.clone(),
-    emissive: 0x0a3540,
+    color: bodyBase,
+    emissive: rival ? 0x2a0810 : 0x0a3540,
     specular: 0x333333,
     shininess: 36,
     transparent: true,
@@ -951,8 +1125,8 @@ function createAgentRig(scene: Scene, slot = 0): AgentRig {
   // faint cool self-light keeps the authored gear (pack, pads, antenna, gun)
   // from sinking into the night grade where the silhouette work is invisible
   const gearMat = new MeshPhongMaterial({
-    color: new Color(0x232c3d).lerp(new Color(trimHex), 0.08),
-    emissive: 0x121a28,
+    color: new Color(0x232c3d).lerp(new Color(trimHex), rival ? 0.22 : 0.08),
+    emissive: rival ? 0x1a080c : 0x121a28,
     specular: 0x2a2a2a,
     shininess: 28,
     transparent: true,
@@ -988,7 +1162,7 @@ function createAgentRig(scene: Scene, slot = 0): AgentRig {
   for (const m of [visor, rim, pack, antenna, padL, padR, gun]) m.castShadow = true;
   joints.root.scale.setScalar(1.12);
   scene.add(joints.root);
-  return {
+  const rig: AgentRig = {
     joints,
     bodyMat,
     gearMat,
@@ -1005,6 +1179,9 @@ function createAgentRig(scene: Scene, slot = 0): AgentRig {
     activeAction: null,
     walkClipSpeed: 0,
     procMeshes: [...segs, visor, rim, pack, antenna, stripe, padL, padR, gun],
+    augMeshes: [],
+    chassisUrl: GENERATED_AGENT_URL,
+    npcIndex: opts.npcIndex ?? -1,
     trimHex,
     heading: 0,
     phase: 0,
@@ -1013,6 +1190,25 @@ function createAgentRig(scene: Scene, slot = 0): AgentRig {
     seen: false,
     downed: false,
   };
+  if (manifest) attachAugments(rig, manifest);
+  rig.chassisUrl = chassisUrl(manifest ?? buildAppearanceManifest({ variant: 'male' }));
+  return rig;
+}
+
+// When the hero GLB hides procedural limb meshes, reparent augments onto the
+// root so dress stays visible (frozen at rest pose relative to the root).
+function reparentAugmentsToRoot(rig: AgentRig): void {
+  const root = rig.joints.root;
+  root.updateMatrixWorld(true);
+  const wp = new Vector3();
+  for (const m of rig.augMeshes) {
+    m.getWorldPosition(wp);
+    root.worldToLocal(wp);
+    m.parent?.remove(m);
+    m.position.copy(wp);
+    m.rotation.set(0, 0, 0);
+    root.add(m);
+  }
 }
 
 // hero agent GLB (user-generated via Tripo): loaded like the car model with
@@ -1021,9 +1217,22 @@ function createAgentRig(scene: Scene, slot = 0): AgentRig {
 // AnimationMixer per agent plays idle/walk/run, otherwise the mesh stays
 // static and the stride-locked bob stands in for a walk cycle.
 function loadGeneratedAgentModel(rigs: AgentRig[]): void {
+  if (rigs.length === 0) return;
+  // group by chassis URL so a future male/female model split is a data swap
+  const byUrl = new Map<string, AgentRig[]>();
+  for (const rig of rigs) {
+    const url = rig.chassisUrl || GENERATED_AGENT_URL;
+    const list = byUrl.get(url);
+    if (list) list.push(rig);
+    else byUrl.set(url, [rig]);
+  }
+  for (const [url, group] of byUrl) loadGeneratedAgentModelUrl(group, url);
+}
+
+function loadGeneratedAgentModelUrl(rigs: AgentRig[], url: string): void {
   const loader = new GLTFLoader();
   loader.load(
-    GENERATED_AGENT_URL,
+    url,
     (gltf) => {
       const source = gltf.scene;
       const clips = gltf.animations;
@@ -1130,6 +1339,7 @@ function loadGeneratedAgentModel(rigs: AgentRig[]): void {
         rig.modelMats = mats;
         rig.modelReady = true;
         for (const m of rig.procMeshes) m.visible = false;
+        reparentAugmentsToRoot(rig);
       }
     },
     undefined,
@@ -3326,7 +3536,11 @@ function buildDepGeometries(): BufferGeometry[] {
   ];
 }
 
-export function createGameScene(state: SimState, shadows = true): GameScene {
+export function createGameScene(
+  state: SimState,
+  shadows = true,
+  appearance: SceneAppearanceOpts = {},
+): GameScene {
   const scene = new Scene();
   const light = LIGHTING[Math.max(0, Math.min(2, state.env.tod))]!;
   const rain = state.env.rain === 1;
@@ -3743,7 +3957,10 @@ export function createGameScene(state: SimState, shadows = true): GameScene {
   const ringMeshes: Mesh[] = [];
   const blobMeshes: Mesh[] = [];
   for (let i = 0; i < state.agents.length; i++) {
-    agentRigs.push(createAgentRig(scene, i));
+    const manifest =
+      appearance.agentManifests?.[i] ??
+      buildAppearanceManifest({ variant: i % 2 === 0 ? 'male' : 'female', trimSlot: i });
+    agentRigs.push(createAgentRig(scene, i, manifest));
     // thin pulsing band instead of the old thick torus: the chunky ring read
     // as prototype next to the terminal HUD (thickness lives in the halo)
     const ring = new Mesh(
@@ -3779,7 +3996,27 @@ export function createGameScene(state: SimState, shadows = true): GameScene {
     scene.add(blob);
     blobMeshes.push(blob);
   }
-  loadGeneratedAgentModel(agentRigs);
+
+  // Rival peer squads (purge / HQ / siege): same chassis, rival trim, tiered
+  // augment reads. Hide those NPCs in the crowd so the chassis is not doubled.
+  const hideNpc = new Uint8Array(state.npcs.length);
+  const rivalRigs: AgentRig[] = [];
+  const rivalLook = buildAppearanceManifest({
+    variant: 'male',
+    levels: rivalAugmentLevels(appearance.rivalElite === true, appearance.rivalLoadoutTier ?? 2),
+    faction: 'rival',
+    trimSlot: 0,
+  });
+  for (let ni = 0; ni < state.npcs.length; ni++) {
+    const n = state.npcs[ni]!;
+    if (!n.missionTarget || n.kind !== NPC_ENEMY) continue;
+    hideNpc[ni] = 1;
+    rivalRigs.push(
+      createAgentRig(scene, rivalRigs.length, rivalLook, { rival: true, npcIndex: ni }),
+    );
+  }
+
+  loadGeneratedAgentModel([...agentRigs, ...rivalRigs]);
 
   // environmental zones (chem, EMP): flat ground markers built once at setup
   // since zones never move. Chem is a filled disc with a rim; EMP is a pair of
@@ -3977,6 +4214,8 @@ export function createGameScene(state: SimState, shadows = true): GameScene {
     streaks,
     billboard,
     agentRigs,
+    rivalRigs,
+    hideNpc,
     ringMeshes,
     blobMeshes,
     assetMeshes,
@@ -4403,6 +4642,9 @@ export function syncScene(
           m.color.copy(SCENE_COLORS.dead);
           m.opacity = 1;
         }
+        for (const m of rig.augMeshes) {
+          (m.material as MeshPhongMaterial | MeshBasicMaterial).opacity = 1;
+        }
       } else if (rig.modelReady && rig.mixer && rig.actFall) {
         rig.mixer.update(dtSec);
       }
@@ -4427,6 +4669,9 @@ export function syncScene(
       m.color.copy(a.stunT > 0 ? SCENE_COLORS.dead : agentModelBase);
       if (a.stunT <= 0) m.color.lerp(trim, 0.12);
       m.opacity = op;
+    }
+    for (const m of rig.augMeshes) {
+      (m.material as MeshPhongMaterial | MeshBasicMaterial).opacity = op;
     }
     const ringMat = ring.material as MeshBasicMaterial;
     ringMat.color.copy(SCENE_COLORS.select);
@@ -4513,6 +4758,106 @@ export function syncScene(
     blob.visible = !driving;
     (blob.material as MeshBasicMaterial).opacity = 0.32 * op;
   });
+
+  // rival peer chassis: same locomotion path as agents, driven from NPC state
+  for (let ri = 0; ri < gs.rivalRigs.length; ri++) {
+    const rig = gs.rivalRigs[ri]!;
+    const ni = rig.npcIndex;
+    const n = ni >= 0 && ni < state.npcs.length ? state.npcs[ni]! : null;
+    const root = rig.joints.root;
+    if (!n || n.state === ST_DEAD) {
+      if (!rig.downed) {
+        rig.downed = true;
+        if (rig.modelReady && rig.mixer && rig.actFall) {
+          rig.activeAction?.fadeOut(0.08);
+          rig.actFall.reset().fadeIn(0.05).play();
+          rig.activeAction = rig.actFall;
+          root.rotation.set(0, rig.heading, 0);
+          root.position.y = 0;
+        } else {
+          if (!rig.modelReady) pose(rig.joints, CLIP_IDLE, 0);
+          root.rotation.set(0, rig.heading, Math.PI / 2);
+          root.position.y = 0.3;
+        }
+        if (rig.rimColor) rig.rimColor.value.copy(SCENE_COLORS.dead).multiplyScalar(0.25);
+        rig.bodyMat.color.copy(SCENE_COLORS.dead);
+        for (const m of rig.modelMats) m.color.copy(SCENE_COLORS.dead);
+      } else if (rig.modelReady && rig.mixer && rig.actFall) {
+        rig.mixer.update(dtSec);
+      }
+      continue;
+    }
+    rig.downed = false;
+    const trim = new Color(rig.trimHex);
+    rig.bodyMat.color.copy(SCENE_COLORS.enemy);
+    if (rig.rimColor) rig.rimColor.value.copy(SCENE_COLORS.enemy).lerp(trim, 0.35);
+    else rig.bodyMat.emissive.copy(SCENE_COLORS.enemy).multiplyScalar(0.25);
+    rig.visorMat.color.copy(trim).lerp(white, 0.25).multiplyScalar(1.4);
+    rig.stripeMat.color.copy(trim).multiplyScalar(1.8);
+    const op = n.cloakT > 0 ? 0.3 : 1;
+    rig.bodyMat.opacity = op;
+    rig.gearMat.opacity = op;
+    rig.visorMat.opacity = op;
+    rig.stripeMat.opacity = op;
+    for (const m of rig.modelMats) {
+      m.color.copy(agentModelBase).lerp(trim, 0.35);
+      m.opacity = op;
+    }
+    for (const m of rig.augMeshes) {
+      const mat = m.material as MeshPhongMaterial | MeshBasicMaterial;
+      mat.opacity = op;
+    }
+    // rival NPCs are crowd-side in the sim; interpolate from last render sample
+    const x = fromFx(n.x);
+    const z = fromFx(n.z);
+    if (!rig.seen) {
+      rig.seen = true;
+      rig.lastX = x;
+      rig.lastZ = z;
+    }
+    const dx = x - rig.lastX;
+    const dz = z - rig.lastZ;
+    rig.lastX = x;
+    rig.lastZ = z;
+    const dist2 = dx * dx + dz * dz;
+    const moving = dist2 > 4e-6;
+    if (moving) {
+      let turn = Math.atan2(dx, dz) - rig.heading;
+      if (turn > Math.PI) turn -= Math.PI * 2;
+      else if (turn < -Math.PI) turn += Math.PI * 2;
+      const maxTurn = 12 * dtSec;
+      rig.heading += Math.max(-maxTurn, Math.min(maxTurn, turn));
+    }
+    const clip = !moving ? CLIP_IDLE : Math.sqrt(dist2) / dtSec > 3 ? CLIP_RUN : CLIP_WALK;
+    const def = CLIPS[clip]!;
+    const adv = def.stride > 0 ? Math.sqrt(dist2) * def.stride : dtSec * def.fps;
+    rig.phase = (rig.phase + adv / FRAMES) % 1;
+    let bounce: number;
+    if (rig.modelReady && rig.mixer) {
+      const idling = clip === CLIP_IDLE;
+      const act = idling ? (rig.actIdle ?? rig.actWalk) : rig.actWalk;
+      if (act) {
+        act.timeScale = idling ? (rig.actIdle ? 1 : 0) : 1;
+        if (act !== rig.activeAction) {
+          rig.activeAction?.fadeOut(0.2);
+          act.reset().fadeIn(0.2).play();
+          rig.activeAction = act;
+        }
+        rig.mixer.update(dtSec);
+      }
+      bounce = 0;
+    } else if (rig.modelReady) {
+      bounce =
+        clip === CLIP_IDLE
+          ? 0.015 + Math.sin(nowMs / 900 + ri) * 0.015
+          : Math.abs(Math.sin(rig.phase * Math.PI * 2)) * 0.06;
+    } else {
+      pose(rig.joints, clip, rig.phase);
+      bounce = root.position.y;
+    }
+    root.position.set(x, bounce, z);
+    root.rotation.set(0, rig.heading, 0);
+  }
 
   const pcount = Math.min(state.projectiles.length, PROJ_CAP);
   for (let i = 0; i < pcount; i++) {

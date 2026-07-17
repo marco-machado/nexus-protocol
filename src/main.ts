@@ -1,6 +1,7 @@
 import { createRenderer } from './render/renderer';
 import { applyPalette } from './render/palette';
 import { WorldGlobe } from './render/globe';
+import { buildAppearanceManifest, type AppearanceManifest } from './render/appearance';
 import { audio } from './app/audio';
 import { createCanvasHost } from './app/canvasHost';
 import { Game } from './app/game';
@@ -9,6 +10,29 @@ import { ScreenStore } from './app/screenState';
 import { mountScreenRoot } from './app/ui/root';
 import { settings } from './app/settings';
 import { defaultSpec } from './sim/units';
+
+// staging ladder: blank, mixed V1/V2, heavy V2, full V3 — eye-check augment reads
+function stagingAppearances(): AppearanceManifest[] {
+  return [
+    buildAppearanceManifest({ variant: 'male', trimSlot: 0 }),
+    buildAppearanceManifest({
+      variant: 'female',
+      levels: { legs: 1, eyes: 1, arms: 1 },
+      trimSlot: 1,
+    }),
+    buildAppearanceManifest({
+      variant: 'male',
+      levels: { legs: 2, arms: 2, torso: 2, eyes: 2, brain: 1 },
+      armor: true,
+      trimSlot: 2,
+    }),
+    buildAppearanceManifest({
+      variant: 'female',
+      levels: { legs: 3, arms: 3, torso: 3, eyes: 3, brain: 3, heart: 3 },
+      trimSlot: 3,
+    }),
+  ];
+}
 
 async function main(): Promise<void> {
   applyPalette(settings.palette);
@@ -40,7 +64,12 @@ async function main(): Promise<void> {
       specs,
       hud,
       { visualTest: true, tod: 2, weather: 0 },
-      { civCount: 0, cardTitle: 'VISUAL TEST: cars and agents', host },
+      {
+        civCount: 0,
+        cardTitle: 'VISUAL TEST: cars, agents, augment reads',
+        host,
+        appearances: stagingAppearances(),
+      },
     );
     return;
   }
@@ -68,6 +97,7 @@ async function main(): Promise<void> {
         perf: true,
         cardTitle: 'PERF STRESS',
         host,
+        appearances: stagingAppearances(),
       },
     );
     return;
@@ -87,7 +117,12 @@ async function main(): Promise<void> {
       specs,
       hud,
       { debug: true, tod: 2, weather: 0 },
-      { civCount: 0, cardTitle: 'DEBUG: map and agents', host },
+      {
+        civCount: 0,
+        cardTitle: 'DEBUG: map and agents',
+        host,
+        appearances: stagingAppearances(),
+      },
     );
     return;
   }

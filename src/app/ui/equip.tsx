@@ -1,8 +1,9 @@
 import { useReducer, useState, type MouseEvent, type ReactNode } from 'react';
+import type { AppearanceManifest } from '../../render/appearance';
 import { WEAPONS } from '../../sim/weapons';
 import { briefingIntel, generateClauses, modNames } from '../clauses';
 import {
-  agentQuirks,
+  agentAppearance,
   AUG_SLOTS,
   augLevel,
   augLevelUnlocked,
@@ -18,6 +19,22 @@ import {
   type MetaState,
   type Territory,
 } from '../meta';
+
+function appearancePreview(m: AppearanceManifest, prospective?: { slot: string; next: number }): string {
+  const parts: string[] = [];
+  const levels = { ...m.levels };
+  if (prospective && prospective.next > 0) {
+    const key = prospective.slot as keyof typeof levels;
+    if (key in levels) levels[key] = prospective.next;
+  }
+  if (levels.legs > 0) parts.push(`LEG STRUTS V${levels.legs}`);
+  if (levels.arms > 0) parts.push(`ARM PLATE V${levels.arms}`);
+  if (levels.torso > 0) parts.push(`TORSO ARMOR V${levels.torso}`);
+  if (levels.eyes > 0) parts.push(`EYE GLOW V${levels.eyes}`);
+  if (levels.brain > 0) parts.push(`BRAIN NODE V${levels.brain}`);
+  if (levels.heart > 0) parts.push(`HEART CORE V${levels.heart}`);
+  return parts.length > 0 ? parts.join(' · ') : 'NO CHASSIS DRESS';
+}
 
 const POOL_GEAR = {
   persuadertron: { name: 'Persuadertron', desc: 'F-key conversion pulse', price: 500, tier: 1, stock: 'persuadertrons' },
@@ -250,11 +267,9 @@ export function EquipScreen({
                   <button type="button" className="ac-name" aria-label={`Select ${a.name}`} onClick={() => setSelAgent(i)}>
                     {a.name}
                   </button>
-                  {agentQuirks(a).map((q) => (
-                    <span key={q.name} className="chip gold" title={q.desc}>
-                      {q.name}
-                    </span>
-                  ))}
+                  <span className="chip" title="Cosmetic chassis variant">
+                    {a.variant === 'female' ? 'FEMALE' : 'MALE'}
+                  </span>
                   <span className="ac-hp">HP {spec.maxHp}</span>
                 </div>
                 <div className="ac-stats">
@@ -322,6 +337,9 @@ export function EquipScreen({
                       </>
                     );
                   })()}
+                </div>
+                <div className="ac-augs ac-dress" title="Chassis dress from installed augments">
+                  CHASSIS · {appearancePreview(agentAppearance(a, i))}
                 </div>
               </div>
             );
@@ -446,6 +464,7 @@ export function EquipScreen({
                 ))}
               </span>
             );
+            const look = sel.alive ? agentAppearance(sel, selAgent) : null;
             if (lvl >= 3) {
               return (
                 <ShopRow key={slot.key} tier="V3" tierClass="t5" locked={false} name={slot.name} detail="fully augmented" stock={pips}>
@@ -455,6 +474,9 @@ export function EquipScreen({
             }
             const def = slot.levels[lvl]!;
             const locked = !augLevelUnlocked(m, lvl + 1);
+            const preview = look
+              ? appearancePreview(look, { slot: slot.key, next: lvl + 1 })
+              : '';
             return (
               <ShopRow
                 key={slot.key}
@@ -462,7 +484,7 @@ export function EquipScreen({
                 tierClass={lvl + 1 >= 3 ? 't5' : lvl + 1 === 2 ? 't3' : undefined}
                 locked={locked}
                 name={slot.name}
-                detail={def.desc}
+                detail={`${def.desc}${preview ? ` · reads: ${preview}` : ''}`}
                 stock={pips}
               >
                 <button

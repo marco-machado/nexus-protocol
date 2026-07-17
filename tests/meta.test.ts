@@ -1,15 +1,17 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { MISSION_DEFENSE, MISSION_HQ } from '../src/sim/state';
 import {
   actOfTerritory,
   advanceTime,
-  agentQuirks,
+  agentAppearance,
   applyResult,
   buildSpec,
+  ensureAgentVariant,
   newAgent,
   campaignAct,
   CYCLE_MS,
   incomePerCycle,
+  loadMeta,
   makeTerritories,
   missionConditions,
   missionSeed,
@@ -25,6 +27,7 @@ import {
   strikeInterval,
   syndicateDecapitated,
   updateRegionUnlocks,
+  type MetaAgent,
   type MetaState,
 } from '../src/app/meta';
 import { DOCTRINE_BRUTE, DOCTRINE_STEALTH, DOCTRINE_SWARM } from '../src/sim/units';
@@ -252,42 +255,83 @@ describe('rival sieges', () => {
   });
 });
 
-describe('service records and veteran quirks', () => {
-  it('applies quirk modifiers to the built spec at their thresholds', () => {
+describe('agents as uniform assets', () => {
+  it('builds identical specs for identical loadouts across different service records', () => {
     const rookie = newAgent(0);
     const vet = newAgent(1);
-    vet.missions = 20;
-    vet.kills = 50;
-    vet.persuasions = 25;
-    const base = buildSpec(rookie);
-    const spec = buildSpec(vet);
-    expect(agentQuirks(rookie)).toEqual([]);
-    expect(agentQuirks(vet).map((q) => q.key)).toEqual(['steady', 'scar', 'cold', 'silver']);
-    expect(spec.spreadMul).toBe(base.spreadMul - 5);
-    expect(spec.maxHp).toBe(base.maxHp + 10);
-    expect(spec.fireMul).toBe(base.fireMul - 5);
-    expect(spec.drainMul).toBe(base.drainMul - 10);
-    expect(spec.speedMul).toBe(base.speedMul);
+    vet.missions = 40;
+    vet.kills = 200;
+    vet.persuasions = 80;
+    // same player decisions
+    for (const a of [rookie, vet]) {
+      a.loadout = [2, 5];
+      a.gear.armor = true;
+      a.gear.persuadertron = true;
+      a.augments = { legs: 2, arms: 1, torso: 3, eyes: 2, brain: 1, heart: 2 };
+    }
+    expect(buildSpec(vet)).toEqual(buildSpec(rookie));
   });
 
-  it('attributes persuasions and announces newly earned quirks in the debrief', () => {
+  it('keeps Service Records as ledger flavor without combat power', () => {
     const m = newMeta(0);
     for (const a of m.agents) a.missions = 9;
     const survivors = m.agents.map(() => true);
     const info = applyResult(m, m.territories[0]!, true, 0, 0, survivors, { persuaded: 8 });
     expect(m.agents.every((a) => a.persuasions === 2)).toBe(true);
     expect(m.agents.every((a) => a.missions === 10)).toBe(true);
-    const commendations = info.lines.filter((l) => l.includes('Steady Hands'));
-    expect(commendations.length).toBe(m.agents.length);
+    expect(info.lines.every((l) => !/commendation|Steady Hands|Scar Tissue/i.test(l))).toBe(true);
   });
 
-  it('does not commend dead agents', () => {
+  it('still writes off dead agents without quirk language', () => {
     const m = newMeta(0);
     m.agents[0]!.missions = 9;
     const survivors = m.agents.map((_, i) => i !== 0);
     const info = applyResult(m, m.territories[0]!, false, 0, 0, survivors, {});
-    expect(info.lines.some((l) => l.includes('Steady Hands'))).toBe(false);
     expect(info.lines.some((l) => l.includes('written off'))).toBe(true);
+    expect(info.lines.every((l) => !/commendation/i.test(l))).toBe(true);
+  });
+
+  it('assigns a cosmetic body variant on recruitment', () => {
+    const a = newAgent(3);
+    expect(a.variant === 'male' || a.variant === 'female').toBe(true);
+  });
+
+  it('migrates legacy saves missing variant exactly once', () => {
+    const m = newMeta(0);
+    const legacy = JSON.parse(JSON.stringify(m)) as MetaState;
+    for (const a of legacy.agents) delete (a as Partial<MetaAgent>).variant;
+    const store = new Map<string, string>();
+    vi.stubGlobal('localStorage', {
+      getItem: (k: string) => store.get(k) ?? null,
+      setItem: (k: string, v: string) => void store.set(k, v),
+      removeItem: (k: string) => void store.delete(k),
+    });
+    store.set('nexus-protocol-save-v2', JSON.stringify(legacy));
+    const loaded = loadMeta()!;
+    expect(loaded.agents.every((a) => a.variant === 'male' || a.variant === 'female')).toBe(true);
+    const first = loaded.agents.map((a) => a.variant);
+    const loaded2 = loadMeta()!;
+    expect(loaded2.agents.map((a) => a.variant)).toEqual(first);
+    vi.unstubAllGlobals();
+  });
+
+  it('never puts body variant into the simulation spec', () => {
+    const a = newAgent(0);
+    a.variant = 'female';
+    const spec = buildSpec(a);
+    expect(JSON.stringify(spec)).not.toMatch(/female|male|variant/);
+  });
+
+  it('builds appearance from loadout state for equip and field agreement', () => {
+    const a = newAgent(0);
+    a.augments = { legs: 3, eyes: 2 };
+    a.gear.armor = true;
+    const look = agentAppearance(a, 1);
+    expect(look.variant).toBe(ensureAgentVariant(a));
+    expect(look.levels.legs).toBe(3);
+    expect(look.levels.eyes).toBe(2);
+    expect(look.levels.torso).toBe(1);
+    expect(look.trimSlot).toBe(1);
   });
 });
 

@@ -41,7 +41,7 @@ The game is built around a deterministic fixed-point simulation, a Three.js pres
 - **Seven mission types**: assassination, persuasion, raid, purge, defense, heist, and HQ assault.
 - **Persuadertron swarm play** with civilian conversion, influence thresholds, follower orders, and flashmob tactics.
 - **City simulation** with crowds, panic propagation, police escalation, autonomous vehicles, hijacking, explosions, destructible storefront breaches, time of day, and rain.
-- **Campaign layer** with 40 territories across 8 regions, taxes, unrest, real-time income/research, rival syndicate doctrines, counterattack sieges, veteran quirks, and New Game+.
+- **Campaign layer** with 40 territories across 8 regions, taxes, unrest, real-time income/research, rival syndicate doctrines, counterattack sieges, and New Game+. Agents are uniform assets: behavior is pure loadout/gear/augments (veteran quirks retired; Service Records remain ledger flavor), with male/female body variants and augment dress on the chassis.
 - **Presentation** with WebGPU rendering, WebGL fallback, GPU-instanced skeletal crowds, vehicle assets, bloom, vignette, rain, procedural WebAudio, minimap, comms ticker, and colorblind-safe palettes (interim look; high-fidelity district and character presentation is the design target, not yet the shipped bar).
 
 ## Getting started

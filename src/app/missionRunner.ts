@@ -15,6 +15,7 @@ import { createAlarmGrade, rgbToCss, updateAlarmGrade } from '../render/alarmScr
 import { applyPalette, SCENE_COLORS } from '../render/palette';
 import { createPost, type Post } from '../render/post';
 import { createRain, type Rain } from '../render/rain';
+import type { AppearanceManifest } from '../render/appearance';
 import {
   AGENT_TRIM,
   applyAlarmGrade,
@@ -126,6 +127,8 @@ export interface MissionOptions {
   cardTitle?: string;
   // roster codenames parallel to specs; slots fall back to A1-A4 (FR-017)
   codenames?: string[];
+  // appearance manifests parallel to specs; drives augment dress and variant
+  appearances?: AppearanceManifest[];
   // flavor operation name for the HUD top bar
   opName?: string;
   // R3F canvas host (stages 2+3): the mission mounts into the persistent
@@ -215,7 +218,11 @@ function createMissionSystems(
   onEnd: (result: MissionResult) => void,
 ): MissionHandle {
   const state = createMission(seed, missionType, specs, { ...simParams, civCount: opts.civCount ?? simParams.civCount });
-  const gs = createGameScene(state, settings.shadows);
+  const gs = createGameScene(state, settings.shadows, {
+    agentManifests: opts.appearances,
+    rivalElite: simParams.elite === true,
+    rivalLoadoutTier: simParams.loadoutTier ?? 2,
+  });
   // night-oriented PMREM so wet PBR asphalt and Standard concrete pick up neon IBL
   const rainOn = state.env.rain === 1 || !!state.map.visualTest;
   const envIntensity = rainOn
@@ -1083,7 +1090,7 @@ function createMissionSystems(
     const alpha = Math.min(1, acc / TICK_MS);
     syncScene(gs, state, prevAX, prevAZ, prevVX, prevVZ, alpha, selected, rig);
     updateDiagnostics();
-    gs.crowd.update(state, prevNX, prevNZ, alpha, dt, rig);
+    gs.crowd.update(state, prevNX, prevNZ, alpha, dt, rig, gs.hideNpc);
     rainFx?.update(dt, rig.cx, rig.cz);
     if (post) post.pipeline.render();
     else renderer.render(gs.scene, rig.camera);

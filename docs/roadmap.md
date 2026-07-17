@@ -177,9 +177,9 @@ Approved 2026-07-16; decision record `docs/game-design-aaa-draft.md` (suggestion
 - [x] Debrief as performance review (issue #13 milestone B; approach metrics from new sim counters, clause outcomes and riders, HR-language counterfactual line, rendered on the debrief screen)
 
 ### Agents as assets (draft 14 to 16)
-- [ ] Uniform operative chassis, male and female variants; look varies only by loadout and faction trim
-- [ ] Retire veteran quirks (`QUIRKS` in `src/app/meta.ts`, `buildSpec`); Service Records stay as ledger flavor
-- [ ] Augments read on the body (chassis attachments by slot and version)
+- [x] Uniform operative chassis, male and female variants; look varies only by loadout and faction trim (issue #14; `MetaAgent.variant` cosmetic field, latent until R5 chassis assets; both variants use the current hero GLB via `CHASSIS_URLS`)
+- [x] Retire veteran quirks (`QUIRKS` deleted from `src/app/meta.ts`; `buildSpec` is pure loadout/gear/augs; Service Records stay as ledger flavor and debrief counters)
+- [x] Augments read on the body (chassis attachments by slot and version; pure `buildAppearanceManifest` in `src/render/appearance.ts` shared by field, equip preview, and rival peers)
 
 ### World and input (draft 17 to 25)
 - [ ] Region grammar parameters and landmark anchor placement in map generation (render kits live on the presentation ladder)
