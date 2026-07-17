@@ -381,7 +381,7 @@ export function createMission(
     tech.vip = true;
     tech.hp = 40;
     s.mission.vipId = tech.id;
-    s.mission.loot = 2500 + 500 * extraGuards;
+    s.mission.lootPrize = 2500 + 500 * extraGuards;
   } else {
     for (let t = 0; t < 2; t++) {
       const cell = nearestWalkable(

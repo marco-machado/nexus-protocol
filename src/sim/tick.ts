@@ -1665,7 +1665,10 @@ function updateHeist(s: SimState): void {
   if (!power || !vault) return;
   if (m.stage === 0 && !power.alive) m.stage = 1;
   if (!vault.alive) {
-    if (m.stage < 2) m.stage = 2;
+    if (m.stage < 2) {
+      m.stage = 2;
+      m.loot += m.lootPrize;
+    }
     return;
   }
   if (m.stage >= 1) {
@@ -1676,6 +1679,7 @@ function updateHeist(s: SimState): void {
         vault.alive = false;
         s.map.obstacle[vault.cell] = 0;
         m.stage = 2;
+        m.loot += m.lootPrize;
       }
     }
   }

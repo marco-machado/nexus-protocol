@@ -104,7 +104,11 @@ export interface MissionState {
   waveT: number;
   turretBudget: number;
   trapBudget: number;
+  // credits actually secured in the field; the heist prize moves from
+  // lootPrize into loot only when the vault opens, so an abandoned contract
+  // keeps exactly what was taken and nothing promised
   loot: number;
+  lootPrize: number;
   contract: ContractState;
 }
 
@@ -207,6 +211,7 @@ export function baseState(seed: number, mapSeed: number, mapParams?: MapParams):
       turretBudget: 0,
       trapBudget: 0,
       loot: 0,
+      lootPrize: 0,
       contract: { failures: [], lossReason: REASON_NONE, abortArmed: false, rivalCell: -1 },
     },
     breaches: [],

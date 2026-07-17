@@ -44,6 +44,7 @@ import {
   EV_NO_ROUTE,
   FAIL_FIRED,
   FAIL_WARNING,
+  FM_ABANDONED,
   MISSION_DEFENSE,
   SWARM_FLASHMOB,
   SWARM_FOLLOW,
@@ -1072,7 +1073,11 @@ function createMissionSystems(
         survivors: state.agents.map((a) => a.alive),
         ticks: state.tick,
         finalHash: hashState(state),
-        loot: state.mission.status === STATUS_WON ? state.mission.loot : 0,
+        // secured loot survives a win or a booked abandonment, never a wipe
+        loot:
+          state.mission.status === STATUS_WON || contractLossReason(state) === FM_ABANDONED
+            ? state.mission.loot
+            : 0,
       });
     }
   });

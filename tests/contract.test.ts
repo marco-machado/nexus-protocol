@@ -217,6 +217,17 @@ describe('raid and heist: lockdown deadline', () => {
     expect(contractLossReason(s)).toBe(FM_LOCKDOWN);
   });
 
+  it('credits heist loot only when the vault actually opens', () => {
+    const s = mission(MISSION_HEIST);
+    expect(s.mission.loot).toBe(0);
+    expect(s.mission.lootPrize).toBeGreaterThan(0);
+    // an abort before the vault opens has nothing secured to keep
+    s.mission.assets[1]!.alive = false;
+    step(s, []);
+    expect(s.mission.stage).toBe(2);
+    expect(s.mission.loot).toBe(s.mission.lootPrize);
+  });
+
   it('uses the longer heist timer and stands down once the vault is open', () => {
     const s = mission(MISSION_HEIST);
     // off the exfil pad so the open vault does not end the mission mid-test
