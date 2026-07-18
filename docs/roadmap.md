@@ -204,10 +204,10 @@ Approved 2026-07-16; decision record `docs/game-design-aaa-draft.md` (suggestion
 - [x] Rival arcs with memory (state predicates over campaign facts) (2026-07-18, issue #17): per-rival arc stages derived from acts and grievance counters in `src/app/narrative/rivalArcs.ts` gate line pools; rivals reference sieges repelled, flips, and HQ losses at debrief and speak in-mission only through doctrine-tagged bark entries; campaign history persisted in the meta save with in-place upgrade for existing saves
 
 ### Delivery and gates (draft 6 to 8, 47)
-- [ ] Two named visual tiers (WebGPU AAA tier, WebGL2 readability tier) with per-tier perf rows
-- [ ] Asset pipeline: compressed geometry, GPU-compressed textures, per-region streaming, GDD Section 17 budgets
-- [ ] Generated-asset production line stood up (3D, image, audio generators; 3D generation key pending)
-- [ ] Measured gates on every milestone: visual scorecard with fresh-eyes review, inspector metrics, regression baselines, bot playtests
+- [~] Two named visual tiers (WebGPU AAA tier, WebGL2 readability tier) with per-tier perf rows (2026-07-18, issue #18): pure tier resolution over capability fixtures in `src/render/tier.ts`, renderer consumes the resolved profile, `?webgl` stays the forcing override, player-facing guarantee wording on the settings screen; gap: the compatibility-tier reference row in `docs/perf.md` is pending a manual run on the named Windows iGPU machine
+- [x] Asset pipeline: compressed geometry, GPU-compressed textures, per-region streaming, GDD Section 17 budgets (2026-07-18, issue #18): build-time meshopt and KTX2 encoding with editable sources (`scripts/encode-assets.mjs`), mission-runner code split, build-generated streaming manifest with core plus per-region packs, launch awaits district-pack residency (`src/app/streaming.ts`), budget audit in CI (`scripts/audit-delivery.mjs`, measured PASS in `docs/perf.md`); production-build render-path eye-check pending, region packs fill as R5 content lands
+- [x] Generated-asset production line stood up (3D, image, audio generators; 3D generation key pending) (2026-07-18, issue #18): four-stage pipeline with per-asset-class budgets in `docs/asset-production.md`; image and audio keys verified present, 3D work queues finalized prompts for manual generation
+- [~] Measured gates on every milestone: visual scorecard with fresh-eyes review, inspector metrics, regression baselines, bot playtests (2026-07-18, issue #18): standing harness written (`docs/quality-gates.md`), evidence schema mechanically validated by `scripts/check-gates.mjs`, R5 claim blocked on a complete evidence set; gap: no milestone evidence folder exists yet, the first presentation milestone after this track produces it as the harness acceptance run
 
 ## Phase E: Multiplayer and accounts
 
