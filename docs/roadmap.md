@@ -40,7 +40,7 @@ Last validated 2026-07-07 against the working tree: `npm test` green (57/57 acro
 | D: City simulation | Vehicles, destructible mid-layer, day/night/weather, GPU crowds | Done |
 | Presentation (R3) | Premium browser mission look; see `docs/presentation-roadmap.md` | Done (DoD 7/7, 2026-07-11; wayfinder map issue #2); R4 AA later |
 | Presentation (R4/R5) | AA density, then browser AAA ship bar; see `docs/presentation-roadmap.md` | Not started |
-| AAA upgrade (GDD v3.0) | R3F migration, contract expansion, uniform assets, region identity, intent cursor and camera, R&D board, narrative layer | In progress (R3F migration stages 1-3 done 2026-07-17, issue #12; contracts milestones A to C done 2026-07-17, issue #13; other tracks not started) |
+| AAA upgrade (GDD v3.0) | R3F migration, contract expansion, uniform assets, region identity, intent cursor and camera, R&D board, narrative layer | In progress (R3F migration stages 1-3 done 2026-07-17, issue #12; contracts milestones A to C done 2026-07-17, issue #13; world and input track done 2026-07-18, issue #15, tilt-shift evaluation still open in ADR-0003; other tracks not started) |
 | E: Multiplayer and accounts | Co-op, async PvP, accounts, cloud saves | Not started (groundwork only) |
 | F: Platform and release | Input remap, gamepad, touch, load budget, accessibility audit | Not started |
 
@@ -182,13 +182,13 @@ Approved 2026-07-16; decision record `docs/game-design-aaa-draft.md` (suggestion
 - [x] Augments read on the body (chassis attachments by slot and version; pure `buildAppearanceManifest` in `src/render/appearance.ts` shared by field, equip preview, and rival peers)
 
 ### World and input (draft 17 to 25)
-- [ ] Region grammar parameters and landmark anchor placement in map generation (render kits live on the presentation ladder)
-- [ ] Grammar-shapes-tactics briefing reads
-- [ ] Intent cursor with context-sensitive states and snap-to-target reticles
-- [ ] Order feedback grammar (one-frame confirm, denial reasons)
-- [ ] Shift-queued orders, attack-move, formation-preserving group moves; confirmations on destructive actions
-- [ ] Full smooth camera (continuous eased rotation, smooth zoom, inertial pan) replacing 45-degree steps in `src/render/camera.ts`
-- [ ] Tilt-shift perspective camera prototype, evaluated against orthographic by evidence (draft 25)
+- [x] Region grammar parameters and landmark anchor placement in map generation (render kits live on the presentation ladder) — 2026-07-18, issue #15: `MapParams` grew block scale, street width, alley density, and landmark kind; all 8 `REGIONS` own distinct sets; every district carves exactly one region-specific landmark anchor at the central corner lot with patched street blocking; obstacle-grid and golden hashes re-pinned with rationale
+- [x] Grammar-shapes-tactics briefing reads — 2026-07-18, issue #15: `districtRead` in `src/sim/district.ts` derives measured alley/plaza/street facts and player-doctrine favor/resist ratings from the generated map; briefing presentation stays with the contracts track
+- [x] Intent cursor with context-sensitive states and snap-to-target reticles — 2026-07-18, issue #15: `src/app/cursor.ts` over the shared read-only sim queries (`src/sim/queries.ts`, ADR-0002)
+- [x] Order feedback grammar (one-frame confirm, denial reasons) — 2026-07-18, issue #15: destination ping, target lock ring, path trace, denial marker with captioned comms mirror (`src/app/orderFeedback.ts`), pooled audio tick/buzz; ping/deny entries in all three palettes
+- [x] Shift-queued orders, attack-move, formation-preserving group moves; confirmations on destructive actions — 2026-07-18, issue #15: queues/formations/confirm are app-layer over plain commands (`src/app/orders.ts`); attack-move is the one new sim command with golden re-pin and replay coverage
+- [x] Full smooth camera (continuous eased rotation, smooth zoom, inertial pan) replacing 45-degree steps in `src/render/camera.ts` — 2026-07-18, issue #15; perf row pending measurement
+- [ ] Tilt-shift perspective camera prototype, evaluated against orthographic by evidence (draft 25) — prototype behind `?tiltshift` landed 2026-07-18 (issue #15); the evaluation itself is OPEN in `docs/adr/0003-orthographic-versus-tilt-shift-frame.md` pending identification checks, fresh-eyes review, and measured perf rows
 
 ### Meta economy (draft 30 to 33)
 - [ ] R&D board: discrete projects with cost and duration, limited lab slots; budget sliders retired
