@@ -42,6 +42,16 @@ Measured 2026-07-04 during alarm level RED with active combat. fps is capped by 
 
 The VAT crowd rows were measured 2026-07-05 after the Phase D skeletal-crowd pass, at the full `NPC_CAP = 400` display cap (411 spawned) through headless Chrome driven by Playwright, which caps at 120 Hz; the 1% low staying above 105 at 2.4x the acceptance NPC count indicates the animated crowd kept the headroom.
 
+## Delivery budgets (Section 17)
+
+`npm run audit:delivery` measures gzip transfer sizes over the built output (menu-shell entry graph, mission chunk graph plus core pack, whole dist) against `scripts/delivery-budgets.json`; CI runs it after every build. Record the audit output here per presentation milestone, next to the perf rows.
+
+| Date | Menu interactive (< 5 MB) | First contract (< 20 MB) | Campaign (< 150 MB) | Verdict |
+|---|---|---|---|---|
+| 2026-07-18 (pipeline landed) | 1.39 MB | 6.93 MB (code 0.02, core pack 5.52) | 9.27 MB | PASS |
+
+First-contract asset classes on 2026-07-18: textures 3.12 MB (budget 8), models 1.72 MB (budget 6), audio 0.00 MB (budget 4), portraits 0.47 MB (budget 1). Build-time encoding (`scripts/encode-assets.mjs`): GLB geometry meshopt-compressed (rigged GLBs get lossless reorder plus the meshopt bitstream; quantization is skipped because it rewrites skins), tiled material maps encoded to KTX2 (ETC1S for color and roughness, UASTC for normals; UASTC raw payloads are larger than the source JPEGs by design and trade transfer for staying compressed in GPU memory). A production-build eye-check of the KTX2/meshopt render path on real hardware is pending; the dev path is unchanged (raw sources, no manifest).
+
 ## Flashmob density probe
 
 `tests/flashmobDensity.test.ts` (committed, runs in `npm test`) measures the worst-case pathfinding load flagged in the roadmap M2 note: 322 persuaded NPCs converging on one corner cell through per-unit A*. Result on Apple Silicon: worst tick 5.24 ms, p99 4.05 ms, mean 0.39 ms against the 50 ms budget, 9.5 findPath calls/tick, 107 expansions/call, zero MAX_EXPAND aborts, full convergence (median distance 0 cells after 600 ticks). Verdict: per-unit A* holds at flashmob density; the flow-field rewrite stays unbuilt. The test asserts worst < 25 ms, mean < 5 ms, zero aborts, and convergence, so it doubles as a regression tripwire.

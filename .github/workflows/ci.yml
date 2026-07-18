@@ -18,6 +18,8 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build
+      # Section 17 delivery budgets enforced over the built output (issue #18)
+      - run: npm run audit:delivery
       # Serial files keep the wall-clock flashmob probe (tests/flashmobDensity.test.ts)
       # from contending with parallel test workers on 2-core runners; see docs/perf.md.
       - run: npm test -- --fileParallelism=false
