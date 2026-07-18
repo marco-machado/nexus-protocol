@@ -21,6 +21,7 @@ import {
   type Territory,
 } from './meta';
 import { buildReview, evaluateClauses, generateClauses } from './clauses';
+import { generateBreakthroughOffers, startProject } from './research';
 import { lossDebriefLine } from './contractCard';
 import { ScreenStore, type GlobeHandle } from './screenState';
 import { hintsFor } from './tutorial';
@@ -101,7 +102,34 @@ export class Game {
       rev: this.mapRev++,
       globe: this.ensureGlobe(),
       onContract: (t, defense) => this.equip(t, defense),
+      onResearch: () => this.research(),
     });
+  }
+
+  private setResearchScreen(): void {
+    this.deps.screen.set({
+      kind: 'research',
+      meta: this.meta,
+      rev: this.mapRev++,
+      onStart: (id) => {
+        if (startProject(this.meta, id, Date.now())) saveMeta(this.meta);
+        this.setResearchScreen();
+      },
+      onBack: () => this.map(),
+    });
+  }
+
+  private research(): void {
+    this.stopMapTimer();
+    this.globe?.stop();
+    advanceTime(this.meta, Date.now());
+    saveMeta(this.meta);
+    this.setResearchScreen();
+    this.mapTimer = setInterval(() => {
+      advanceTime(this.meta, Date.now());
+      saveMeta(this.meta);
+      if (this.deps.screen.get().kind === 'research') this.setResearchScreen();
+    }, 30_000);
   }
 
   private map(): void {
@@ -218,6 +246,20 @@ export class Game {
       captureEligible: !defense && !isRecovery,
       recovery: isRecovery && captive !== undefined,
     });
+    // mission field data surfaces as breakthrough offers on the R&D board
+    // instead of invisible point drips; seeded from mission facts
+    const offerLines = generateBreakthroughOffers(
+      this.meta,
+      {
+        seed,
+        won: result.won,
+        missionType,
+        writeOffs: result.survivors.filter((s) => !s).length,
+        persuaded: result.persuaded,
+      },
+      Date.now(),
+    );
+    info.lines.push(...offerLines);
     saveMeta(this.meta);
     this.deps.screen.set({ kind: 'debrief', info, meta: this.meta, onContinue: () => this.map() });
   }

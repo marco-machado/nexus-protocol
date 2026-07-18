@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { MISSION_DEFENSE, MISSION_HQ } from '../src/sim/state';
+import { MISSION_DEFENSE, MISSION_HQ, MISSION_PURGE } from '../src/sim/state';
 import {
   actOfTerritory,
   advanceTime,
@@ -22,7 +22,6 @@ import {
   prospectiveAgentAppearance,
   REGIONS,
   regionUnlocked,
-  researchPerCycle,
   SIEGE_DEADLINE_MS,
   startNgPlus,
   strikeInterval,
@@ -31,7 +30,22 @@ import {
   type MetaAgent,
   type MetaState,
 } from '../src/app/meta';
+import {
+  augVersionUnlocked,
+  buyInfrastructure,
+  gearUnlocked,
+  generateBreakthroughOffers,
+  OFFER_WINDOW_MS,
+  POINTS_TO_CREDITS,
+  projectById,
+  projectCost,
+  PROJECTS,
+  startProject,
+  taxCeiling,
+  weaponUnlocked,
+} from '../src/app/research';
 import { DOCTRINE_BRUTE, DOCTRINE_STEALTH, DOCTRINE_SWARM } from '../src/sim/units';
+import { WEAPONS } from '../src/sim/weapons';
 
 describe('phase C world generation', () => {
   const world = makeTerritories();
@@ -116,18 +130,13 @@ describe('acts and region unlocks', () => {
 });
 
 describe('real-time economy', () => {
-  it('accrues income and research per elapsed cycle', () => {
+  it('accrues income per elapsed cycle', () => {
     const m = newMeta(0);
     const income = incomePerCycle(m);
-    const research = researchPerCycle(m);
-    const perCycle =
-      Math.round((research * m.researchSplit) / 100) +
-      Math.round((research * (100 - m.researchSplit)) / 100);
     const credits = m.credits;
     advanceTime(m, CYCLE_MS * 3);
     expect(m.cycle).toBe(3);
     expect(m.credits).toBe(credits + income * 3);
-    expect(m.weaponPts + m.augPts).toBe(perCycle * 3);
   });
 
   it('caps offline accrual at 24 hours', () => {
@@ -142,11 +151,16 @@ describe('real-time economy', () => {
   it('accrues the same in one jump as in many small steps', () => {
     const jump = newMeta(0);
     const steps = newMeta(0);
+    for (const m of [jump, steps]) {
+      m.credits = 10000;
+      startProject(m, 'lab-2', 0);
+    }
     advanceTime(jump, CYCLE_MS * 4);
     for (let i = 1; i <= 8; i++) advanceTime(steps, (CYCLE_MS / 2) * i);
     expect(steps.credits).toBe(jump.credits);
     expect(steps.cycle).toBe(jump.cycle);
-    expect(steps.weaponPts).toBe(jump.weaponPts);
+    expect(steps.completed).toEqual(jump.completed);
+    expect(steps.active).toEqual(jump.active);
   });
 
   it('lets unrest rebel a territory away while idle', () => {
@@ -158,13 +172,6 @@ describe('real-time economy', () => {
     expect(home.owned).toBe(false);
     expect(home.rival).toBe(-1);
     expect(home.unrest).toBe(40);
-  });
-
-  it('scales research with territory funding', () => {
-    const one = newMeta(0);
-    const many = newMeta(0);
-    for (const t of many.territories) if (t.id < 10) t.owned = true;
-    expect(researchPerCycle(many)).toBeGreaterThan(researchPerCycle(one));
   });
 
   it('ignores clock rollback', () => {
@@ -371,8 +378,8 @@ describe('act 3 finale and New Game+', () => {
   it('carries assets into NG+ and remixes the world', () => {
     const m = newMeta(0);
     m.credits = 99999;
-    m.weaponPts = 520;
-    m.augPts = 380;
+    m.completed = ['w-smg', 'w-longrifle', 'lab-2'];
+    m.labSlots = 2;
     m.arsenal[8] = 2;
     m.agents[0]!.kills = 77;
     for (const t of m.territories) t.owned = true;
@@ -381,7 +388,8 @@ describe('act 3 finale and New Game+', () => {
     startNgPlus(m, 5000);
     expect(m.ngPlus).toBe(1);
     expect(m.credits).toBe(99999);
-    expect(m.weaponPts).toBe(520);
+    expect(m.completed).toEqual(['w-smg', 'w-longrifle', 'lab-2']);
+    expect(m.labSlots).toBe(2);
     expect(m.arsenal[8]).toBe(2);
     expect(m.agents[0]!.kills).toBe(77);
     expect(m.territories.filter((t) => t.owned).map((t) => t.id)).toEqual([0]);
@@ -472,5 +480,234 @@ describe('debrief-time territory settlement', () => {
     applyResult(m, t, false, 0, 2, [true, true, true, true], { defense: true });
     expect(t.owned).toBe(false);
     expect(t.unrest).toBe(40);
+  });
+});
+
+const HOUR_MS = 60 * 60 * 1000;
+
+describe('R&D project board', () => {
+  function funded(): MetaState {
+    const m = newMeta(0);
+    m.credits = 100000;
+    return m;
+  }
+
+  it('audits the output law and edge integrity over the whole table', () => {
+    const ids = new Set(PROJECTS.map((p) => p.id));
+    expect(ids.size).toBe(PROJECTS.length);
+    for (const p of PROJECTS) {
+      expect(p.output.trim().length).toBeGreaterThan(0);
+      expect(p.cost).toBeGreaterThan(0);
+      expect(p.durationMs).toBeGreaterThan(0);
+      for (const r of p.requires) expect(ids.has(r)).toBe(true);
+    }
+  });
+
+  it('covers every gated catalog item with exactly one project', () => {
+    for (const w of WEAPONS) {
+      const gated = PROJECTS.filter((p) => p.deliverable.kind === 'weapon' && p.deliverable.wid === w.id);
+      expect(gated.length).toBe(w.tier > 1 ? 1 : 0);
+    }
+    const augs = PROJECTS.filter((p) => p.deliverable.kind === 'augment');
+    expect(augs.length).toBe(12);
+  });
+
+  it('starts a project by consuming credits and a lab slot up front', () => {
+    const m = funded();
+    const before = m.credits;
+    expect(startProject(m, 'w-smg', 0)).toBe(true);
+    expect(m.credits).toBe(before - projectById('w-smg')!.cost);
+    expect(m.active).toEqual([{ id: 'w-smg', remainingMs: projectById('w-smg')!.durationMs }]);
+    expect(startProject(m, 'w-smg', 0)).toBe(false);
+  });
+
+  it('enforces slot exclusivity with a single lab', () => {
+    const m = funded();
+    expect(startProject(m, 'w-smg', 0)).toBe(true);
+    expect(startProject(m, 'w-longrifle', 0)).toBe(false);
+    advanceTime(m, HOUR_MS);
+    expect(startProject(m, 'w-longrifle', m.lastSeen)).toBe(true);
+  });
+
+  it('completes across cycles and unlocks the deliverable', () => {
+    const m = funded();
+    startProject(m, 'w-smg', 0);
+    expect(weaponUnlocked(m, 2)).toBe(false);
+    advanceTime(m, 15 * 60 * 1000);
+    expect(m.completed).toEqual([]);
+    advanceTime(m, 30 * 60 * 1000);
+    expect(m.completed).toEqual(['w-smg']);
+    expect(m.active).toEqual([]);
+    expect(weaponUnlocked(m, 2)).toBe(true);
+    expect(m.log.some((l) => l.includes('R&D deliverable'))).toBe(true);
+  });
+
+  it('enforces prerequisite edges', () => {
+    const m = funded();
+    expect(startProject(m, 'w-minigun', 0)).toBe(false);
+    m.completed.push('w-smg');
+    expect(startProject(m, 'w-minigun', 0)).toBe(true);
+  });
+
+  it('caps offline project progress at 24 hours like income', () => {
+    const m = funded();
+    m.active.push({ id: 'w-plasma', remainingMs: OFFLINE_CAP_MS + HOUR_MS });
+    advanceTime(m, OFFLINE_CAP_MS * 7);
+    expect(m.completed).toEqual([]);
+    expect(m.active[0]!.remainingMs).toBe(HOUR_MS);
+  });
+
+  it('expands lab capacity through the lab project', () => {
+    const m = funded();
+    expect(m.labSlots).toBe(1);
+    startProject(m, 'lab-2', 0);
+    advanceTime(m, 2 * HOUR_MS);
+    expect(m.labSlots).toBe(2);
+    expect(startProject(m, 'w-smg', m.lastSeen)).toBe(true);
+    expect(startProject(m, 'w-longrifle', m.lastSeen)).toBe(true);
+    expect(startProject(m, 'g-cloak', m.lastSeen)).toBe(false);
+  });
+
+  it('gates equipment and augment versions on completed projects', () => {
+    const m = funded();
+    expect(gearUnlocked(m, 'cloak')).toBe(false);
+    expect(augVersionUnlocked(m, 'legs', 1)).toBe(true);
+    expect(augVersionUnlocked(m, 'legs', 2)).toBe(false);
+    m.completed.push('g-cloak', 'aug-legs-2');
+    expect(gearUnlocked(m, 'cloak')).toBe(true);
+    expect(augVersionUnlocked(m, 'legs', 2)).toBe(true);
+    expect(augVersionUnlocked(m, 'legs', 3)).toBe(false);
+  });
+});
+
+describe('breakthrough offers', () => {
+  it('generates deterministically from seeded mission facts', () => {
+    const a = newMeta(0);
+    const b = newMeta(0);
+    const facts = { seed: 12345, won: true, missionType: MISSION_PURGE, writeOffs: 1, persuaded: 3 };
+    const linesA = generateBreakthroughOffers(a, facts, 1000);
+    const linesB = generateBreakthroughOffers(b, facts, 1000);
+    expect(a.offers).toEqual(b.offers);
+    expect(linesA).toEqual(linesB);
+    expect(a.offers.length).toBe(3);
+    expect(a.offers.map((o) => o.source)).toEqual([
+      'asset write-off salvage',
+      'persuaded VIP intel',
+      'captured rival tech',
+    ]);
+    expect(a.offers.every((o) => o.expires === 1000 + OFFER_WINDOW_MS)).toBe(true);
+  });
+
+  it('generates nothing when no mission facts qualify', () => {
+    const m = newMeta(0);
+    const lines = generateBreakthroughOffers(m, { seed: 7, won: false, missionType: 0, writeOffs: 0, persuaded: 0 }, 0);
+    expect(lines).toEqual([]);
+    expect(m.offers).toEqual([]);
+  });
+
+  it('discounts the named project until exercised', () => {
+    const m = newMeta(0);
+    m.credits = 100000;
+    const base = projectById('w-smg')!.cost;
+    m.offers.push({ project: 'w-smg', pct: 25, expires: 1000, source: 'persuaded VIP intel' });
+    expect(projectCost(m, 'w-smg', 0)).toBe(Math.round((base * 75) / 100));
+    expect(projectCost(m, 'w-smg', 1000)).toBe(base);
+    const before = m.credits;
+    expect(startProject(m, 'w-smg', 0)).toBe(true);
+    expect(before - m.credits).toBe(Math.round((base * 75) / 100));
+    expect(m.offers).toEqual([]);
+  });
+
+  it('lapses expired offers visibly in the log', () => {
+    const m = newMeta(0);
+    generateBreakthroughOffers(m, { seed: 99, won: false, missionType: 0, writeOffs: 2, persuaded: 0 }, 0);
+    expect(m.offers.length).toBe(1);
+    advanceTime(m, OFFER_WINDOW_MS + 1);
+    expect(m.offers).toEqual([]);
+    expect(m.log.some((l) => l.includes('Breakthrough window closed'))).toBe(true);
+  });
+});
+
+describe('territory infrastructure', () => {
+  it('sells named capabilities on owned territories only', () => {
+    const m = newMeta(0);
+    m.credits = 100000;
+    const home = m.territories[0]!;
+    const hostile = m.territories[1]!;
+    expect(taxCeiling(home)).toBe(50);
+    expect(buyInfrastructure(m, home, 'annex')).toBe(true);
+    expect(taxCeiling(home)).toBe(65);
+    expect(buyInfrastructure(m, home, 'annex')).toBe(false);
+    expect(buyInfrastructure(m, hostile, 'annex')).toBe(false);
+    expect(m.log.some((l) => l.includes('Infrastructure commissioned'))).toBe(true);
+  });
+
+  it('pacification grid keeps a district from rebelling', () => {
+    const m = newMeta(0);
+    m.credits = 100000;
+    const home = m.territories[0]!;
+    home.taxRate = 50;
+    home.unrest = 99;
+    buyInfrastructure(m, home, 'grid');
+    advanceTime(m, CYCLE_MS);
+    expect(home.owned).toBe(true);
+    expect(home.unrest).toBe(90);
+  });
+
+  it('siege bulwark doubles the takeover deadline', () => {
+    const m = newMeta(0);
+    m.credits = 100000;
+    m.regionsUnlocked = 3;
+    const home = m.territories[0]!;
+    buyInfrastructure(m, home, 'bulwark');
+    m.syndicates[0]!.nextStrikeAt = 1000;
+    processSieges(m, 1000);
+    expect(home.siege!.deadline).toBe(1000 + SIEGE_DEADLINE_MS * 2);
+  });
+});
+
+describe('research migration', () => {
+  it('upgrades a pre-board save in place: unlocks kept, points liquidated, slider dropped', () => {
+    const m = newMeta(0);
+    const legacy = JSON.parse(JSON.stringify(m)) as Record<string, unknown>;
+    delete legacy.labSlots;
+    delete legacy.active;
+    delete legacy.completed;
+    delete legacy.offers;
+    legacy.researchSplit = 50;
+    legacy.weaponPts = 340;
+    legacy.augPts = 200;
+    const store = new Map<string, string>();
+    vi.stubGlobal('localStorage', {
+      getItem: (k: string) => store.get(k) ?? null,
+      setItem: (k: string, v: string) => void store.set(k, v),
+      removeItem: (k: string) => void store.delete(k),
+    });
+    store.set('nexus-protocol-save-v2', JSON.stringify(legacy));
+    const loaded = loadMeta()!;
+    expect(loaded.version).toBe(2);
+    for (const wid of [2, 3, 4, 5, 6, 7]) expect(weaponUnlocked(loaded, wid)).toBe(true);
+    expect(weaponUnlocked(loaded, 8)).toBe(false);
+    expect(weaponUnlocked(loaded, 9)).toBe(false);
+    for (const item of ['cloak', 'drone', 'shield', 'charge'] as const) {
+      expect(gearUnlocked(loaded, item)).toBe(true);
+    }
+    expect(gearUnlocked(loaded, 'medbay')).toBe(false);
+    expect(gearUnlocked(loaded, 'emp')).toBe(false);
+    expect(augVersionUnlocked(loaded, 'eyes', 2)).toBe(true);
+    expect(augVersionUnlocked(loaded, 'eyes', 3)).toBe(false);
+    expect(loaded.credits).toBe(m.credits + (340 + 200) * POINTS_TO_CREDITS);
+    expect('researchSplit' in loaded).toBe(false);
+    expect('weaponPts' in loaded).toBe(false);
+    expect(loaded.labSlots).toBe(1);
+    expect(loaded.active).toEqual([]);
+    expect(loaded.offers).toEqual([]);
+    expect(loaded.log.some((l) => l.includes('Banked R&D points liquidated'))).toBe(true);
+    const persisted = JSON.parse(store.get('nexus-protocol-save-v2')!) as Record<string, unknown>;
+    expect('researchSplit' in persisted).toBe(false);
+    const reloaded = loadMeta()!;
+    expect(reloaded.credits).toBe(loaded.credits);
+    expect(reloaded.completed).toEqual(loaded.completed);
+    vi.unstubAllGlobals();
   });
 });
