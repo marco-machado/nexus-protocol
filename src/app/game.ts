@@ -21,7 +21,7 @@ import {
   type Territory,
 } from './meta';
 import { buildReview, evaluateClauses, generateClauses } from './clauses';
-import { generateBreakthroughOffers, startProject } from './research';
+import { generateBreakthroughOffers, projectCost, startProject } from './research';
 import { lossDebriefLine } from './contractCard';
 import { ScreenStore, type GlobeHandle } from './screenState';
 import { hintsFor } from './tutorial';
@@ -112,7 +112,13 @@ export class Game {
       meta: this.meta,
       rev: this.mapRev++,
       onStart: (id) => {
-        if (startProject(this.meta, id, Date.now())) saveMeta(this.meta);
+        const now = Date.now();
+        // the board prices offers from lastSeen; refuse the commit when the
+        // displayed discount lapsed so the click never charges more than shown
+        const shown = projectCost(this.meta, id, this.meta.lastSeen);
+        advanceTime(this.meta, now);
+        if (projectCost(this.meta, id, now) <= shown) startProject(this.meta, id, now);
+        saveMeta(this.meta);
         this.setResearchScreen();
       },
       onBack: () => this.map(),
@@ -246,8 +252,7 @@ export class Game {
       captureEligible: !defense && !isRecovery,
       recovery: isRecovery && captive !== undefined,
     });
-    // mission field data surfaces as breakthrough offers on the R&D board
-    // instead of invisible point drips; seeded from mission facts
+    // seeded from mission facts so offer generation stays deterministic
     const offerLines = generateBreakthroughOffers(
       this.meta,
       {

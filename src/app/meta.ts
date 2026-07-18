@@ -376,10 +376,13 @@ export function processSieges(m: MetaState, now: number): void {
     if (now < syn.nextStrikeAt) continue;
     const target = pickSiegeTarget(m, syn.doctrine);
     if (!target) continue;
-    target.siege = { rival: syn.id, deadline: now + SIEGE_DEADLINE_MS * (hasInfra(target, 'bulwark') ? 2 : 1) };
+    const deadlineMs = SIEGE_DEADLINE_MS * (hasInfra(target, 'bulwark') ? 2 : 1);
+    target.siege = { rival: syn.id, deadline: now + deadlineMs };
     syn.strikes++;
     syn.nextStrikeAt = now + strikeInterval(act, m.ngPlus) + (hash32(syn.id, syn.strikes) % STRIKE_JITTER_MS);
-    m.log.unshift(`${syn.name} moving on ${target.name}. Defense contract posted; deadline 4 hours.`);
+    m.log.unshift(
+      `${syn.name} moving on ${target.name}. Defense contract posted; deadline ${deadlineMs / 3_600_000} hours.`,
+    );
   }
 }
 

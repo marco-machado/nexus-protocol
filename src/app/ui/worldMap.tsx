@@ -176,7 +176,7 @@ function Popover({
                   <small>{def.capability}</small>
                 </span>
                 <button
-                  disabled={m.credits < def.cost}
+                  disabled={m.credits < def.cost || (def.id === 'bulwark' && t.siege !== undefined)}
                   onClick={() => {
                     if (buyInfrastructure(m, t, def.id)) {
                       saveMeta(m);

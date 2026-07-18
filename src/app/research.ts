@@ -199,6 +199,7 @@ export function startProject(m: MetaState, id: string, now: number): boolean {
   } else {
     m.log.unshift(`R&D allocation: ${def.name} committed for ${cost}cr. Delivery in ${fmtDuration(def.durationMs)}.`);
   }
+  m.log.length = Math.min(m.log.length, 12);
   m.active.push({ id, remainingMs: def.durationMs });
   return true;
 }
@@ -213,7 +214,10 @@ export function tickProjects(m: MetaState, elapsedMs: number): void {
       continue;
     }
     const def = BY_ID.get(a.id);
-    if (!def) continue;
+    if (!def) {
+      m.log.unshift(`R&D write-off: project "${a.id}" no longer on the books. Allocation lost.`);
+      continue;
+    }
     m.completed.push(a.id);
     if (def.deliverable.kind === 'lab') m.labSlots++;
     m.log.unshift(`R&D deliverable: ${def.name} complete. Output: ${def.output}.`);
@@ -294,7 +298,7 @@ export interface InfraDef {
 export const INFRA: InfraDef[] = [
   { id: 'annex', name: 'TAX AUTHORITY ANNEX', cost: 2500, capability: 'levy up to 65% tax, above the 50% charter cap' },
   { id: 'grid', name: 'PACIFICATION GRID', cost: 3500, capability: 'caps unrest at 90; the district cannot rebel' },
-  { id: 'bulwark', name: 'SIEGE BULWARK', cost: 3000, capability: 'doubles the takeover deadline on rival sieges' },
+  { id: 'bulwark', name: 'SIEGE BULWARK', cost: 3000, capability: 'doubles the takeover deadline on future rival sieges; no effect on a siege already underway' },
 ];
 
 export function infraById(id: string): InfraDef | undefined {
