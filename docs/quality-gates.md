@@ -43,7 +43,7 @@ Baseline update procedure: baselines change only when an intentional art change 
 
 ## Evidence schema
 
-`docs/gates/<milestone>/` must contain: `scorecard.md`, `fresh-eyes.md`, `inspector-metrics.md`, `baselines.md`, `playtests.md`, `budget-audit.txt`, and a `perf.md` reference inside `scorecard.md` or `fresh-eyes.md` naming the dated rows added for the milestone. `scripts/check-gates.mjs` validates completeness and fails any scorecard category below the premium threshold.
+`docs/gates/<milestone>/` must contain: `scorecard.md`, `fresh-eyes.md`, `inspector-metrics.md`, `baselines.md`, `playtests.md`, `budget-audit.txt`, and a `perf.md` reference inside `scorecard.md` or `fresh-eyes.md` naming the dated rows added for the milestone. `scripts/check-gates.mjs` validates completeness, requires each scorecard category's line to carry a rung from the ladder, and fails any category whose line scores `below-premium` (prose elsewhere in the file may mention the rung names freely; only lines naming a category are parsed).
 
 ## The R5 claim is mechanically blocked
 

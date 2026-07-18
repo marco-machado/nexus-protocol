@@ -43,14 +43,24 @@ for (const f of REQUIRED) {
   if (!existsSync(join(dir, f))) fail(`missing ${f}`);
 }
 
+// longest rung first so 'below-premium' is not read as 'premium', and 'aaa'
+// not as 'aa'
+const RUNG = /\b(below-premium|premium|aaa|aa)\b/i;
+
 const scorecardPath = join(dir, 'scorecard.md');
 if (existsSync(scorecardPath)) {
   const scorecard = readFileSync(scorecardPath, 'utf8');
+  const lines = scorecard.split('\n');
   for (const cat of CATEGORIES) {
-    if (!scorecard.includes(cat)) fail(`scorecard missing category: ${cat}`);
-  }
-  if (/below-premium/i.test(scorecard)) {
-    fail('scorecard has a category below the premium threshold');
+    const rungs = lines
+      .filter((l) => l.includes(cat))
+      .map((l) => RUNG.exec(l)?.[1]?.toLowerCase())
+      .filter((r) => r !== undefined);
+    if (rungs.length === 0) {
+      fail(`scorecard records no score for category: ${cat}`);
+    } else if (rungs.includes('below-premium')) {
+      fail(`scorecard scores '${cat}' below the premium threshold`);
+    }
   }
   if (!/docs\/perf\.md/.test(scorecard) && existsSync(join(dir, 'fresh-eyes.md')) && !/docs\/perf\.md/.test(readFileSync(join(dir, 'fresh-eyes.md'), 'utf8'))) {
     fail('no reference to the dated docs/perf.md rows for this milestone');
