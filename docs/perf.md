@@ -4,6 +4,17 @@ Measured baselines for the **current** (pre high-fidelity pivot) presentation st
 
 **Design note (2026-07-08):** `docs/game-design.md` v2.1 and constitution v2.0.0 no longer treat mid-range iGPU 60 fps / ~150 NPCs as a non-negotiable ship gate. Fidelity-first presentation may re-baseline targets, machines, and density; when that work lands, record new rows here and do not rewrite these historical measurements.
 
+## Visual tiers and reference hardware
+
+Two named tiers per GDD v3.0 draft 6 (`src/render/tier.ts`); each keeps a standing perf row per presentation milestone.
+
+| Tier | Backend | Reference hardware | Status |
+|---|---|---|---|
+| AAA tier | WebGPU | Apple Silicon MacBook (macOS), integrated GPU | Measured; all Apple Silicon rows below are this machine |
+| Compatibility tier | WebGL2 | Mid-range Windows laptop, Intel Iris Xe class iGPU, 1080p | Chosen 2026-07-18; pending measurement (procedure below) |
+
+The compatibility-tier reference machine absorbs the mid-range Windows iGPU row that has been pending since Phase A. Measurement procedure: on the reference machine, open `/?perf&webgl` and `/?perf&webgl&tod=2&rain=1` (all effect toggles on), let the overlay settle for 60 seconds during alarm RED combat, and record fps avg, fps 1% low, sim ms/tick, and NPCs alive as a new row in the results table, tagged with the tier name. Repeat without `&webgl` on the same machine if it exposes WebGPU, so both tiers get rows from one session. The row stays pending until a human runs it on real hardware; this file never records estimated numbers.
+
 ## Harness
 
 `npm run dev`, then open `/?perf` (WebGPU) or `/?perf&webgl` (WebGL fallback). Optional `&npcs=N` sets the civilian count (default 170; guards and mission spawns add ~10 more). The mode launches an assassination district with four effectively immortal SMG agents that are automatically ordered to attack the nearest hostile or reposition every 3 seconds, keeping panic, pathfinding, and projectiles active. An overlay reports rolling average fps, 1% low, sim step cost per tick, and live NPC count.
@@ -23,7 +34,7 @@ Measured baselines for the **current** (pre high-fidelity pivot) presentation st
 | MacBook, AAA presentation pass (pools, lamps, rim, alarm grade, HUD controls) | WebGL fallback | 161 | 160.0 | 144.9 | 0.13 | pass (display-capped) |
 | MacBook, AAA presentation pass, night/rain, alarm RED | WebGL fallback | 160 | 159.6 | 142.9 | 0.12 | pass (display-capped) |
 | MacBook, mock-parity pass (streak reflections, grain/grade, HUD redesign) | WebGPU | 172 | 160.0 | 147.1 | 0.12 | pass (display-capped) |
-| Mid-range Windows laptop (iGPU) | both | | | | | pending manual run |
+| Mid-range Windows laptop (iGPU); now the compatibility-tier reference machine | both | | | | | pending manual run (see Visual tiers) |
 | MacBook, continuous smooth camera (eased rotate/zoom, inertial pan) | WebGPU + WebGL | | | | | pending measurement |
 | MacBook, tilt-shift prototype (`?perf&tiltshift`, post on) | WebGPU + WebGL | | | | | pending measurement |
 

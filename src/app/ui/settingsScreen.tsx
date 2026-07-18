@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from 'react';
 import { PALETTES, type PaletteName } from '../../render/palette';
+import { activeTier } from '../../render/tier';
 import {
   SIM_SPEED_FAST,
   SIM_SPEED_NORMAL,
@@ -97,6 +98,14 @@ export function SettingsScreen({ onBack }: { onBack: () => void }) {
       <VolumeRow label="Score" note="adaptive stems follow the district alarm state" volKey="musicVol" />
       <VolumeRow label="Effects" note="weapons, comms, and city one-shots" volKey="sfxVol" />
       <h3>VIDEO</h3>
+      {activeTier() ? (
+        <div className="setrow">
+          <span className="setlbl">
+            Visual tier<small>{activeTier()!.guarantee}</small>
+          </span>
+          <b className="setval">{activeTier()!.label}</b>
+        </div>
+      ) : null}
       <ToggleRow label="Neon post-processing" note="bloom and vignette over the night palette" on={settings.postFx} onToggle={setToggle('postFx')} />
       <ToggleRow label="Weather effects" note="rain renders when the contract forecast calls it" on={settings.rain} onToggle={setToggle('rain')} />
       <ToggleRow label="Dynamic shadows" note="gates the shadow pass immediately; casters bake at deployment" on={settings.shadows} onToggle={setToggle('shadows')} />
