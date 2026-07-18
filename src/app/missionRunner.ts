@@ -70,7 +70,7 @@ import { influence, step, TICK_MS } from '../sim/tick';
 import { NPC_CIV, ST_DEAD, ST_PERSUADED, type AgentSpec } from '../sim/units';
 import { V_WRECK } from '../sim/vehicles';
 import { WEAPONS } from '../sim/weapons';
-import { DENY_NO_ROUTE, DENY_NO_TARGET, ORDER_OK, routeQuery } from '../sim/queries';
+import { DENY_NO_ROUTE, DENY_NO_TARGET, ORDER_OK, placeQuery, routeQuery } from '../sim/queries';
 import { audio } from './audio';
 import type { CanvasHost, MissionHandle } from './canvasHost';
 import { createComms } from './comms';
@@ -428,6 +428,7 @@ function createMissionSystems(
     clientY: number,
     attackMod: boolean,
     altMod: boolean,
+    shiftMod: boolean,
   ): CursorRead | null => {
     const g = groundAt(clientX, clientY);
     if (!g) return null;
@@ -437,6 +438,7 @@ function createMissionSystems(
       ground: g,
       sweepArmed: armedOrder === 'order:sweep' || altMod,
       placeMode,
+      placeKind: shiftMod ? DEP_TRAP : DEP_TURRET,
       attackMod,
     });
   };
@@ -451,23 +453,29 @@ function createMissionSystems(
   const issueGround = (kind: 'move' | 'sweep', g: { x: number; z: number }, queueIt: boolean): void => {
     const ids = selIds();
     if (ids.length === 0) return;
+    // clamp off-map clicks to the destination the commands will carry, so
+    // the route check judges what would actually be issued
+    const dest = {
+      x: Math.max(0.5, Math.min(state.map.w - 0.5, g.x)),
+      z: Math.max(0.5, Math.min(state.map.h - 0.5, g.z)),
+    };
     const anyDriving = ids.some((id) => state.agents[id]!.driving >= 0);
     if (
       !queueIt &&
       !anyDriving &&
-      ids.every((id) => routeQuery(state, id, toFx(g.x), toFx(g.z)) === DENY_NO_ROUTE)
+      ids.every((id) => routeQuery(state, id, toFx(dest.x), toFx(dest.z)) === DENY_NO_ROUTE)
     ) {
-      denyAt(g.x, g.z, DENY_NO_ROUTE);
+      denyAt(dest.x, dest.z, DENY_NO_ROUTE);
       return;
     }
     const positions = ids.map((id) => ({ x: fromFx(state.agents[id]!.x), z: fromFx(state.agents[id]!.z) }));
-    const targets = formationTargets(positions, g);
+    const targets = formationTargets(positions, dest);
     ids.forEach((id, i) => {
       const order: GroundOrder = { kind, x: targets[i]!.x, z: targets[i]!.z };
       if (queueIt) queues.enqueue(id, order);
       else queues.issueNow(state, id, order, send);
     });
-    feedback.ping(g.x, g.z, kind === 'sweep');
+    feedback.ping(dest.x, dest.z, kind === 'sweep');
     feedback.trace(ids);
     audio.orderTick();
   };
@@ -575,25 +583,31 @@ function createMissionSystems(
         rig.vz = dz * 30;
       }
       cursorChip.style.display = 'none';
+      feedback.hover(-1, -1);
       return;
     }
     const g = groundAt(e.clientX, e.clientY);
     if (g) lastGround = g;
-    lastPointer = { x: e.clientX, y: e.clientY };
+    // an off-screen or HUD-hovering pointer must never edge-pan the camera
+    const overHud = isHudTarget(e);
+    lastPointer = overHud ? { x: -1, y: -1 } : { x: e.clientX, y: e.clientY };
     if (boxDiv) {
       const x = Math.min(downX, e.clientX);
       const y = Math.min(downY, e.clientY);
       boxDiv.style.cssText = `left:${x}px;top:${y}px;width:${Math.abs(e.clientX - downX)}px;height:${Math.abs(e.clientY - downY)}px;`;
     }
-    if (boxDiv || isHudTarget(e)) {
+    if (boxDiv || overHud) {
       cursorChip.style.display = 'none';
+      feedback.hover(-1, -1);
       return;
     }
-    const read = cursorReadAt(e.clientX, e.clientY, e.ctrlKey || e.metaKey, e.altKey);
+    const read = cursorReadAt(e.clientX, e.clientY, e.ctrlKey || e.metaKey, e.altKey, e.shiftKey);
     if (!read) {
       cursorChip.style.display = 'none';
+      feedback.hover(-1, -1);
       return;
     }
+    feedback.hover(read.npcId, read.vehId);
     cursorChip.style.display = 'block';
     cursorChip.style.left = `${e.clientX + 14}px`;
     cursorChip.style.top = `${e.clientY + 18}px`;
@@ -646,8 +660,15 @@ function createMissionSystems(
         const cx = Math.max(0, Math.min(state.map.w - 1, Math.floor(g.x)));
         const cz = Math.max(0, Math.min(state.map.h - 1, Math.floor(g.z)));
         const kind = e.shiftKey ? DEP_TRAP : DEP_TURRET;
-        const left = kind === DEP_TURRET ? state.mission.turretBudget : state.mission.trapBudget;
-        if (left > 0) send({ type: 'place', kind, cell: cx + cz * state.map.w });
+        const cell = cx + cz * state.map.w;
+        const deny = placeQuery(state, kind, cell);
+        if (deny === ORDER_OK) {
+          send({ type: 'place', kind, cell });
+          feedback.ping(cx + 0.5, cz + 0.5);
+          audio.orderTick();
+        } else {
+          denyAt(cx + 0.5, cz + 0.5, deny);
+        }
       }
       return;
     }
@@ -681,7 +702,7 @@ function createMissionSystems(
     if (isHudTarget(e)) return;
     const g = groundAt(e.clientX, e.clientY);
     if (!g) return;
-    const read = cursorReadAt(e.clientX, e.clientY, e.ctrlKey || e.metaKey, e.altKey);
+    const read = cursorReadAt(e.clientX, e.clientY, e.ctrlKey || e.metaKey, e.altKey, e.shiftKey);
     if (!read) return;
     issueFromRead(read, g, e.shiftKey);
   };
@@ -832,6 +853,13 @@ function createMissionSystems(
   const onWheel = (e: WheelEvent) => {
     zoomBy(rig, e.deltaY > 0 ? 3 : -3);
   };
+  // the pointer leaving the window (or the window losing focus) must stop
+  // edge-pan, or the camera drifts on a stale position until re-entry
+  const onPointerGone = () => {
+    lastPointer = { x: -1, y: -1 };
+    cursorChip.style.display = 'none';
+    feedback.hover(-1, -1);
+  };
   const onResize = () => {
     renderer.setSize(window.innerWidth, window.innerHeight);
   };
@@ -845,6 +873,8 @@ function createMissionSystems(
   window.addEventListener('keyup', onPanUp);
   window.addEventListener('wheel', onWheel);
   window.addEventListener('resize', onResize);
+  document.addEventListener('pointerleave', onPointerGone);
+  window.addEventListener('blur', onPointerGone);
 
   let disposed = false;
   const dispose = () => {
@@ -859,6 +889,8 @@ function createMissionSystems(
     window.removeEventListener('keyup', onPanUp);
     window.removeEventListener('wheel', onWheel);
     window.removeEventListener('resize', onResize);
+    document.removeEventListener('pointerleave', onPointerGone);
+    window.removeEventListener('blur', onPointerGone);
     renderer.setAnimationLoop(null);
     hud.removeEventListener('click', onHudClick);
     hudControls.dispose();

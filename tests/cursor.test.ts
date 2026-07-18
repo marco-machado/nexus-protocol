@@ -4,7 +4,7 @@ import { toFx } from '../src/sim/fixed';
 import { cellIdx } from '../src/sim/map';
 import { DENY_NO_TARGET, DENY_OUT_OF_RANGE, DENY_PERSUADE_IMMUNE, ORDER_OK } from '../src/sim/queries';
 import { createMission } from '../src/sim/setup';
-import { MISSION_ASSASSINATE, MISSION_DEFENSE, MISSION_ESCORT } from '../src/sim/state';
+import { DEP_TRAP, DEP_TURRET, MISSION_ASSASSINATE, MISSION_DEFENSE, MISSION_ESCORT } from '../src/sim/state';
 import { spawnNpc } from '../src/sim/tick';
 import { defaultSpec, NPC_CIV, NPC_GUARD } from '../src/sim/units';
 import { VEH_CAR } from '../src/sim/vehicles';
@@ -24,6 +24,7 @@ function hover(over: Partial<Parameters<typeof resolveCursor>[2]> = {}) {
     ground: { x: 48.5, z: 60.5 },
     sweepArmed: false,
     placeMode: false,
+    placeKind: DEP_TURRET,
     attackMod: false,
     ...over,
   };
@@ -107,5 +108,17 @@ describe('intent cursor', () => {
     expect(ok.kind).toBe('place');
     const away = resolveCursor(s, [0], hover({ placeMode: true, ground: { x: 2.5, z: 2.5 } }));
     expect(away.deny).not.toBe(ORDER_OK);
+  });
+
+  it('reads place mode per deployable kind so turret and trap budgets diverge', () => {
+    const s = createMission(SEED, MISSION_DEFENSE, specs());
+    const relay = s.mission.assets[0]!;
+    const g = { x: (relay.cell % s.map.w) + 1.5, z: ((relay.cell / s.map.w) | 0) + 0.5 };
+    s.mission.turretBudget = 0;
+    const turret = resolveCursor(s, [0], hover({ placeMode: true, ground: g }));
+    expect(turret.deny).not.toBe(ORDER_OK);
+    const trap = resolveCursor(s, [0], hover({ placeMode: true, ground: g, placeKind: DEP_TRAP }));
+    expect(trap.deny).toBe(ORDER_OK);
+    expect(trap.label).toBe('PLACE TRAP');
   });
 });
