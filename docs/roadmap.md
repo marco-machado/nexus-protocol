@@ -40,7 +40,7 @@ Last validated 2026-07-07 against the working tree: `npm test` green (57/57 acro
 | D: City simulation | Vehicles, destructible mid-layer, day/night/weather, GPU crowds | Done |
 | Presentation (R3) | Premium browser mission look; see `docs/presentation-roadmap.md` | Done (DoD 7/7, 2026-07-11; wayfinder map issue #2); R4 AA later |
 | Presentation (R4/R5) | AA density, then browser AAA ship bar; see `docs/presentation-roadmap.md` | Not started |
-| AAA upgrade (GDD v3.0) | R3F migration, contract expansion, uniform assets, region identity, intent cursor and camera, R&D board, narrative layer | In progress (R3F migration stages 1-3 done 2026-07-17, issue #12; contracts milestones A to C done 2026-07-17, issue #13; world and input track done 2026-07-18, issue #15, tilt-shift evaluation still open in ADR-0003; other tracks not started) |
+| AAA upgrade (GDD v3.0) | R3F migration, contract expansion, uniform assets, region identity, intent cursor and camera, R&D board, narrative layer | In progress (R3F migration stages 1-3 done 2026-07-17, issue #12; contracts milestones A to C done 2026-07-17, issue #13; world and input track done 2026-07-18, issue #15, tilt-shift evaluation still open in ADR-0003; meta economy track done 2026-07-18, issue #16; other tracks not started) |
 | E: Multiplayer and accounts | Co-op, async PvP, accounts, cloud saves | Not started (groundwork only) |
 | F: Platform and release | Input remap, gamepad, touch, load budget, accessibility audit | Not started |
 
@@ -91,7 +91,7 @@ Single remaining item before Phase A closes: the manual perf run on a mid-range 
 
 ### M6 Meta shell
 - [x] Territories with tax sliders, unrest, rebellion flips, per-cycle income (`src/app/meta.ts`)
-- [x] Two research tracks with budget split (`src/app/meta.ts`)
+- [x] Two research tracks with budget split (`src/app/meta.ts`); superseded by the R&D project board (issue #16, `src/app/research.ts`)
 - [x] Six augment slots at V1 (Legs, Torso, Heart, Eyes, Brain, Arms)
 - [x] Armory and equip screens (`src/app/screens.ts`)
 - [x] Permadeath, augment salvage at 50 percent, replacement recruits, procedural codenames
@@ -123,7 +123,7 @@ Single remaining item before Phase A closes: the manual perf run on a mid-range 
 - [x] Weapon tiers 3-5: Minigun, Flamethrower, Gauss Rifle, Launcher, Plasma Lance, Orbital Tag (`src/sim/weapons.ts`)
 - [x] Area damage with falloff (`explodeAt`), delayed orbital strikes (`SimState.blasts`), LOS-blocking smoke (`SimState.smoke`) (`src/sim/tick.ts`)
 - [x] Equipment tiers 3-5: Cloak Field, Drone Scout, Energy Shield, Demo Charges, MedBay Beacon, EMP Burst (`SimState.deployables`, `src/app/screens.ts`)
-- [x] Augment V2/V3 per slot, research-gated (V2 200 pts, V3 380 pts) (`src/app/meta.ts`)
+- [x] Augment V2/V3 per slot, research-gated (`src/app/meta.ts`); point thresholds superseded by per-slot board projects (issue #16, `src/app/research.ts`)
 - [x] V3 specials wired: Eyes sees through smoke, Brain grants Persuadertron immunity (`buildSpec`)
 - [x] Purge missions: rival squads with leader/follower control and enemy Persuadertron pulses (`src/sim/setup.ts`, `src/sim/tick.ts`)
 - [x] Defense missions: in-mission turret/trap placement budget, escalating waves, relay defense (`place` command)
@@ -138,8 +138,8 @@ Single remaining item before Phase A closes: the manual perf run on a mid-range 
 - [x] Counterattack sieges from act 2: doctrine-chosen target, 4-hour deadline, REPEL TAKEOVER contract, one siege per syndicate (`processSieges`)
 - [x] Acts 1-3 on the 10/28 territory boundaries; regions unlock at 3 owned in the prior region (`actOfTerritory`, `updateRegionUnlocks`)
 - [x] HQ finale (`MISSION_HQ`, type 6) per syndicate; capture decapitates the syndicate (`src/sim/setup.ts`, `src/app/game.ts`)
-- [x] New Game+ carries credits/research/arsenal/agents, remixes rival ownership, resets to home sector (`startNgPlus`)
-- [x] Real-time economy: `advanceTime` runs income/unrest/rebellion/research per 30-min cycle, 24h offline cap, negative deltas ignored
+- [x] New Game+ carries credits/completed projects/arsenal/agents, remixes rival ownership, resets to home sector (`startNgPlus`)
+- [x] Real-time economy: `advanceTime` runs income/unrest/rebellion per 30-min cycle plus R&D project progress, 24h offline cap, negative deltas ignored
 - [x] Service records and veteran quirks: 5-entry `QUIRKS` table applied in `buildSpec`
 - [x] Per-region map variety and per-attempt mission seeds (`generateMap`, `missionSeed`)
 - [x] 3D strategic world globe: 40 markers in 8 regions, HQ/siege/selection states, animated attack arcs, drag-rotate and pick (`src/render/globe.ts`, wired in `src/app/game.ts`)
@@ -191,10 +191,10 @@ Approved 2026-07-16; decision record `docs/game-design-aaa-draft.md` (suggestion
 - [ ] Tilt-shift perspective camera prototype, evaluated against orthographic by evidence (draft 25): prototype behind `?tiltshift` landed 2026-07-18 (issue #15); the evaluation itself is OPEN in `docs/adr/0003-orthographic-versus-tilt-shift-frame.md` pending identification checks, fresh-eyes review, and measured perf rows
 
 ### Meta economy (draft 30 to 33)
-- [ ] R&D board: discrete projects with cost and duration, limited lab slots; budget sliders retired
-- [ ] Competing income sinks: projects, replacement assets, augment installs, territory infrastructure
-- [ ] Marquee projects visible deep in the tree; breakthrough offers from salvage and intel
-- [ ] Output law: every project ships a verb, an object, or a threshold-crossing capability
+- [x] R&D board: discrete projects with cost and duration, limited lab slots; budget sliders retired (2026-07-18, issue #16): project table and board machinery in `src/app/research.ts`, point pools/split slider/threshold tables deleted from `src/app/meta.ts`, pre-board saves upgraded in place (unlocks become completed projects, banked points liquidate at 10cr per point), board screen in `src/app/ui/research.tsx`
+- [x] Competing income sinks: projects, replacement assets, augment installs, territory infrastructure (2026-07-18, issue #16): per-cycle and per-mission research point drips removed; per-territory infrastructure purchases (`INFRA` in `src/app/research.ts`) with named capabilities: tax annex, pacification grid, siege bulwark
+- [x] Marquee projects visible deep in the tree; breakthrough offers from salvage and intel (2026-07-18, issue #16): marquee entries always listed with prerequisite chains; debrief-time offers seeded from mission facts (write-off salvage, persuaded VIP intel, captured rival tech on purge/HQ wins) with wall-clock expiry and a lapse log line
+- [x] Output law: every project ships a verb, an object, or a threshold-crossing capability (2026-07-18, issue #16): `output` annotation on every `PROJECTS` entry, audited by test in `tests/meta.test.ts`
 
 ### Narrative (draft 34 to 38)
 - [ ] Region-opening vignettes (scripted comms conversations, app layer, skippable)
