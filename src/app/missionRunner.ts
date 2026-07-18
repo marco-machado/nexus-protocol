@@ -9,7 +9,7 @@ import {
   type Mesh,
 } from 'three';
 import type { WebGPURenderer } from 'three/webgpu';
-import { createRig, rigYawDelta, targetRigYaw, updateRig } from '../render/camera';
+import { createRig, rigYawDelta, rotateBy, updateRig, zoomBy, type CameraFrame } from '../render/camera';
 import { NPC_CAP } from '../render/crowd';
 import { createAlarmGrade, rgbToCss, updateAlarmGrade } from '../render/alarmScript';
 import { applyPalette, SCENE_COLORS } from '../render/palette';
@@ -255,9 +255,9 @@ function createMissionSystems(
     get camera() {
       return {
         yaw: rig.yaw,
-        targetYaw: targetRigYaw(rig),
+        targetYaw: rig.yawTarget,
         yawDelta: rigYawDelta(rig),
-        yawStep: rig.yawStep,
+        frame: rig.frame,
         rotating: Math.abs(rigYawDelta(rig)) > 0.001,
         trace: cameraMotionTrace,
       };
@@ -280,19 +280,31 @@ function createMissionSystems(
       },
       camera: {
         yaw: rig.yaw,
-        targetYaw: targetRigYaw(rig),
+        targetYaw: rig.yawTarget,
         yawDelta: rigYawDelta(rig),
-        yawStep: rig.yawStep,
+        frame: rig.frame,
         rotating: Math.abs(rigYawDelta(rig)) > 0.001,
         trace: cameraMotionTrace,
       },
     });
   };
-  const rig = createRig(window.innerWidth / window.innerHeight, fromFx(state.agents[0]!.x), fromFx(state.agents[0]!.z));
+  // the tilt-shift perspective frame is a prototype under evaluation
+  // (docs/adr/0003); the orthographic frame stays the default until that
+  // ADR closes on recorded evidence
+  const cameraFrame: CameraFrame = new URLSearchParams(location.search).has('tiltshift')
+    ? 'tiltshift'
+    : 'ortho';
+  const rig = createRig(
+    window.innerWidth / window.innerHeight,
+    fromFx(state.agents[0]!.x),
+    fromFx(state.agents[0]!.z),
+    cameraFrame,
+  );
   if (state.map.visualTest) {
     rig.cx = 48;
     rig.cz = 48;
     rig.viewHeight = 58;
+    rig.viewTarget = 58;
   }
   const cameraMotionTrace: number[] = [];
   const queue = new CommandQueue();
@@ -529,7 +541,20 @@ function createMissionSystems(
     return !!t && !!t.closest?.('[data-act], .panpad, .hud-ctl');
   };
 
+  // middle-mouse grab pan: the ground point under the pointer stays under it
+  let mmDrag: { gx: number; gz: number } | null = null;
+
   const onPointerDown = (e: PointerEvent) => {
+    if (e.button === 1 && !isHudTarget(e)) {
+      e.preventDefault();
+      const g = groundAt(e.clientX, e.clientY);
+      if (g) {
+        mmDrag = { gx: g.x, gz: g.z };
+        rig.vx = 0;
+        rig.vz = 0;
+      }
+      return;
+    }
     if (e.button !== 0 || isHudTarget(e)) return;
     downX = e.clientX;
     downY = e.clientY;
@@ -538,6 +563,20 @@ function createMissionSystems(
     document.body.appendChild(boxDiv);
   };
   const onPointerMove = (e: PointerEvent) => {
+    if (mmDrag) {
+      const drag = groundAt(e.clientX, e.clientY);
+      if (drag) {
+        const dx = mmDrag.gx - drag.x;
+        const dz = mmDrag.gz - drag.z;
+        rig.cx += dx;
+        rig.cz += dz;
+        // release inherits the last drag delta as light inertia
+        rig.vx = dx * 30;
+        rig.vz = dz * 30;
+      }
+      cursorChip.style.display = 'none';
+      return;
+    }
     const g = groundAt(e.clientX, e.clientY);
     if (g) lastGround = g;
     lastPointer = { x: e.clientX, y: e.clientY };
@@ -563,6 +602,10 @@ function createMissionSystems(
     cursorChip.classList.toggle('deny', read.deny !== ORDER_OK);
   };
   const onPointerUp = (e: PointerEvent) => {
+    if (e.button === 1) {
+      mmDrag = null;
+      return;
+    }
     if (e.button !== 0 || !boxDiv) return;
     boxDiv.remove();
     boxDiv = null;
@@ -655,6 +698,8 @@ function createMissionSystems(
         if (now - (keyTimes.get(k) ?? 0) < 350) {
           rig.cx = fromFx(state.agents[idx]!.x);
           rig.cz = fromFx(state.agents[idx]!.z);
+          rig.vx = 0;
+          rig.vz = 0;
         }
         keyTimes.set(k, now);
       }
@@ -750,14 +795,12 @@ function createMissionSystems(
     } else if (k === '-' || k === '=') {
       settings.simSpeed = k === '-' ? SIM_SPEED_NORMAL : SIM_SPEED_FAST;
       saveSettings();
-    } else if (k === '[' || k === 'q') {
-      cameraMotionTrace.length = 0;
-      cameraMotionTrace.push(Number(rig.yaw.toFixed(4)));
-      rig.yawStep = (rig.yawStep + 7) % 8;
-    } else if (k === ']' || k === 'e') {
-      cameraMotionTrace.length = 0;
-      cameraMotionTrace.push(Number(rig.yaw.toFixed(4)));
-      rig.yawStep = (rig.yawStep + 1) % 8;
+    } else if (k === '[' || k === 'q' || k === ']' || k === 'e') {
+      if (rotateKeys.size === 0) {
+        cameraMotionTrace.length = 0;
+        cameraMotionTrace.push(Number(rig.yaw.toFixed(4)));
+      }
+      rotateKeys.add(k === '[' || k === 'q' ? 'ccw' : 'cw');
     }
   };
 
@@ -768,6 +811,7 @@ function createMissionSystems(
     d: 'ArrowRight',
   };
   const panKeys = new Set<string>();
+  const rotateKeys = new Set<'ccw' | 'cw'>();
   const onPanDown = (e: KeyboardEvent) => {
     if (e.key.startsWith('Arrow')) {
       panKeys.add(e.key);
@@ -779,11 +823,14 @@ function createMissionSystems(
   };
   const onPanUp = (e: KeyboardEvent) => {
     panKeys.delete(e.key);
-    const mapped = PAN_KEYS[e.key.toLowerCase()];
+    const k = e.key.toLowerCase();
+    const mapped = PAN_KEYS[k];
     if (mapped) panKeys.delete(mapped);
+    if (k === '[' || k === 'q') rotateKeys.delete('ccw');
+    if (k === ']' || k === 'e') rotateKeys.delete('cw');
   };
   const onWheel = (e: WheelEvent) => {
-    rig.viewHeight = Math.max(10, Math.min(70, rig.viewHeight + (e.deltaY > 0 ? 3 : -3)));
+    zoomBy(rig, e.deltaY > 0 ? 3 : -3);
   };
   const onResize = () => {
     renderer.setSize(window.innerWidth, window.innerHeight);
@@ -857,7 +904,7 @@ function createMissionSystems(
   let post: Post | null = null;
   const setPost = (on: boolean): void => {
     if (on && !post) {
-      post = createPost(renderer, gs.scene, rig.camera);
+      post = createPost(renderer, gs.scene, rig.camera, cameraFrame === 'tiltshift');
     } else if (!on && post) {
       (post.pipeline as { dispose?: () => void }).dispose?.();
       post = null;
@@ -968,9 +1015,9 @@ function createMissionSystems(
       saveSettings();
       refreshControls();
     } else if (act === 'rotate:ccw') {
-      rig.yawStep = (rig.yawStep + 7) % 8;
+      rotateBy(rig, -Math.PI / 4);
     } else if (act === 'rotate:cw') {
-      rig.yawStep = (rig.yawStep + 1) % 8;
+      rotateBy(rig, Math.PI / 4);
     } else if (act === 'ui:help') {
       hud.classList.toggle('show-help');
     } else if (act.startsWith('mode:')) {
@@ -1230,13 +1277,54 @@ function createMissionSystems(
       }
     }
 
-    // hold-to-pan feeds the same yaw-relative vector as the keyboard path
-    const panSpeed = 0.03 * dt * (rig.viewHeight / 26);
+    // held rotation is continuous and eased through the same target the
+    // 45-degree button nudges use
+    if (rotateKeys.has('ccw')) rotateBy(rig, (-2.2 * dt) / 1000);
+    if (rotateKeys.has('cw')) rotateBy(rig, (2.2 * dt) / 1000);
+
+    // keys, hold-to-pan, and screen-edge pan all set the same yaw-relative
+    // velocity; updateRig integrates it and lets it decay as light inertia
     const heldPan = hudControls.activePan();
-    if (panKeys.has('ArrowUp') || heldPan === 'up') panBy('up', panSpeed);
-    if (panKeys.has('ArrowDown') || heldPan === 'down') panBy('down', panSpeed);
-    if (panKeys.has('ArrowLeft') || heldPan === 'left') panBy('left', panSpeed);
-    if (panKeys.has('ArrowRight') || heldPan === 'right') panBy('right', panSpeed);
+    const dirs = new Set<PanDir>();
+    if (panKeys.has('ArrowUp')) dirs.add('up');
+    if (panKeys.has('ArrowDown')) dirs.add('down');
+    if (panKeys.has('ArrowLeft')) dirs.add('left');
+    if (panKeys.has('ArrowRight')) dirs.add('right');
+    if (heldPan) dirs.add(heldPan);
+    const EDGE_PX = 8;
+    if (lastPointer.x >= 0 && !boxDiv && !mmDrag) {
+      if (lastPointer.x <= EDGE_PX) dirs.add('left');
+      else if (lastPointer.x >= window.innerWidth - EDGE_PX) dirs.add('right');
+      if (lastPointer.y <= EDGE_PX) dirs.add('up');
+      else if (lastPointer.y >= window.innerHeight - EDGE_PX) dirs.add('down');
+    }
+    if (dirs.size > 0) {
+      const fx = -Math.sin(rig.yaw);
+      const fz = -Math.cos(rig.yaw);
+      let px = 0;
+      let pz = 0;
+      for (const d of dirs) {
+        if (d === 'up') {
+          px += fx;
+          pz += fz;
+        } else if (d === 'down') {
+          px -= fx;
+          pz -= fz;
+        } else if (d === 'left') {
+          px += fz;
+          pz -= fx;
+        } else {
+          px -= fz;
+          pz += fx;
+        }
+      }
+      const len = Math.hypot(px, pz);
+      if (len > 0) {
+        const panSpeed = 30 * (rig.viewHeight / 26);
+        rig.vx = (px / len) * panSpeed;
+        rig.vz = (pz / len) * panSpeed;
+      }
+    }
     updateRig(rig, window.innerWidth / window.innerHeight, dt);
     if (cameraMotionTrace.length > 0 && cameraMotionTrace.length < 36) {
       const yawSample = Number(rig.yaw.toFixed(4));
