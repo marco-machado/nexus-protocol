@@ -40,7 +40,7 @@ Last validated 2026-07-07 against the working tree: `npm test` green (57/57 acro
 | D: City simulation | Vehicles, destructible mid-layer, day/night/weather, GPU crowds | Done |
 | Presentation (R3) | Premium browser mission look; see `docs/presentation-roadmap.md` | Done (DoD 7/7, 2026-07-11; wayfinder map issue #2); R4 AA later |
 | Presentation (R4/R5) | AA density, then browser AAA ship bar; see `docs/presentation-roadmap.md` | Not started |
-| AAA upgrade (GDD v3.0) | R3F migration, contract expansion, uniform assets, region identity, intent cursor and camera, R&D board, narrative layer | In progress (R3F migration stages 1-3 done 2026-07-17, issue #12; contracts milestones A to C done 2026-07-17, issue #13; world and input track done 2026-07-18, issue #15, tilt-shift evaluation still open in ADR-0003; meta economy track done 2026-07-18, issue #16; other tracks not started) |
+| AAA upgrade (GDD v3.0) | R3F migration, contract expansion, uniform assets, region identity, intent cursor and camera, R&D board, narrative layer | In progress (R3F migration stages 1-3 done 2026-07-17, issue #12; contracts milestones A to C done 2026-07-17, issue #13; world and input track done 2026-07-18, issue #15, tilt-shift evaluation still open in ADR-0003; meta economy track done 2026-07-18, issue #16; narrative track done 2026-07-18, issue #17; other tracks not started) |
 | E: Multiplayer and accounts | Co-op, async PvP, accounts, cloud saves | Not started (groundwork only) |
 | F: Platform and release | Input remap, gamepad, touch, load budget, accessibility audit | Not started |
 
@@ -197,11 +197,11 @@ Approved 2026-07-16; decision record `docs/game-design-aaa-draft.md` (suggestion
 - [x] Output law: every project ships a verb, an object, or a threshold-crossing capability (2026-07-18, issue #16): `output` annotation on every `PROJECTS` entry, audited by test in `tests/meta.test.ts`
 
 ### Narrative (draft 34 to 38)
-- [ ] Region-opening vignettes (scripted comms conversations, app layer, skippable)
-- [ ] Fixed handler-side cast (board liaison, actuarial AI, rival executives)
-- [ ] Reactive comms engine: fact-matched bark database over mission and campaign state
-- [ ] Corporate Archive codex with intel-driven unlocks
-- [ ] Rival arcs with memory (state predicates over campaign facts)
+- [x] Region-opening vignettes (scripted comms conversations, app layer, skippable) (2026-07-18, issue #17): data-scripted transcripts for regions 1-7 in `src/app/narrative/vignettes.ts`, played by the `VignetteScreen` overlay off the existing region-unlock hook, skippable with one input, marked fired in the campaign history
+- [x] Fixed handler-side cast (board liaison, actuarial AI, rival executives) (2026-07-18, issue #17): cast table with per-speaker voice notes in `src/app/narrative/cast.ts`, including regional fixers; speakers are data with attribution only
+- [x] Reactive comms engine: fact-matched bark database over mission and campaign state (2026-07-18, issue #17): deterministic priority-then-stable-order selection with one-shot fired history in `src/app/narrative/engine.ts`, mission facts derived read-only from `SimState` in `src/app/narrative/facts.ts`, bark tables in `src/app/narrative/barks.ts`; tutorial hints absorbed as low-priority entries into one rate-limited ticker channel; zero sim impact, no golden-hash change
+- [x] Corporate Archive codex with intel-driven unlocks (2026-07-18, issue #17): in-fiction documents with unlock predicates in `src/app/narrative/archive.ts`, unlocks run at debrief and announced in the ledger, unread flags until opened, `ArchiveScreen` reachable from the world map; Archive persists through NG+ while barks, vignettes, and arc stages reset
+- [x] Rival arcs with memory (state predicates over campaign facts) (2026-07-18, issue #17): per-rival arc stages derived from acts and grievance counters in `src/app/narrative/rivalArcs.ts` gate line pools; rivals reference sieges repelled, flips, and HQ losses at debrief and speak in-mission only through doctrine-tagged bark entries; campaign history persisted in the meta save with in-place upgrade for existing saves
 
 ### Delivery and gates (draft 6 to 8, 47)
 - [ ] Two named visual tiers (WebGPU AAA tier, WebGL2 readability tier) with per-tier perf rows
