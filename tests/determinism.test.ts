@@ -32,13 +32,13 @@ const CHECKPOINT_EVERY = 200;
 
 // If this hash changes, sim behavior changed: either the change was an
 // intentional gameplay edit (update the constant) or determinism broke.
-// Re-pinned for the contracts-track milestone C (issue #13): the six new
-// contract types added mission fields (convoy/cargo, escort, captive,
-// saturation, garrison) and agent work-channel/held fields to hashState, and
-// assassination targets now spawn ten cells deeper than the guard anchor so
-// the flight-to-exit failure is a contestable chase (GDD 9.2, doctrine-matrix
-// probe finding). Other mission types are behaviorally unchanged.
-const GOLDEN_FINAL_HASH = 0x4bc18742;
+// Re-pinned for the world-and-input track (issue #15): the attack-move
+// command landed as a real sim command (agent attackMove flag added to
+// hashState, tick 750 of the golden script now issues one), so the golden
+// replay exercises engage-while-moving. Behavior of every other command is
+// unchanged; the previous pin 0x4bc18742 reproduces exactly when the
+// attackmove entry is removed from the script.
+const GOLDEN_FINAL_HASH = 0xef2e7707;
 
 function specs() {
   const lead = defaultSpec();
@@ -57,6 +57,7 @@ const script: ReplayEntry[] = [
   { tick: 400, command: { type: 'persuade', id: 0 } },
   { tick: 520, command: { type: 'swarm', mode: 2, x: toFx(48.5), z: toFx(16.5) } },
   { tick: 600, command: { type: 'move', ids: [0, 1, 2, 3], x: toFx(48.5), z: toFx(18.5) } },
+  { tick: 750, command: { type: 'attackmove', ids: [0, 1, 2, 3], x: toFx(48.5), z: toFx(60.5) } },
   { tick: 900, command: { type: 'move', ids: [0, 1, 2, 3], x: toFx(48.5), z: toFx(90.5) } },
 ];
 

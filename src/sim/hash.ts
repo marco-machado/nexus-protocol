@@ -41,7 +41,7 @@ export function hashState(s: SimState): number {
     mix(a.alive ? 1 : 0);
     mix(a.cloakT | (a.shield << 9) | (a.stunT << 18));
     mix((a.driving + 2) | ((a.attackVeh + 2) << 8) | ((a.held ? 1 : 0) << 16));
-    mix(a.workKind | ((a.workCell + 2) << 2) | (a.workT << 18));
+    mix(a.workKind | ((a.workCell + 2) << 2) | (a.workT << 18) | ((a.attackMove ? 1 : 0) << 26));
   }
   for (const n of s.npcs) {
     mix(n.x);

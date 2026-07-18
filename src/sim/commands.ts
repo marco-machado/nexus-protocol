@@ -13,6 +13,15 @@ export interface AttackCommand {
   npcId: number;
 }
 
+// move with engagement permitted to interrupt: the agent advances, halts to
+// fire per its aggression setting, and resumes once the threat is gone
+export interface AttackMoveCommand {
+  type: 'attackmove';
+  ids: number[];
+  x: Fx;
+  z: Fx;
+}
+
 export interface StimCommand {
   type: 'stim';
   ids: number[];
@@ -109,6 +118,7 @@ export interface DriveCommand {
 export type Command =
   | MoveCommand
   | AttackCommand
+  | AttackMoveCommand
   | StimCommand
   | PersuadeCommand
   | SwarmCommand
