@@ -83,3 +83,9 @@ export function setActiveTier(profile: TierProfile): void {
 export function activeTier(): TierProfile | null {
   return active;
 }
+
+// effect gating that runs before createRenderer records a tier (headless
+// tests, the equip preview) assumes the full envelope
+export function tierProfile(): TierProfile {
+  return active ?? TIER_PROFILES.aaa;
+}

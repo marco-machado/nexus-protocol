@@ -1,5 +1,5 @@
 import { createRenderer } from './render/renderer';
-import { detectCapabilities, resolveTier } from './render/tier';
+import { detectCapabilities, resolveTier, tierProfile } from './render/tier';
 import { initAssetPipeline } from './render/assets';
 import { applyPalette } from './render/palette';
 import { WorldGlobe } from './render/globe';
@@ -52,7 +52,13 @@ async function main(): Promise<void> {
   const tier = resolveTier(detectCapabilities(navigator, location.search));
   const renderer = await createRenderer(canvas, tier, settings.shadows);
   initAssetPipeline(renderer, await loadManifest());
-  const host = createCanvasHost(canvas, renderer, settings.shadows);
+  // createRenderer records the real backend's tier; read it back so the host
+  // and globe follow the profile the renderer actually landed on
+  const host = createCanvasHost(
+    canvas,
+    renderer,
+    settings.shadows && tierProfile().shadowClass === 'pcf',
+  );
   // mission content is a split chunk so the menu shell stays inside the
   // Section 17 menu-interactive transfer budget as R5 assets land
   const loadMissionRunner = () => import('./app/missionRunner');
@@ -146,7 +152,10 @@ async function main(): Promise<void> {
       const { runMission } = await loadMissionRunner();
       return runMission(renderer, seed, missionType, specs, hud, simParams, { ...opts, host });
     },
-    createGlobe: () => new WorldGlobe(renderer, { postFx: settings.postFx }),
+    createGlobe: () =>
+      new WorldGlobe(renderer, {
+        postFx: settings.postFx && tierProfile().postPipeline !== 'off',
+      }),
   });
   game.start();
 }

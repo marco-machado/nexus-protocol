@@ -52,6 +52,7 @@ import { MeshPhongNodeMaterial, PMREMGenerator, type WebGPURenderer } from 'thre
 import { color as tslColor, dot, normalView, oneMinus, positionViewDirection, pow, saturate, texture as tslTexture, uniform } from 'three/tsl';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { configureGltfLoader, ktx2TextureLoader, ktx2UrlFor } from './assets';
+import { tierProfile } from './tier';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { clone as skeletonClone } from 'three/examples/jsm/utils/SkeletonUtils.js';
 import { objectiveComplete } from '../sim/contract';
@@ -1140,7 +1141,8 @@ function createAgentRig(
   const bodyMat: AgentRig['bodyMat'] = opts.preview
     ? new MeshPhongMaterial(bodyOpts)
     : new MeshPhongNodeMaterial(bodyOpts);
-  const rimUniform = opts.preview ? null : createRimUniform();
+  const rimUniform =
+    opts.preview || !tierProfile().effects.agentRim ? null : createRimUniform();
   // emissiveNode exists on every node material at runtime; the installed
   // typings only declare it on MeshStandardNodeMaterial
   if (rimUniform) {
@@ -3783,8 +3785,9 @@ export function createGameScene(
   const billboard = district ? createBillboard(scene, light, district.hulls) : null;
   // colored pools on wet asphalt: lamps first (primary street lighting),
   // then signage, then low facade strips, all under one overlap budget
+  const tierFx = tierProfile();
   const spillMats: MeshBasicMaterial[] = [signMesh.material as MeshBasicMaterial, strips.material as MeshBasicMaterial];
-  if (light.neon >= 1) {
+  if (light.neon >= 1 && tierFx.effects.signSpill) {
     const pools = createLightPools(scene, [
       ...(lamps?.sources ?? []),
       ...(district?.spill ?? []),
@@ -3796,7 +3799,7 @@ export function createGameScene(
   // mirrored smears under every static emitter plus per-car slots; lamps get
   // the warm lamp-head tint, district signage its own neon
   let streaks: StreakHandles | null = null;
-  if (light.neon >= 1) {
+  if (light.neon >= 1 && tierFx.reflectionClass === 'streak') {
     const warmHead = new Color(0xffd9a0);
     const streakSources: StreakSource[] = [
       ...(lamps?.sources.map((p) => ({ x: p.x, z: p.z, h: 3.4, c: warmHead, w: 0.6 })) ?? []),
