@@ -1395,6 +1395,35 @@
       .panel.victory { border-top-color: var(--gold); }
       .victory h1 span { color: var(--gold); }
       .victory .loglines { text-align: left; }
+      /* region-opening vignette transcript */
+      .panel.vignette { max-width: 680px; cursor: pointer; }
+      .vig-head small { display: block; color: #7d8aa0; font-size: 10px; letter-spacing: 2px; margin-bottom: 5px; }
+      .vig-head h2 { border-bottom: 1px solid #1b2940; padding-bottom: 10px; }
+      .vig-lines { margin-top: 14px; display: flex; flex-direction: column; gap: 12px; min-height: 220px; }
+      .vig-line { display: flex; flex-direction: column; gap: 2px; }
+      .vig-speaker { color: var(--accent); font-size: 10px; letter-spacing: 2px; }
+      .vig-text { color: #c7d2e4; font-size: 12px; line-height: 1.6; border-left: 2px solid #1b2940; padding-left: 10px; }
+      .vignette .btnrow button { cursor: pointer; }
+      /* corporate archive codex */
+      .panel.archive { max-width: 960px; }
+      .arch-head small { display: block; color: #7d8aa0; font-size: 10px; letter-spacing: 2px; margin-bottom: 5px; }
+      .arch-head { position: relative; border-bottom: 1px solid #1b2940; padding-bottom: 10px; }
+      .arch-count { position: absolute; right: 0; bottom: 10px; color: #5f86b0; font-size: 10px; letter-spacing: 1.5px; }
+      .arch-body { display: flex; gap: 16px; margin-top: 14px; min-height: 320px; }
+      .arch-list { flex: 0 0 320px; display: flex; flex-direction: column; gap: 6px; max-height: 52vh; overflow: auto; }
+      .arch-row { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; text-align: left; position: relative; }
+      .arch-row.sel { border-color: var(--accent); }
+      .arch-row.locked { color: #45526b; }
+      .arch-kind { font-size: 9px; letter-spacing: 1.5px; color: #5f86b0; }
+      .arch-row.locked .arch-kind { color: #45526b; }
+      .arch-title { font-size: 11px; letter-spacing: 1px; }
+      .arch-new { position: absolute; top: 8px; right: 10px; color: var(--gold); font-size: 9px; letter-spacing: 1.5px; }
+      .arch-lock { position: absolute; top: 8px; right: 10px; color: #45526b; font-size: 9px; letter-spacing: 1.5px; }
+      .arch-reader { flex: 1; border: 1px solid #1b2940; background: #0a0f18; padding: 14px 18px; max-height: 52vh; overflow: auto; }
+      .arch-reader small { color: #7d8aa0; font-size: 10px; letter-spacing: 2px; }
+      .arch-reader h3 { margin-top: 6px; }
+      .arch-reader p { color: #9db0c8; font-size: 12px; line-height: 1.7; }
+      .arch-empty { color: #45526b; font-size: 11px; letter-spacing: 1px; line-height: 1.8; padding-top: 30px; text-align: center; }
     </style>
   </head>
   <body>

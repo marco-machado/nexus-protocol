@@ -105,6 +105,10 @@ import { createNameplates, plateLabel } from './nameplates';
 import { createPerfOverlay } from './perfOverlay';
 import { SIM_SPEED_FAST, SIM_SPEED_NORMAL, saveSettings, settings } from './settings';
 import type { TutorialHint } from './tutorial';
+import { hintEntries } from './narrative/barks';
+import { tickerLine } from './narrative/cast';
+import { createNarrativeChannel, type NarrativeEntry } from './narrative/engine';
+import { createMissionFactTracker, type MissionFactOpts, type MissionFacts } from './narrative/facts';
 
 export interface MissionResult {
   won: boolean;
@@ -121,6 +125,14 @@ export interface MissionResult {
   roundsFired: number;
   stimSpent: number;
   alarmRaised: boolean;
+  // one-shot narrative ids fired this contract, for the meta save's history
+  narrativeFired?: string[];
+}
+
+export interface MissionNarrative {
+  barks: NarrativeEntry<MissionFacts>[];
+  fired: readonly string[];
+  factOpts: MissionFactOpts;
 }
 
 
@@ -128,6 +140,9 @@ export interface MissionOptions {
   civCount?: number;
   perf?: boolean;
   hints?: TutorialHint[];
+  // reactive bark database plus campaign fired-history and fact options;
+  // hints above are absorbed into the same rate-limited channel
+  narrative?: MissionNarrative;
   // staging scenes (visual test, perf, debug) override the read-model title
   cardTitle?: string;
   // roster codenames parallel to specs; slots fall back to A1-A4 (FR-017)
@@ -1005,7 +1020,11 @@ function createMissionSystems(
   const comms = createComms();
   const codenames = opts.codenames ?? [];
   const nameplates = createNameplates(codenames);
-  const pendingHints = [...(opts.hints ?? [])];
+  const barkEntries = [...(opts.narrative?.barks ?? []), ...hintEntries(opts.hints ?? [])];
+  const factTracker = createMissionFactTracker(state, opts.narrative?.factOpts ?? {});
+  const narrativeChannel = createNarrativeChannel(barkEntries, {
+    fired: opts.narrative?.fired ?? [],
+  });
 
   // interactive HUD (contracts/hud-controls.md): agent cards rebuild every
   // 200 ms, so card controls go through one delegated listener on #hud; the
@@ -1399,12 +1418,8 @@ function createMissionSystems(
       renderHud(hudDynamic, state, selected, paused, placeMode, codenames, opts.opName ?? 'NIGHTWIRE', opts.cardTitle);
       refreshControls();
       pollEvents();
-      for (let i = pendingHints.length - 1; i >= 0; i--) {
-        if (pendingHints[i]!.when(state)) {
-          comms.push(pendingHints[i]!.text);
-          pendingHints.splice(i, 1);
-        }
-      }
+      const bark = narrativeChannel.poll(factTracker.update(), time);
+      if (bark) comms.push(tickerLine(bark.speaker, bark.text));
     }
 
     if (state.mission.status !== STATUS_ACTIVE && endTimer < 0) {
@@ -1424,6 +1439,7 @@ function createMissionSystems(
         roundsFired: state.agentShots,
         stimSpent: state.stimSpent,
         alarmRaised: state.alarmEver === 1,
+        narrativeFired: narrativeChannel.oneShotsFired(),
         // secured loot survives a win or a booked abandonment, never a wipe
         loot:
           state.mission.status === STATUS_WON || contractLossReason(state) === FM_ABANDONED

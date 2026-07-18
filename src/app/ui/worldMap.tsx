@@ -13,6 +13,7 @@ import {
   type MetaState,
   type Territory,
 } from '../meta';
+import { unreadArchiveCount } from '../narrative/archive';
 import { buyInfrastructure, fmtDuration, hasInfra, INFRA, projectById, taxCeiling } from '../research';
 import type { GlobeHandle } from '../screenState';
 import { RangeInput } from './controls';
@@ -236,7 +237,16 @@ function Legend({ m }: { m: MetaState }) {
   );
 }
 
-function RdDrawer({ m, onResearch }: { m: MetaState; onResearch: () => void }) {
+function RdDrawer({
+  m,
+  onResearch,
+  onArchive,
+}: {
+  m: MetaState;
+  onResearch: () => void;
+  onArchive: () => void;
+}) {
+  const unread = unreadArchiveCount(m.narrative);
   const activeTxt =
     m.active.length === 0
       ? 'ALL LABS IDLE · CAPACITY UNALLOCATED'
@@ -259,6 +269,7 @@ function RdDrawer({ m, onResearch }: { m: MetaState; onResearch: () => void }) {
         </span>
       ) : null}
       <button onClick={onResearch}>OPEN PROJECT BOARD</button>
+      <button onClick={onArchive}>ARCHIVE{unread > 0 ? ` · ${unread} NEW` : ''}</button>
     </div>
   );
 }
@@ -269,12 +280,14 @@ export function WorldMapScreen({
   globe,
   onContract,
   onResearch,
+  onArchive,
 }: {
   meta: MetaState;
   rev: number;
   globe: GlobeHandle | null;
   onContract: (t: Territory, defense?: boolean) => void;
   onResearch: () => void;
+  onArchive: () => void;
 }) {
   const [selRegion, setSelRegion] = useState(-1);
   const [selTerr, setSelTerr] = useState(-1);
@@ -390,7 +403,7 @@ export function WorldMapScreen({
         </div>
         <Legend m={m} />
       </div>
-      <RdDrawer m={m} onResearch={onResearch} />
+      <RdDrawer m={m} onResearch={onResearch} onArchive={onArchive} />
       <div className="ticker" title={m.log.slice(0, 4).join('\n')}>
         &gt; {m.log[0] ?? 'Awaiting first directive.'}
       </div>

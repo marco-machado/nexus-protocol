@@ -1,5 +1,6 @@
 import type { GlobeSnapshot } from '../render/globe';
 import type { DebriefInfo, MetaState, Territory } from './meta';
+import type { Vignette } from './narrative/vignettes';
 import { Store } from './store';
 
 // the surface the world-map screen needs from the strategic globe; the real
@@ -29,6 +30,14 @@ export type Screen =
       globe: GlobeHandle | null;
       onContract: (t: Territory, defense?: boolean) => void;
       onResearch: () => void;
+      onArchive: () => void;
+    }
+  | { kind: 'vignette'; vignette: Vignette; onDone: () => void }
+  | {
+      kind: 'archive';
+      meta: MetaState;
+      onOpen: (id: string) => void;
+      onBack: () => void;
     }
   | {
       kind: 'research';
