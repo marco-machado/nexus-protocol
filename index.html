@@ -490,6 +490,30 @@
         pointer-events: none;
         z-index: 10;
       }
+      .orderfx {
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        z-index: 13;
+      }
+      .cursorchip {
+        position: fixed;
+        pointer-events: none;
+        z-index: 15;
+        font-family: ui-monospace, 'SF Mono', 'Cascadia Mono', monospace;
+        font-size: 10px;
+        letter-spacing: 0.08em;
+        color: var(--accent);
+        background: rgba(6, 9, 14, 0.82);
+        border: 1px solid var(--accent);
+        border-left-width: 3px;
+        padding: 2px 6px;
+        white-space: nowrap;
+      }
+      .cursorchip.deny {
+        color: var(--bad);
+        border-color: var(--bad);
+      }
       #screen {
         position: fixed;
         inset: 0;

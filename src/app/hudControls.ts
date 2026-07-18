@@ -145,6 +145,7 @@ const CLUSTER_HTML = `
     <div class="ordergrid">
       <button data-act="order:move">${ORDER_ICONS.move}<i>MOVE</i></button>
       <button data-act="order:attack">${ORDER_ICONS.attack}<i>ATTACK</i></button>
+      <button data-act="order:sweep">${ORDER_ICONS.sweep}<i>SWEEP</i></button>
       <button data-act="order:hold">${ORDER_ICONS.hold}<i>HOLD</i></button>
       <button data-act="stim:1">${ORDER_ICONS.stim}<i>STIM</i></button>
       <button data-act="persuade">${ORDER_ICONS.persuade}<i>PERSUADE</i></button>
@@ -229,7 +230,7 @@ export function createHudControls(host: HTMLElement, hooks: HudControlHooks): Hu
           btn.classList.toggle('on', Math.abs(Number(act.slice(6)) - simSpeed) < 0.01);
         } else if (act.startsWith('pan:') || act.startsWith('rotate:') || act.startsWith('mode:')) {
           // camera controls and client-side order-mode toggles are always live
-        } else if (act === 'order:move' || act === 'order:attack') {
+        } else if (act === 'order:move' || act === 'order:attack' || act === 'order:sweep') {
           btn.disabled = ids.length === 0;
         } else if (act === 'order:hold') {
           btn.disabled = commandForAction('aggro', ids, agents, { x: 0, z: 0 }) === null;
