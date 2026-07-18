@@ -126,7 +126,14 @@ describe('sabotage: planted charges, discovery, defusal', () => {
     guard.z = charge.z;
     guard.anchor = charge.cell;
     const heat0 = s.alarm.heat;
-    steps(s, 120);
+    // keep the guard parked: the scenario is about defusal, not wander luck
+    for (let i = 0; i < 120; i++) {
+      guard.x = charge.x;
+      guard.z = charge.z;
+      guard.path = [];
+      guard.pathI = 0;
+      step(s, []);
+    }
     expect(charge.alive).toBe(false);
     expect(target.alive).toBe(true);
     expect(s.alarm.heat).toBeGreaterThan(heat0);

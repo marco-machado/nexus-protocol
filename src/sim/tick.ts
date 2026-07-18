@@ -473,7 +473,10 @@ function carLeg(s: SimState, v: Vehicle): void {
     cells.push(cellIdx(nx, nz));
     cx = nx;
     cz = nz;
-    if (isIntersection(cx, cz) && !isIntersection(cx + dx, cz + dz)) {
+    if (
+      isIntersection(cx, cz, s.map.block, s.map.street) &&
+      !isIntersection(cx + dx, cz + dz, s.map.block, s.map.street)
+    ) {
       const roll = rand(s, 4);
       if (roll < 2) {
         const tx = roll === 0 ? dz : -dz;

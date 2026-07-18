@@ -1,5 +1,5 @@
 import { initContract } from './contract';
-import { cellIdx, MAP_H, MAP_W, type MapData, type MapParams } from './map';
+import { cellIdx, centralCross, MAP_H, MAP_W, type MapData, type MapParams } from './map';
 import { nearestWalkable } from './path';
 import {
   baseState,
@@ -104,16 +104,18 @@ function spawnVehicles(s: SimState): void {
   const nearAvoid = (cell: number, r: number) =>
     avoid.some((c) => Math.max(Math.abs(cellX(c) - cellX(cell)), Math.abs(cellZ(c) - cellZ(cell))) <= r);
 
+  const block = s.map.block;
+  const street = s.map.street;
   const pumps: number[] = [];
   // stride scan scatters pumps deterministically without consuming rand
   for (let i = 0; i < total && pumps.length < FUEL_COUNT; i++) {
     const cell = (i * 2731 + 17) % total;
     const x = cellX(cell);
     const z = cellZ(cell);
-    if (s.map.obstacle[cell] || isStreetCell(x, z)) continue;
-    const mx = x % 16;
-    const mz = z % 16;
-    if (mx !== 4 && mx !== 15 && mz !== 4 && mz !== 15) continue;
+    if (s.map.obstacle[cell] || isStreetCell(x, z, block, street)) continue;
+    const mx = x % block;
+    const mz = z % block;
+    if (mx !== street && mx !== block - 1 && mz !== street && mz !== block - 1) continue;
     if (pumps.some((c) => Math.abs(cellX(c) - x) + Math.abs(cellZ(c) - z) < 20)) continue;
     if (s.mission.assets.some((a) => Math.max(Math.abs(cellX(a.cell) - x), Math.abs(cellZ(a.cell) - z)) <= 4)) continue;
     if (nearAvoid(cell, 5)) continue;
@@ -125,10 +127,8 @@ function spawnVehicles(s: SimState): void {
   const lanes: number[] = [];
   for (let cell = 0; cell < total; cell++) {
     if (s.map.streetBlocked[cell]) continue;
-    const x = cellX(cell);
-    const z = cellZ(cell);
-    const mx = x % 16;
-    const mz = z % 16;
+    const mx = cellX(cell) % block;
+    const mz = cellZ(cell) % block;
     if (mz !== 1 && mz !== 2 && mx !== 1 && mx !== 2) continue;
     if (nearAvoid(cell, 3)) continue;
     lanes.push(cell);
@@ -145,8 +145,8 @@ function spawnVehicles(s: SimState): void {
     used.add(idx);
     const cell = lanes[idx]!;
     const v = createVehicle(s.vehicles.length, VEH_CAR, cell);
-    const mz = cellZ(cell) % 16;
-    const mx = cellX(cell) % 16;
+    const mz = cellZ(cell) % block;
+    const mx = cellX(cell) % block;
     if (mz === 1) v.dirX = 1;
     else if (mz === 2) v.dirX = -1;
     else if (mx === 2) v.dirZ = 1;
@@ -155,9 +155,10 @@ function spawnVehicles(s: SimState): void {
     s.vehicles.push(v);
   }
 
+  const k = centralCross(block);
   const tramDefs = [
-    { a: cellIdx(2, 49), b: cellIdx(93, 49), cell: cellIdx(48, 49), dirX: 1, dirZ: 0 },
-    { a: cellIdx(50, 2), b: cellIdx(50, 93), cell: cellIdx(50, 48), dirX: 0, dirZ: 1 },
+    { a: cellIdx(2, k + 1), b: cellIdx(93, k + 1), cell: cellIdx(48, k + 1), dirX: 1, dirZ: 0 },
+    { a: cellIdx(k + 2, 2), b: cellIdx(k + 2, 93), cell: cellIdx(k + 2, 48), dirX: 0, dirZ: 1 },
   ];
   for (const t of tramDefs) {
     const v = createVehicle(s.vehicles.length, VEH_TRAM, t.cell);
@@ -192,8 +193,11 @@ function createVisualTestMap(): MapData {
   return {
     w: MAP_W,
     h: MAP_H,
+    block: 16,
+    street: 4,
     obstacle,
     buildings: [],
+    landmark: null,
     walkable,
     edgeCells,
     streetBlocked,
@@ -385,6 +389,7 @@ export function createMission(
     if (s.map.obstacle[coreCell]) coreCell = nearestWalkable(s.map, coreCell);
     markObstacle(s, coreCell);
     s.mission.assets.push({ cell: coreCell, hp: 800, maxHp: 800, alive: true });
+    s.mission.siteCell = coreCell;
   } else if (missionType === MISSION_DEFENSE) {
     const cx = Math.max(1, Math.min(MAP_W - 2, ax));
     const cz = Math.max(1, Math.min(MAP_H - 2, az + 20));
@@ -392,6 +397,7 @@ export function createMission(
     if (s.map.obstacle[cell]) cell = nearestWalkable(s.map, cell);
     markObstacle(s, cell);
     s.mission.assets.push({ cell, hp: 500, maxHp: 500, alive: true });
+    s.mission.siteCell = cell;
     s.mission.wavesTotal = 4 + Math.min(2, extraGuards);
     s.mission.waveT = 500;
     s.mission.turretBudget = 3;
@@ -408,6 +414,7 @@ export function createMission(
     if (s.map.obstacle[vaultCell] || vaultCell === powerCell) vaultCell = nearestWalkable(s.map, vaultCell);
     markObstacle(s, vaultCell);
     s.mission.assets.push({ cell: vaultCell, hp: 600, maxHp: 600, alive: true });
+    s.mission.siteCell = vaultCell;
 
     const tech = spawnNpc(s, NPC_CIV, nearestWalkable(s.map, cellIdx(ax + 2, az + 2)));
     tech.vip = true;
@@ -431,7 +438,7 @@ export function createMission(
       tower.wid = 3;
     }
   } else if (missionType === MISSION_CONVOY) {
-    const lane = 49;
+    const lane = centralCross(s.map.block) + 1;
     const start = cellIdx(2, lane);
     const v = createVehicle(s.vehicles.length, VEH_CONVOY, start);
     v.dirX = 1;
