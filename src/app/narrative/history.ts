@@ -8,6 +8,7 @@ export interface NarrativeCounters {
   contractsWon: number;
   contractsLost: number;
   vipsAcquired: number;
+  assetsCaptured: number;
   persuadedTotal: number;
   collateralTotal: number;
   collateralByDistrict: Record<string, number>;
@@ -31,6 +32,7 @@ function emptyCounters(): NarrativeCounters {
     contractsWon: 0,
     contractsLost: 0,
     vipsAcquired: 0,
+    assetsCaptured: 0,
     persuadedTotal: 0,
     collateralTotal: 0,
     collateralByDistrict: {},
@@ -99,6 +101,7 @@ export interface ContractOutcome {
   hqRazed: boolean;
   siegeRepelled: boolean;
   vipAcquired: boolean;
+  assetCaptured: boolean;
   writeOffs: number;
   civKills: number;
   persuaded: number;
@@ -112,6 +115,7 @@ export function recordContractOutcome(h: NarrativeHistory, o: ContractOutcome): 
   c.writeOffs += o.writeOffs;
   c.persuadedTotal += o.persuaded;
   if (o.vipAcquired) c.vipsAcquired++;
+  if (o.assetCaptured) c.assetsCaptured++;
   if (o.civKills > 0) {
     c.collateralTotal += o.civKills;
     const key = String(o.districtId);
