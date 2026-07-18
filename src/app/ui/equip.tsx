@@ -142,16 +142,19 @@ export function EquipScreen({
   };
   const sel = m.agents[selAgent]!;
   const selFull = sel.alive && slotsUsed(sel) >= SLOT_CAP;
+  // field trim is keyed by launch order among living assets, so previews must
+  // index the deploy slot rather than the roster row
+  const deploySlot = (idx: number) => m.agents.slice(0, idx).filter((a) => a.alive).length;
   const activePreview =
     previewAug?.agent === selAgent &&
     sel.alive &&
     augLevel(sel, previewAug.slot) + 1 === previewAug.next
       ? previewAug
       : null;
-  const selectedLook = sel.alive ? agentAppearance(sel, selAgent) : null;
+  const selectedLook = sel.alive ? agentAppearance(sel, deploySlot(selAgent)) : null;
   const previewLook =
     selectedLook && activePreview
-      ? prospectiveAgentAppearance(sel, activePreview.slot, activePreview.next, selAgent)
+      ? prospectiveAgentAppearance(sel, activePreview.slot, activePreview.next, deploySlot(selAgent))
       : selectedLook;
 
   const stop = (fn: () => void) => (e: MouseEvent) => {
@@ -362,7 +365,7 @@ export function EquipScreen({
                   })()}
                 </div>
                 <div className="ac-augs ac-dress" title="Chassis dress from installed augments">
-                  CHASSIS · {appearancePreview(agentAppearance(a, i))}
+                  CHASSIS · {appearancePreview(agentAppearance(a, deploySlot(i)))}
                 </div>
               </div>
             );
@@ -510,7 +513,7 @@ export function EquipScreen({
             const def = slot.levels[lvl]!;
             const locked = !augLevelUnlocked(m, lvl + 1);
             const prospective = sel.alive
-              ? prospectiveAgentAppearance(sel, slot.key, lvl + 1, selAgent)
+              ? prospectiveAgentAppearance(sel, slot.key, lvl + 1, deploySlot(selAgent))
               : null;
             const preview = prospective ? appearancePreview(prospective) : '';
             const showPreview = () =>
