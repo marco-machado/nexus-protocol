@@ -19,6 +19,9 @@ export const ORDER_ICONS: Record<string, string> = {
   cycle: svg(
     '<path d="M12 5.2V2l5 4-5 4V6.9a5.1 5.1 0 0 0-4.9 6.3H5A7 7 0 0 1 12 5.2z"/><path d="M12 18.8V22l-5-4 5-4v3.1a5.1 5.1 0 0 0 4.9-6.3H19a7 7 0 0 1-7 8z"/>',
   ),
+  sweep: svg(
+    '<path d="M3 12l6-4v2.6h4v2.8H9V16z"/><circle cx="17" cy="12" r="3.6" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M16 7h2v2h-2zM16 15h2v2h-2zM12.4 11h2v2h-2zM19.6 11h2v2h-2z"/>',
+  ),
 };
 
 // silhouettes indexed by weapon id (src/sim/weapons.ts order)

@@ -35,6 +35,10 @@ export const SCENE_COLORS = {
   cargo: new Color(0xffe066),
   captive: new Color(0x9ad0ff),
   charge: new Color(0xff3344),
+  // order feedback grammar: confirm ping/path trace and denial marker; both
+  // pair shape and text with the color (Principle VI)
+  ping: new Color(0x00ff88),
+  deny: new Color(0xef4444),
 };
 
 export const PALETTES: Record<PaletteName, PaletteDef> = {
@@ -80,6 +84,8 @@ export const PALETTES: Record<PaletteName, PaletteDef> = {
       cargo: 0xffe066,
       captive: 0x9ad0ff,
       charge: 0xff3344,
+      ping: 0x00ff88,
+      deny: 0xef4444,
     },
   },
   // Okabe-Ito colorblind-safe set for the red/magenta/orange faction cluster
@@ -126,6 +132,8 @@ export const PALETTES: Record<PaletteName, PaletteDef> = {
       cargo: 0xf0e442,
       captive: 0x0072b2,
       charge: 0x009e73,
+      ping: 0xf0e442,
+      deny: 0xd55e00,
     },
   },
   contrast: {
@@ -170,6 +178,8 @@ export const PALETTES: Record<PaletteName, PaletteDef> = {
       cargo: 0xffee44,
       captive: 0x99ccff,
       charge: 0xff3333,
+      ping: 0x00ff66,
+      deny: 0xff3333,
     },
   },
 };

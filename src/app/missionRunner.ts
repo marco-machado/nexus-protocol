@@ -70,9 +70,13 @@ import { influence, step, TICK_MS } from '../sim/tick';
 import { NPC_CIV, ST_DEAD, ST_PERSUADED, type AgentSpec } from '../sim/units';
 import { V_WRECK } from '../sim/vehicles';
 import { WEAPONS } from '../sim/weapons';
+import { DENY_NO_ROUTE, DENY_NO_TARGET, ORDER_OK, routeQuery } from '../sim/queries';
 import { audio } from './audio';
 import type { CanvasHost, MissionHandle } from './canvasHost';
 import { createComms } from './comms';
+import { denialCaption, resolveCursor, type CursorRead } from './cursor';
+import { createOrderFeedback } from './orderFeedback';
+import { ConfirmGate, formationTargets, OrderQueues, type GroundOrder } from './orders';
 import {
   conditionsLine,
   EXPANSION_ANNOUNCED_LINE,
@@ -335,8 +339,15 @@ function createMissionSystems(
   // command path, TACTICAL through the swarm channel; armed orders turn the
   // next ground click into that command (mouse parity for RMB-only orders)
   let orderMode: 'direct' | 'tactical' = 'direct';
-  let armedOrder: 'order:move' | 'order:attack' | null = null;
+  let armedOrder: 'order:move' | 'order:attack' | 'order:sweep' | null = null;
   let sysTab = 'comms';
+  const queues = new OrderQueues();
+  const confirmGate = new ConfirmGate();
+  const feedback = createOrderFeedback();
+  const cursorChip = document.createElement('div');
+  cursorChip.className = 'cursorchip';
+  cursorChip.style.display = 'none';
+  document.body.appendChild(cursorChip);
   const syncArmed = () => {
     for (const b of Array.from(
       hud.querySelectorAll<HTMLButtonElement>('button[data-act^="order:"]'),
@@ -348,6 +359,7 @@ function createMissionSystems(
   const groundPlane = new Plane(new Vector3(0, 1, 0), 0);
   const hit = new Vector3();
   let lastGround: { x: number; z: number } = { x: rig.cx, z: rig.cz };
+  let lastPointer = { x: -1, y: -1 };
 
   const send = (c: Command) => {
     queue.enqueue(state.tick + 1, c);
@@ -381,6 +393,130 @@ function createMissionSystems(
     return targetNpc;
   };
 
+  const pickVehAt = (clientX: number, clientY: number): number => {
+    let targetVeh = -1;
+    let bestD = 26;
+    const v = new Vector3();
+    for (const veh of state.vehicles) {
+      if (veh.state === V_WRECK) continue;
+      v.set(fromFx(veh.x), 0.5, fromFx(veh.z)).project(rig.camera);
+      const sx = ((v.x + 1) / 2) * window.innerWidth;
+      const sy = ((-v.y + 1) / 2) * window.innerHeight;
+      const d = Math.hypot(sx - clientX, (sy - clientY) * 0.75);
+      if (d < bestD) {
+        bestD = d;
+        targetVeh = veh.id;
+      }
+    }
+    return targetVeh;
+  };
+
+  const cursorReadAt = (
+    clientX: number,
+    clientY: number,
+    attackMod: boolean,
+    altMod: boolean,
+  ): CursorRead | null => {
+    const g = groundAt(clientX, clientY);
+    if (!g) return null;
+    return resolveCursor(state, selIds(), {
+      npcId: pickNpcAt(clientX, clientY),
+      vehId: pickVehAt(clientX, clientY),
+      ground: g,
+      sweepArmed: armedOrder === 'order:sweep' || altMod,
+      placeMode,
+      attackMod,
+    });
+  };
+
+  const denyAt = (x: number, z: number, reason: number): void => {
+    const caption = denialCaption(reason);
+    feedback.deny(x, z, caption);
+    comms.push(`Order refused: ${caption.toLowerCase()}.`);
+    audio.denyBuzz();
+  };
+
+  const issueGround = (kind: 'move' | 'sweep', g: { x: number; z: number }, queueIt: boolean): void => {
+    const ids = selIds();
+    if (ids.length === 0) return;
+    const anyDriving = ids.some((id) => state.agents[id]!.driving >= 0);
+    if (
+      !queueIt &&
+      !anyDriving &&
+      ids.every((id) => routeQuery(state, id, toFx(g.x), toFx(g.z)) === DENY_NO_ROUTE)
+    ) {
+      denyAt(g.x, g.z, DENY_NO_ROUTE);
+      return;
+    }
+    const positions = ids.map((id) => ({ x: fromFx(state.agents[id]!.x), z: fromFx(state.agents[id]!.z) }));
+    const targets = formationTargets(positions, g);
+    ids.forEach((id, i) => {
+      const order: GroundOrder = { kind, x: targets[i]!.x, z: targets[i]!.z };
+      if (queueIt) queues.enqueue(id, order);
+      else queues.issueNow(state, id, order, send);
+    });
+    feedback.ping(g.x, g.z, kind === 'sweep');
+    feedback.trace(ids);
+    audio.orderTick();
+  };
+
+  const issueFromRead = (read: CursorRead, g: { x: number; z: number }, queueIt: boolean): void => {
+    const ids = selIds();
+    if (ids.length === 0) return;
+    switch (read.kind) {
+      case 'persuade':
+        if (read.deny !== ORDER_OK) {
+          denyAt(g.x, g.z, read.deny);
+          break;
+        }
+        send({ type: 'persuade', id: read.actorId });
+        if (read.npcId >= 0) feedback.lockNpc(read.npcId);
+        audio.persuadePulse();
+        audio.orderTick();
+        break;
+      case 'target':
+        if (read.deny !== ORDER_OK) {
+          denyAt(g.x, g.z, read.deny);
+          break;
+        }
+        if (read.npcId >= 0) {
+          send({ type: 'attack', ids, npcId: read.npcId });
+          feedback.lockNpc(read.npcId);
+        } else if (read.vehId >= 0) {
+          send({ type: 'attackveh', ids, vehId: read.vehId });
+          feedback.lockVeh(read.vehId);
+        }
+        audio.orderTick();
+        break;
+      case 'hijack':
+        send({ type: 'hijack', id: read.actorId });
+        if (read.vehId >= 0) feedback.lockVeh(read.vehId);
+        audio.orderTick();
+        break;
+      case 'vehicle': {
+        const veh = state.vehicles[read.vehId];
+        if (veh) issueGround('move', { x: fromFx(veh.x), z: fromFx(veh.z) }, queueIt);
+        break;
+      }
+      case 'interact': {
+        if (missionType === MISSION_BLACKOUT) send({ type: 'hack', ids, cell: read.cell });
+        else if (missionType === MISSION_RECOVERY) send({ type: 'breach', ids, cell: read.cell });
+        else send({ type: 'carry', id: ids[0]! });
+        feedback.ping((read.cell % state.map.w) + 0.5, ((read.cell / state.map.w) | 0) + 0.5);
+        audio.orderTick();
+        break;
+      }
+      case 'sweep':
+        issueGround('sweep', g, queueIt);
+        break;
+      case 'move':
+        issueGround('move', g, queueIt);
+        break;
+      case 'place':
+        break;
+    }
+  };
+
   let downX = 0;
   let downY = 0;
   let boxDiv: HTMLDivElement | null = null;
@@ -404,11 +540,27 @@ function createMissionSystems(
   const onPointerMove = (e: PointerEvent) => {
     const g = groundAt(e.clientX, e.clientY);
     if (g) lastGround = g;
+    lastPointer = { x: e.clientX, y: e.clientY };
     if (boxDiv) {
       const x = Math.min(downX, e.clientX);
       const y = Math.min(downY, e.clientY);
       boxDiv.style.cssText = `left:${x}px;top:${y}px;width:${Math.abs(e.clientX - downX)}px;height:${Math.abs(e.clientY - downY)}px;`;
     }
+    if (boxDiv || isHudTarget(e)) {
+      cursorChip.style.display = 'none';
+      return;
+    }
+    const read = cursorReadAt(e.clientX, e.clientY, e.ctrlKey || e.metaKey, e.altKey);
+    if (!read) {
+      cursorChip.style.display = 'none';
+      return;
+    }
+    cursorChip.style.display = 'block';
+    cursorChip.style.left = `${e.clientX + 14}px`;
+    cursorChip.style.top = `${e.clientY + 18}px`;
+    cursorChip.textContent = read.label;
+    cursorChip.dataset.kind = read.kind;
+    cursorChip.classList.toggle('deny', read.deny !== ORDER_OK);
   };
   const onPointerUp = (e: PointerEvent) => {
     if (e.button !== 0 || !boxDiv) return;
@@ -425,19 +577,23 @@ function createMissionSystems(
         if (act === 'order:move') {
           if (orderMode === 'tactical') {
             send({ type: 'swarm', mode: SWARM_FLASHMOB, x: toFx(g.x), z: toFx(g.z) });
+            feedback.ping(g.x, g.z);
+            audio.orderTick();
           } else {
-            send({
-              type: 'move',
-              ids,
-              x: toFx(Math.max(0.5, Math.min(95.5, g.x))),
-              z: toFx(Math.max(0.5, Math.min(95.5, g.z))),
-            });
+            issueGround('move', g, e.shiftKey);
           }
+        } else if (act === 'order:sweep') {
+          issueGround('sweep', g, e.shiftKey);
         } else {
           const npcId = pickNpcAt(e.clientX, e.clientY);
-          if (npcId >= 0) send({ type: 'attack', ids, npcId });
+          if (npcId >= 0) {
+            send({ type: 'attack', ids, npcId });
+            feedback.lockNpc(npcId);
+            audio.orderTick();
+          } else {
+            denyAt(g.x, g.z, DENY_NO_TARGET);
+          }
         }
-        audio.uiClick();
       }
       return;
     }
@@ -475,42 +631,16 @@ function createMissionSystems(
     });
     if (!moved && !selected.some(Boolean)) selected[0] = state.agents[0]!.alive;
   };
+  // one click states intent: the cursor read decides the order, the queries
+  // decide validity, and every issue or refusal is confirmed in the world
   const onContextMenu = (e: MouseEvent) => {
     e.preventDefault();
     if (isHudTarget(e)) return;
     const g = groundAt(e.clientX, e.clientY);
     if (!g) return;
-    const ids = selIds();
-    if (ids.length === 0) return;
-    const targetNpc = pickNpcAt(e.clientX, e.clientY);
-    let bestD = 26;
-    const v = new Vector3();
-    let targetVeh = -1;
-    const anyDriving = ids.some((id) => state.agents[id]!.driving >= 0);
-    if (targetNpc < 0 && !anyDriving) {
-      for (const veh of state.vehicles) {
-        if (veh.state === V_WRECK) continue;
-        v.set(fromFx(veh.x), 0.5, fromFx(veh.z)).project(rig.camera);
-        const sx = ((v.x + 1) / 2) * window.innerWidth;
-        const sy = ((-v.y + 1) / 2) * window.innerHeight;
-        const d = Math.hypot(sx - e.clientX, (sy - e.clientY) * 0.75);
-        if (d < bestD) {
-          bestD = d;
-          targetVeh = veh.id;
-        }
-      }
-    }
-    if (targetNpc >= 0) send({ type: 'attack', ids, npcId: targetNpc });
-    else if (targetVeh >= 0 && (e.ctrlKey || e.metaKey)) send({ type: 'attackveh', ids, vehId: targetVeh });
-    else if (targetVeh >= 0) {
-      const veh = state.vehicles[targetVeh]!;
-      send({
-        type: 'move',
-        ids,
-        x: toFx(Math.max(0.5, Math.min(95.5, fromFx(veh.x)))),
-        z: toFx(Math.max(0.5, Math.min(95.5, fromFx(veh.z)))),
-      });
-    } else send({ type: 'move', ids, x: toFx(Math.max(0.5, Math.min(95.5, g.x))), z: toFx(Math.max(0.5, Math.min(95.5, g.z))) });
+    const read = cursorReadAt(e.clientX, e.clientY, e.ctrlKey || e.metaKey, e.altKey);
+    if (!read) return;
+    issueFromRead(read, g, e.shiftKey);
   };
 
   const keyTimes = new Map<string, number>();
@@ -572,7 +702,15 @@ function createMissionSystems(
       const gear =
         k === 't' ? GEAR_CHARGE : k === 'y' ? GEAR_MEDBAY : k === 'u' ? GEAR_DRONE : GEAR_EMP;
       const ids = selIds();
-      if (ids.length > 0) send({ type: 'use', ids, gear });
+      if (ids.length > 0) {
+        if (gear === GEAR_CHARGE && !confirmGate.ask('detonate', performance.now())) {
+          comms.push('Demolition charge primed: repeat the order within 4 seconds to confirm.');
+          audio.uiClick();
+        } else {
+          send({ type: 'use', ids, gear });
+          audio.orderTick();
+        }
+      }
     } else if (k === 'n') {
       // context interact: hack the nearest live relay, breach the holding
       // cell door, or pick up / drop the convoy cargo
@@ -687,6 +825,8 @@ function createMissionSystems(
     comms.dispose();
     nameplates.dispose();
     arrowLayer.remove();
+    feedback.dispose();
+    cursorChip.remove();
     setPost(false);
     setRain(false);
     gs.scene.environment = null;
@@ -842,7 +982,7 @@ function createMissionSystems(
       )) {
         b.classList.toggle('on', b.dataset.act === act);
       }
-    } else if (act === 'order:move' || act === 'order:attack') {
+    } else if (act === 'order:move' || act === 'order:attack' || act === 'order:sweep') {
       armedOrder = armedOrder === act ? null : act;
       syncArmed();
     } else if (act === 'order:hold') {
@@ -855,7 +995,13 @@ function createMissionSystems(
         );
       }
     } else if (act === 'abort') {
-      send({ type: 'abort' });
+      // destructive: always a two-step confirmation, app-side only
+      if (confirmGate.ask('abort', performance.now())) {
+        send({ type: 'abort' });
+        audio.orderTick();
+      } else {
+        comms.push('Confirm contract recall: activate ABORT again within 4 seconds.');
+      }
     } else if (act.startsWith('sys:')) {
       sysTab = act.slice(4);
       for (const b of Array.from(
@@ -874,8 +1020,12 @@ function createMissionSystems(
       const cmd = commandForAction(act, ids, state.agents, lastGround);
       // stale click on a just-ineligible control: no sound, no command
       if (!cmd) return;
-      send(cmd);
-      if (cmd.type === 'persuade') audio.persuadePulse();
+      if (cmd.type === 'use' && cmd.gear === GEAR_CHARGE && !confirmGate.ask('detonate', performance.now())) {
+        comms.push('Demolition charge primed: repeat the order within 4 seconds to confirm.');
+      } else {
+        send(cmd);
+        if (cmd.type === 'persuade') audio.persuadePulse();
+      }
     }
     audio.uiClick();
     el.classList.add('pressed');
@@ -1072,6 +1222,7 @@ function createMissionSystems(
         }
         acc -= TICK_MS;
       }
+      queues.advance(state, send);
       simMs = performance.now() - simStart;
       if (perf && state.tick >= nextDriveTick) {
         nextDriveTick = state.tick + 60;
@@ -1113,6 +1264,7 @@ function createMissionSystems(
     );
     drawWave(time);
     nameplates.update(state, prevAX, prevAZ, alpha, selected, rig);
+    feedback.update(state, rig, dt);
     updateArrows();
     audio.update(state);
     if (perf) {
@@ -1307,7 +1459,7 @@ function renderHud(
     </div>
     <div class="hud-agents">${agents}</div>
     <div class="hud-help">
-      <span class="kgroup"><b>LMB</b>select<b>RMB</b>move/attack<b>1-4</b>squad<b>5</b>all</span>
+      <span class="kgroup"><b>LMB</b>select<b>RMB</b>intent order<b>ALT+RMB</b>sweep<b>SHIFT+RMB</b>queue<b>CTRL+RMB</b>force engage<b>1-4</b>squad<b>5</b>all</span>
       <span class="kgroup"><b>F</b>persuade<b>V</b>cloak<b>J</b>hijack<b>T</b>charge<b>Y</b>medbay<b>U</b>drone<b>K</b>EMP<b>N</b>interact<b>G/H/B</b>swarm</span>
       <span class="kgroup"><b>Z/X/C</b>stims<b>Tab</b>weapon<b>R</b>aggression</span>
       <span class="kgroup"><b>WASD</b>pan<b>Q/E</b>rotate<b>SPACE</b>pause<b>-/=</b>speed</span>

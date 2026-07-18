@@ -299,4 +299,16 @@ export const audio = {
     if (!buses) return;
     blip(buses, buses.ui, 'square', 900, 700, 0.03, 0.12);
   },
+
+  // fires together with the order ping so confirmation reaches the operator
+  // even when their eyes are elsewhere on the block
+  orderTick(): void {
+    if (!buses) return;
+    blip(buses, buses.ui, 'square', 1300, 1000, 0.035, 0.14);
+  },
+
+  denyBuzz(): void {
+    if (!buses) return;
+    blip(buses, buses.ui, 'square', 230, 170, 0.12, 0.18);
+  },
 };
