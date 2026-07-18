@@ -37,7 +37,9 @@ function ScreenRoot({ el, store }: { el: HTMLElement; store: ScreenStore }) {
         />
       );
     case 'vignette':
-      return <VignetteScreen vignette={screen.vignette} onDone={screen.onDone} />;
+      return (
+        <VignetteScreen key={screen.vignette.id} vignette={screen.vignette} onDone={screen.onDone} />
+      );
     case 'archive':
       return <ArchiveScreen meta={screen.meta} onOpen={screen.onOpen} onBack={screen.onBack} />;
     case 'research':
