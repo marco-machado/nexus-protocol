@@ -20,7 +20,7 @@ import {
   persuadeTargetQuery,
   placeQuery,
 } from '../sim/queries';
-import { DEP_TURRET, MISSION_BLACKOUT, MISSION_CONVOY, MISSION_RECOVERY, type SimState } from '../sim/state';
+import { DEP_TRAP, DEP_TURRET, MISSION_BLACKOUT, MISSION_CONVOY, MISSION_RECOVERY, type SimState } from '../sim/state';
 import { NPC_CIV, ST_DEAD } from '../sim/units';
 import { V_WRECK } from '../sim/vehicles';
 
@@ -45,6 +45,8 @@ export interface HoverContext {
   ground: { x: number; z: number };
   sweepArmed: boolean;
   placeMode: boolean;
+  // deployable kind one click would place (shift swaps turret for trap)
+  placeKind: number;
   // ctrl/meta held: force an engagement read on any hovered actor
   attackMod: boolean;
 }
@@ -148,8 +150,10 @@ function interactCell(s: SimState, ground: { x: number; z: number }): number {
 export function resolveCursor(s: SimState, selIds: number[], hover: HoverContext): CursorRead {
   if (hover.placeMode) {
     const cell = Math.floor(hover.ground.x) + Math.floor(hover.ground.z) * s.map.w;
-    const deny = placeQuery(s, DEP_TURRET, cell);
-    return read('place', deny, deny === ORDER_OK ? 'PLACE' : denialCaption(deny), -1, cell);
+    const kind = hover.placeKind === DEP_TRAP ? DEP_TRAP : DEP_TURRET;
+    const deny = placeQuery(s, kind, cell);
+    const label = deny === ORDER_OK ? (kind === DEP_TRAP ? 'PLACE TRAP' : 'PLACE TURRET') : denialCaption(deny);
+    return read('place', deny, label, -1, cell);
   }
   if (selIds.length === 0) return read('move', DENY_NO_TARGET, 'NO ASSETS');
   const lead = selIds[0]!;

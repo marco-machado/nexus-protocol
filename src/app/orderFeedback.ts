@@ -44,6 +44,7 @@ export interface OrderFeedback {
   ping(x: number, z: number, sweep?: boolean): void;
   lockNpc(npcId: number): void;
   lockVeh(vehId: number): void;
+  hover(npcId: number, vehId: number): void;
   deny(x: number, z: number, label: string): void;
   trace(ids: number[]): void;
   update(s: SimState, rig: CameraRig, dtMs: number): void;
@@ -61,6 +62,8 @@ export function createOrderFeedback(): OrderFeedback {
   const locks: Lock[] = [];
   const denials: Denial[] = [];
   const traces: Trace[] = [];
+  let hoverNpc = -1;
+  let hoverVeh = -1;
 
   const project = (rig: CameraRig, x: number, y: number, z: number): { x: number; y: number } | null => {
     v.set(x, y, z).project(rig.camera);
@@ -79,6 +82,10 @@ export function createOrderFeedback(): OrderFeedback {
     },
     lockVeh(vehId) {
       locks.push({ npcId: -1, vehId, t: 0 });
+    },
+    hover(npcId, vehId) {
+      hoverNpc = npcId;
+      hoverVeh = vehId;
     },
     deny(x, z, label) {
       denials.push({ x, z, t: 0, label });
@@ -198,6 +205,51 @@ export function createOrderFeedback(): OrderFeedback {
         if (k < 0.5) {
           ctx.fillStyle = css('target');
           ctx.fillText('LOCK', pt.x, pt.y - r - 5);
+        }
+      }
+
+      // snap-to-target reticle: corner brackets on the actor the click would
+      // hit, distinct from the circular post-order lock ring
+      if (hoverNpc >= 0 || hoverVeh >= 0) {
+        let hx = 0;
+        let hz = 0;
+        let live = false;
+        if (hoverNpc >= 0) {
+          const n = s.npcs[hoverNpc];
+          if (n && n.state !== ST_DEAD) {
+            hx = fromFx(n.x);
+            hz = fromFx(n.z);
+            live = true;
+          }
+        } else {
+          const veh = s.vehicles[hoverVeh];
+          if (veh) {
+            hx = fromFx(veh.x);
+            hz = fromFx(veh.z);
+            live = true;
+          }
+        }
+        const pt = live ? project(rig, hx, 0.9, hz) : null;
+        if (pt) {
+          const r = 15;
+          const arm = 6;
+          ctx.strokeStyle = css('target');
+          ctx.globalAlpha = 0.9;
+          for (const [cx2, cy2] of [
+            [-1, -1],
+            [1, -1],
+            [-1, 1],
+            [1, 1],
+          ] as const) {
+            ctx.beginPath();
+            ctx.moveTo(pt.x + cx2 * r - cx2 * arm, pt.y + cy2 * r);
+            ctx.lineTo(pt.x + cx2 * r, pt.y + cy2 * r);
+            ctx.lineTo(pt.x + cx2 * r, pt.y + cy2 * r - cy2 * arm);
+            ctx.stroke();
+          }
+          ctx.fillStyle = css('target');
+          ctx.fillText('TGT', pt.x, pt.y - r - 5);
+          ctx.globalAlpha = 1;
         }
       }
 
