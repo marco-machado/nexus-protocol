@@ -1,4 +1,4 @@
-import { MISSION_DEFENSE, MISSION_RECOVERY } from '../sim/state';
+import { MISSION_DEFENSE, MISSION_PERSUADE, MISSION_RECOVERY } from '../sim/state';
 import type { MissionParams } from '../sim/setup';
 import type { AgentSpec } from '../sim/units';
 import type { MissionOptions, MissionResult } from './missionRunner';
@@ -25,6 +25,14 @@ import { generateBreakthroughOffers, projectCost, startProject } from './researc
 import { lossDebriefLine } from './contractCard';
 import { ScreenStore, type GlobeHandle } from './screenState';
 import { hintsFor } from './tutorial';
+import { evaluateArchiveUnlocks } from './narrative/archive';
+import { MISSION_BARKS } from './narrative/barks';
+import { tickerLine } from './narrative/cast';
+import { entryText, selectEntries } from './narrative/engine';
+import { campaignFacts, repeatCollateralAt, VETERAN_MISSIONS } from './narrative/facts';
+import { recordContractOutcome, recordFired, type ContractOutcome } from './narrative/history';
+import { arcStageFor, CAMPAIGN_LINES, DEBRIEF_LINE_CAP, updateArcStages } from './narrative/rivalArcs';
+import { pendingVignette } from './narrative/vignettes';
 
 // everything the flow controller needs from the outside world, injected so
 // headless tests can drive the full screen flow with stubs (no renderer, no
@@ -103,7 +111,29 @@ export class Game {
       globe: this.ensureGlobe(),
       onContract: (t, defense) => this.equip(t, defense),
       onResearch: () => this.research(),
+      onArchive: () => this.archive(),
     });
+  }
+
+  private archive(): void {
+    this.stopMapTimer();
+    this.globe?.stop();
+    const setScreen = () => {
+      this.deps.screen.set({
+        kind: 'archive',
+        meta: this.meta,
+        onOpen: (id) => {
+          const read = this.meta.narrative.archiveRead;
+          if (!read.includes(id)) {
+            read.push(id);
+            saveMeta(this.meta);
+          }
+          setScreen();
+        },
+        onBack: () => this.map(),
+      });
+    };
+    setScreen();
   }
 
   private setResearchScreen(): void {
@@ -153,6 +183,22 @@ export class Game {
           this.map();
         },
         onNewGame: () => this.start(),
+      });
+      return;
+    }
+    const vignette = pendingVignette(this.meta);
+    if (vignette) {
+      this.globe?.stop();
+      this.deps.screen.set({
+        kind: 'vignette',
+        vignette,
+        onDone: () => {
+          this.meta.narrative.vignettes.push(vignette.id);
+          this.meta.log.unshift(`Regional briefing filed: ${vignette.title}.`);
+          this.meta.log.length = Math.min(this.meta.log.length, 12);
+          saveMeta(this.meta);
+          this.map();
+        },
       });
       return;
     }
@@ -213,6 +259,13 @@ export class Game {
     t.attempts++;
     saveMeta(this.meta);
     const rivalId = defense && t.siege ? t.siege.rival : t.rival;
+    const wasOwned = t.owned;
+    const siegeRival = t.siege ? t.siege.rival : -1;
+    const history = this.meta.narrative;
+    const arcStage =
+      rivalId >= 0
+        ? Math.max(history.arcStages[rivalId] ?? 0, arcStageFor(history.counters, act, rivalId))
+        : 0;
     const simParams: MissionParams = {
       extraGuards: Math.min(4, difficulty),
       doctrine: rivalId >= 0 ? this.meta.syndicates[rivalId]!.doctrine : -1,
@@ -228,6 +281,16 @@ export class Game {
       hints: hintsFor(this.meta, t, missionType),
       codenames,
       appearances,
+      narrative: {
+        barks: MISSION_BARKS,
+        fired: history.fired,
+        factOpts: {
+          rival: rivalId,
+          arcStage,
+          repeatCollateral: repeatCollateralAt(history, t.id),
+          veterans: roster.map((a) => a.missions >= VETERAN_MISSIONS),
+        },
+      },
     });
     const aliveIdx = this.meta.agents.map((a, i) => (a.alive ? i : -1)).filter((i) => i >= 0);
     const survivors = this.meta.agents.map(() => true);
@@ -265,6 +328,44 @@ export class Game {
       Date.now(),
     );
     info.lines.push(...offerLines);
+    // the narrative pass reads the settled campaign facts: record memory,
+    // advance arc stages, select debrief lines, and run Archive unlocks
+    recordFired(history, result.narrativeFired ?? []);
+    const outcome: ContractOutcome = {
+      won: result.won,
+      defense,
+      rival: rivalId,
+      districtId: t.id,
+      flipped: result.won && !defense && !wasOwned && rivalId >= 0,
+      hqRazed: result.won && !defense && !wasOwned && rivalId >= 0 && t.hq === true,
+      siegeRepelled: defense && result.won && siegeRival >= 0,
+      vipAcquired: result.won && missionType === MISSION_PERSUADE,
+      writeOffs: result.survivors.filter((s) => !s).length,
+      civKills: result.civKills,
+      persuaded: result.persuaded,
+      roundsFired: result.roundsFired,
+    };
+    recordContractOutcome(history, outcome);
+    const facts = campaignFacts(this.meta, outcome);
+    updateArcStages(history, facts.act);
+    const narrativeLines: string[] = [];
+    const picked = selectEntries(CAMPAIGN_LINES, facts, new Set(history.fired)).slice(
+      0,
+      DEBRIEF_LINE_CAP,
+    );
+    for (const entry of picked) {
+      narrativeLines.push(tickerLine(entry.speaker, entryText(entry, facts)));
+      if (entry.oneShot) recordFired(history, [entry.id]);
+    }
+    for (const unlockedDoc of evaluateArchiveUnlocks(facts)) {
+      history.archive.push(unlockedDoc.id);
+      narrativeLines.push(
+        `Corporate Archive updated: ${unlockedDoc.kind} "${unlockedDoc.title}" filed. Flagged unread.`,
+      );
+    }
+    info.lines.push(...narrativeLines);
+    this.meta.log.unshift(...narrativeLines);
+    this.meta.log.length = Math.min(this.meta.log.length, 12);
     saveMeta(this.meta);
     this.deps.screen.set({ kind: 'debrief', info, meta: this.meta, onContinue: () => this.map() });
   }

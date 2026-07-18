@@ -2,12 +2,14 @@ import { useEffect, useSyncExternalStore } from 'react';
 import { createRoot } from 'react-dom/client';
 import { audio } from '../audio';
 import type { ScreenStore } from '../screenState';
+import { ArchiveScreen } from './archive';
 import { DebriefScreen } from './debrief';
 import { EquipScreen } from './equip';
 import { MenuScreen } from './menu';
 import { ResearchScreen } from './research';
 import { SettingsScreen } from './settingsScreen';
 import { VictoryScreen } from './victory';
+import { VignetteScreen } from './vignette';
 import { WorldMapScreen } from './worldMap';
 
 function ScreenRoot({ el, store }: { el: HTMLElement; store: ScreenStore }) {
@@ -31,8 +33,13 @@ function ScreenRoot({ el, store }: { el: HTMLElement; store: ScreenStore }) {
           globe={screen.globe}
           onContract={screen.onContract}
           onResearch={screen.onResearch}
+          onArchive={screen.onArchive}
         />
       );
+    case 'vignette':
+      return <VignetteScreen vignette={screen.vignette} onDone={screen.onDone} />;
+    case 'archive':
+      return <ArchiveScreen meta={screen.meta} onOpen={screen.onOpen} onBack={screen.onBack} />;
     case 'research':
       return <ResearchScreen meta={screen.meta} rev={screen.rev} onStart={screen.onStart} onBack={screen.onBack} />;
     case 'equip':
