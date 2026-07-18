@@ -66,6 +66,14 @@ const entryKey = Object.keys(viteManifest).find((k) => viteManifest[k].isEntry);
 const staticKeys = chunkGraph(entryKey, (e) => e.imports ?? []);
 const menuFiles = new Set([...chunkFiles(staticKeys), 'index.html', 'favicon.svg']);
 for (const logo of readdirSync(join(DIST, 'logos'))) menuFiles.add(`logos/${logo}`);
+// runtime-fetched menu-side assets sit outside both the Vite chunk graph and
+// the asset packs (the globe backdrop is fetched on the world-map screen);
+// list them here or the menu and first-contract totals undercount transfer
+const menuRuntimeAssets = ['textures/deep-space-backdrop.jpg'];
+for (const f of menuRuntimeAssets) {
+  if (existsSync(join(DIST, f))) menuFiles.add(f);
+  else fail(`menu runtime asset missing from dist: ${f}`);
+}
 
 const dynamicKeys = new Set();
 for (const key of staticKeys) {
