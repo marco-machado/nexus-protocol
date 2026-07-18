@@ -851,6 +851,7 @@ function applyCommand(s: SimState, c: Command): void {
         if (!a || !a.alive || a.driving >= 0) continue;
         a.attackVeh = c.vehId;
         a.attackTarget = -1;
+        a.attackMove = false;
       }
       break;
     }
