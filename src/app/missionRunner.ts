@@ -16,6 +16,7 @@ import { applyPalette, SCENE_COLORS } from '../render/palette';
 import { createPost, type Post } from '../render/post';
 import { createRain, type Rain } from '../render/rain';
 import type { AppearanceManifest } from '../render/appearance';
+import { rivalPeerContract } from '../render/rivalChassis';
 import {
   AGENT_TRIM,
   applyAlarmGrade,
@@ -222,6 +223,7 @@ function createMissionSystems(
     agentManifests: opts.appearances,
     rivalElite: simParams.elite === true,
     rivalLoadoutTier: simParams.loadoutTier ?? 2,
+    rivalPeerContract: rivalPeerContract(missionType),
   });
   // night-oriented PMREM so wet PBR asphalt and Standard concrete pick up neon IBL
   const rainOn = state.env.rain === 1 || !!state.map.visualTest;

@@ -2,8 +2,16 @@ import { describe, expect, it } from 'vitest';
 import {
   interpolateNpcAxis,
   rivalChassisState,
+  rivalPeerContract,
   shouldUseRivalChassis,
 } from '../src/render/rivalChassis';
+import {
+  MISSION_BROADCAST,
+  MISSION_DEFENSE,
+  MISSION_ESCORT,
+  MISSION_HQ,
+  MISSION_PURGE,
+} from '../src/sim/state';
 import {
   NPC_ENEMY,
   NPC_TACTICAL,
@@ -15,14 +23,28 @@ import {
 describe('rival chassis assignment', () => {
   it('covers setup-time mission rivals and dynamically appended enemy raiders', () => {
     expect(
-      shouldUseRivalChassis({ kind: NPC_ENEMY, missionTarget: true, raider: false }),
+      shouldUseRivalChassis({ kind: NPC_ENEMY, missionTarget: true, raider: false }, true),
     ).toBe(true);
     expect(
-      shouldUseRivalChassis({ kind: NPC_ENEMY, missionTarget: false, raider: true }),
+      shouldUseRivalChassis({ kind: NPC_ENEMY, missionTarget: false, raider: true }, false),
     ).toBe(true);
     expect(
-      shouldUseRivalChassis({ kind: NPC_TACTICAL, missionTarget: false, raider: true }),
+      shouldUseRivalChassis({ kind: NPC_TACTICAL, missionTarget: false, raider: true }, true),
     ).toBe(false);
+  });
+
+  it('keeps peer dress off missionTarget enemies outside peer contracts', () => {
+    expect(
+      shouldUseRivalChassis({ kind: NPC_ENEMY, missionTarget: true, raider: false }, false),
+    ).toBe(false);
+  });
+
+  it('marks only purge, HQ, and siege contracts as peer contracts', () => {
+    expect(rivalPeerContract(MISSION_PURGE)).toBe(true);
+    expect(rivalPeerContract(MISSION_HQ)).toBe(true);
+    expect(rivalPeerContract(MISSION_DEFENSE)).toBe(true);
+    expect(rivalPeerContract(MISSION_ESCORT)).toBe(false);
+    expect(rivalPeerContract(MISSION_BROADCAST)).toBe(false);
   });
 
   it('lets persuasion outrank the hostile chassis state', () => {

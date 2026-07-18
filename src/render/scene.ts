@@ -97,7 +97,6 @@ import {
   rivalChassisState,
   shouldUseRivalChassis,
 } from './rivalChassis';
-import { reparentPreservingWorldTransform } from './transform';
 import {
   createParkedVehicleDress,
   createPropScatter,
@@ -193,6 +192,8 @@ export interface SceneAppearanceOpts {
   // rival squad dress for purge/HQ/siege missionTarget enemies
   rivalElite?: boolean;
   rivalLoadoutTier?: number;
+  // whether missionTarget enemies in this contract are rival operatives
+  rivalPeerContract?: boolean;
 }
 
 export interface GameScene {
@@ -248,8 +249,11 @@ export interface GameScene {
   agentRigs: AgentRig[];
   // missionTarget rival operatives on the shared chassis (after player slots)
   rivalRigs: AgentRig[];
-  // shared dress applied to setup-time rivals and later siege wave spawns
-  rivalLook: AppearanceManifest;
+  // shared dress applied to setup-time rivals and later siege wave spawns;
+  // two entries so rival squads alternate cosmetic body variants
+  rivalLooks: AppearanceManifest[];
+  rivalPeerContract: boolean;
+  chassisCache: ChassisLoadCache;
   // npc indices suppressed in the crowd so rival chassis is not doubled
   hideNpc: Uint8Array;
   ringMeshes: Mesh[];
@@ -971,7 +975,10 @@ function attachAugments(rig: AgentRig, manifest: AppearanceManifest): void {
   const disposed = new Set<object>();
   for (const m of rig.augMeshes) {
     m.parent?.remove(m);
-    m.geometry.dispose();
+    if (!disposed.has(m.geometry)) {
+      disposed.add(m.geometry);
+      m.geometry.dispose();
+    }
     const mat = m.material as MeshPhongMaterial;
     if (!disposed.has(mat)) {
       disposed.add(mat);
@@ -1211,23 +1218,12 @@ function createAgentRig(
   return rig;
 }
 
-// When the hero GLB hides procedural limb meshes, reparent augments onto the
-// root so dress stays visible (frozen at rest pose relative to the root).
-function reparentAugmentsToRoot(rig: AgentRig): void {
-  const root = rig.joints.root;
-  for (const m of rig.augMeshes) {
-    reparentPreservingWorldTransform(root, m);
-  }
-}
-
 export interface AgentPreviewModel {
   root: Object3D;
   update(timeSec: number, reducedMotion: boolean): void;
   dispose(): void;
 }
 
-// Equip renders this exact procedural chassis and attachment dresser. The
-// field uses the same rig as its always-available fallback beneath the GLB.
 export function createAgentPreviewModel(
   scene: Scene,
   manifest: AppearanceManifest,
@@ -1261,12 +1257,33 @@ export function createAgentPreviewModel(
   };
 }
 
+interface ChassisTemplate {
+  normalizer: Object3D;
+  clips: AnimationClip[];
+  walkClip: AnimationClip | null;
+  idleClip: AnimationClip | null;
+  fallClip: AnimationClip | null;
+  clipGroundSpeed: Map<AnimationClip, number>;
+  sizeY: number;
+}
+
+// per-scene so siege waves clone the parsed GLB instead of re-fetching it,
+// while disposal semantics stay mission-scoped; null marks a failed URL
+export interface ChassisLoadCache {
+  templates: Map<string, ChassisTemplate | null>;
+  pending: Map<string, AgentRig[]>;
+}
+
+function createChassisLoadCache(): ChassisLoadCache {
+  return { templates: new Map(), pending: new Map() };
+}
+
 // hero agent GLB (user-generated via Tripo): loaded like the car model with
 // the procedural rig as the always-available fallback. The rig root still
 // drives heading and the downed roll; when the GLB ships skinned clips an
 // AnimationMixer per agent plays idle/walk/run, otherwise the mesh stays
 // static and the stride-locked bob stands in for a walk cycle.
-function loadGeneratedAgentModel(rigs: AgentRig[]): void {
+function loadGeneratedAgentModel(rigs: AgentRig[], cache: ChassisLoadCache): void {
   if (rigs.length === 0) return;
   // group by chassis URL so a future male/female model split is a data swap
   const byUrl = new Map<string, AgentRig[]>();
@@ -1276,127 +1293,178 @@ function loadGeneratedAgentModel(rigs: AgentRig[]): void {
     if (list) list.push(rig);
     else byUrl.set(url, [rig]);
   }
-  for (const [url, group] of byUrl) loadGeneratedAgentModelUrl(group, url);
+  for (const [url, group] of byUrl) {
+    const tpl = cache.templates.get(url);
+    if (tpl) {
+      for (const rig of group) applyChassisTemplate(rig, tpl);
+      continue;
+    }
+    if (tpl === null) continue;
+    const waiting = cache.pending.get(url);
+    if (waiting) {
+      waiting.push(...group);
+      continue;
+    }
+    cache.pending.set(url, [...group]);
+    loadChassisTemplate(url, cache);
+  }
 }
 
-function loadGeneratedAgentModelUrl(rigs: AgentRig[], url: string): void {
+function loadChassisTemplate(url: string, cache: ChassisLoadCache): void {
   const loader = new GLTFLoader();
   loader.load(
     url,
     (gltf) => {
-      const source = gltf.scene;
-      const clips = gltf.animations;
-      // keep baked root motion vertical only: locomotion is owned by the sim,
-      // so the horizontal components of the root bone track are pinned to the
-      // bone's REST position; clips can start mid-stride, so flattening to
-      // the first frame instead would bake in a constant world offset
-      // (never re-export with animate_in_place, it corrupts the bake)
-      let rootBone: Bone | null = null;
-      source.traverse((obj) => {
-        const bone = obj as Bone;
-        if (bone.isBone && !rootBone && !(bone.parent as Bone | null)?.isBone) {
-          rootBone = bone;
-        }
-      });
-      // native gait speed in source units/sec, read from the baked root
-      // travel before it gets flattened
-      const clipGroundSpeed = new Map<AnimationClip, number>();
-      if (rootBone !== null) {
-        const rest = (rootBone as Bone).position;
-        const trackName = `${(rootBone as Bone).name}.position`;
-        for (const clip of clips) {
-          for (const tr of clip.tracks) {
-            if (tr.name !== trackName) continue;
-            const v = tr.values;
-            const n = v.length;
-            const travel = Math.hypot(v[n - 3]! - v[0]!, v[n - 1]! - v[2]!);
-            if (clip.duration > 0) clipGroundSpeed.set(clip, travel / clip.duration);
-            for (let i = 0; i < n; i += 3) {
-              v[i] = rest.x;
-              v[i + 2] = rest.z;
-            }
-          }
-        }
-      }
-      // Tripo batch exports name clips NlaTrack, NlaTrack.001, ... so the
-      // names carry no meaning. The order is NOT the export picker's; it was
-      // measured from the clip data of this export (idle: 15s static, fall:
-      // pelvis pitches 90 degrees and holds, walk: rooted travel over a 2.4s
-      // loop, run: short 1.3s in-place cycle). Re-measure if re-exported.
-      if (clips.length === 4 && clips.every((c) => c.name.startsWith('NlaTrack'))) {
-        const sorted = [...clips].sort((a, b) => a.name.localeCompare(b.name));
-        const presetOrder = ['idle', 'fall', 'walk', 'run'] as const;
-        sorted.forEach((c, ci) => {
-          c.name = presetOrder[ci]!;
-        });
-      }
-      const findClip = (re: RegExp) => clips.find((c) => re.test(c.name)) ?? null;
-      const walkClip = findClip(/walk/i) ?? clips[0] ?? null;
-      const idleClip = findClip(/idle|breath|stand/i);
-      const fallClip = findClip(/fall|death|down/i);
-      const bounds = new Box3().setFromObject(source);
-      const size = new Vector3();
-      const center = new Vector3();
-      bounds.getSize(size);
-      bounds.getCenter(center);
-      source.position.set(-center.x, -bounds.min.y, -center.z);
-      const normalizer = new Object3D();
-      normalizer.rotation.y = GENERATED_AGENT_YAW;
-      // the rig root carries scale 1.12, so the clone compensates to land at
-      // the authored world height
-      normalizer.scale.setScalar(GENERATED_AGENT_HEIGHT / Math.max(0.001, size.y) / 1.12);
-      normalizer.add(source);
-      for (const rig of rigs) {
-        // SkinnedMesh bone bindings survive only the skeleton-aware clone
-        const clone = clips.length > 0 ? skeletonClone(normalizer) : normalizer.clone(true);
-        const mats: MeshPhongNodeMaterial[] = [];
-        clone.traverse((obj) => {
-          const mesh = obj as Mesh;
-          if (!mesh.isMesh) return;
-          const src = mesh.material as MeshStandardMaterial;
-          const mat = new MeshPhongNodeMaterial({
-            map: src.map ?? null,
-            color: 0xe4ebf5,
-            specular: 0x333333,
-            shininess: 36,
-            transparent: true,
-          });
-          if (rig.rimColor) {
-            (mat as unknown as { emissiveNode: unknown }).emissiveNode = agentModelEmissive(
-              rig.rimColor as unknown as AgentRimUniform,
-              src.map ?? null,
-            );
-          }
-          mesh.material = mat;
-          mesh.castShadow = true;
-          mats.push(mat);
-        });
-        if (clips.length > 0) {
-          rig.mixer = new AnimationMixer(clone);
-          rig.actWalk = walkClip ? rig.mixer.clipAction(walkClip) : null;
-          rig.actIdle = idleClip ? rig.mixer.clipAction(idleClip) : null;
-          if (fallClip) {
-            const fall = rig.mixer.clipAction(fallClip);
-            fall.setLoop(LoopOnce, 1);
-            fall.clampWhenFinished = true;
-            rig.actFall = fall;
-          }
-          const worldScale = GENERATED_AGENT_HEIGHT / Math.max(0.001, size.y);
-          rig.walkClipSpeed = walkClip ? (clipGroundSpeed.get(walkClip) ?? 0) * worldScale : 0;
-        }
-        rig.joints.root.add(clone);
-        rig.modelRoot = clone;
-        rig.modelMats = mats;
-        rig.modelReady = true;
-        for (const m of rig.procMeshes) m.visible = false;
-        reparentAugmentsToRoot(rig);
-      }
+      const tpl = prepareChassisTemplate(gltf.scene, gltf.animations);
+      cache.templates.set(url, tpl);
+      const waiting = cache.pending.get(url) ?? [];
+      cache.pending.delete(url);
+      for (const rig of waiting) applyChassisTemplate(rig, tpl);
     },
     undefined,
     () => {
-      for (const rig of rigs) rig.modelReady = false;
+      cache.templates.set(url, null);
+      cache.pending.delete(url);
     },
   );
+}
+
+function prepareChassisTemplate(source: Object3D, clips: AnimationClip[]): ChassisTemplate {
+  // keep baked root motion vertical only: locomotion is owned by the sim,
+  // so the horizontal components of the root bone track are pinned to the
+  // bone's REST position; clips can start mid-stride, so flattening to
+  // the first frame instead would bake in a constant world offset
+  // (never re-export with animate_in_place, it corrupts the bake)
+  let rootBone: Bone | null = null;
+  source.traverse((obj) => {
+    const bone = obj as Bone;
+    if (bone.isBone && !rootBone && !(bone.parent as Bone | null)?.isBone) {
+      rootBone = bone;
+    }
+  });
+  // native gait speed in source units/sec, read from the baked root
+  // travel before it gets flattened
+  const clipGroundSpeed = new Map<AnimationClip, number>();
+  if (rootBone !== null) {
+    const rest = (rootBone as Bone).position;
+    const trackName = `${(rootBone as Bone).name}.position`;
+    for (const clip of clips) {
+      for (const tr of clip.tracks) {
+        if (tr.name !== trackName) continue;
+        const v = tr.values;
+        const n = v.length;
+        const travel = Math.hypot(v[n - 3]! - v[0]!, v[n - 1]! - v[2]!);
+        if (clip.duration > 0) clipGroundSpeed.set(clip, travel / clip.duration);
+        for (let i = 0; i < n; i += 3) {
+          v[i] = rest.x;
+          v[i + 2] = rest.z;
+        }
+      }
+    }
+  }
+  // Tripo batch exports name clips NlaTrack, NlaTrack.001, ... so the
+  // names carry no meaning. The order is NOT the export picker's; it was
+  // measured from the clip data of this export (idle: 15s static, fall:
+  // pelvis pitches 90 degrees and holds, walk: rooted travel over a 2.4s
+  // loop, run: short 1.3s in-place cycle). Re-measure if re-exported.
+  if (clips.length === 4 && clips.every((c) => c.name.startsWith('NlaTrack'))) {
+    const sorted = [...clips].sort((a, b) => a.name.localeCompare(b.name));
+    const presetOrder = ['idle', 'fall', 'walk', 'run'] as const;
+    sorted.forEach((c, ci) => {
+      c.name = presetOrder[ci]!;
+    });
+  }
+  const findClip = (re: RegExp) => clips.find((c) => re.test(c.name)) ?? null;
+  const bounds = new Box3().setFromObject(source);
+  const size = new Vector3();
+  const center = new Vector3();
+  bounds.getSize(size);
+  bounds.getCenter(center);
+  source.position.set(-center.x, -bounds.min.y, -center.z);
+  const normalizer = new Object3D();
+  normalizer.rotation.y = GENERATED_AGENT_YAW;
+  // the rig root carries scale 1.12, so the clone compensates to land at
+  // the authored world height
+  normalizer.scale.setScalar(GENERATED_AGENT_HEIGHT / Math.max(0.001, size.y) / 1.12);
+  normalizer.add(source);
+  return {
+    normalizer,
+    clips,
+    walkClip: findClip(/walk/i) ?? clips[0] ?? null,
+    idleClip: findClip(/idle|breath|stand/i),
+    fallClip: findClip(/fall|death|down/i),
+    clipGroundSpeed,
+    sizeY: size.y,
+  };
+}
+
+function applyChassisTemplate(rig: AgentRig, tpl: ChassisTemplate): void {
+  // SkinnedMesh bone bindings survive only the skeleton-aware clone
+  const clone = tpl.clips.length > 0 ? skeletonClone(tpl.normalizer) : tpl.normalizer.clone(true);
+  const mats: MeshPhongNodeMaterial[] = [];
+  clone.traverse((obj) => {
+    const mesh = obj as Mesh;
+    if (!mesh.isMesh) return;
+    const src = mesh.material as MeshStandardMaterial;
+    const mat = new MeshPhongNodeMaterial({
+      map: src.map ?? null,
+      color: 0xe4ebf5,
+      specular: 0x333333,
+      shininess: 36,
+      transparent: true,
+    });
+    if (rig.rimColor) {
+      (mat as unknown as { emissiveNode: unknown }).emissiveNode = agentModelEmissive(
+        rig.rimColor as unknown as AgentRimUniform,
+        src.map ?? null,
+      );
+    }
+    mesh.material = mat;
+    mesh.castShadow = true;
+    mats.push(mat);
+  });
+  if (tpl.clips.length > 0) {
+    rig.mixer = new AnimationMixer(clone);
+    rig.actWalk = tpl.walkClip ? rig.mixer.clipAction(tpl.walkClip) : null;
+    rig.actIdle = tpl.idleClip ? rig.mixer.clipAction(tpl.idleClip) : null;
+    if (tpl.fallClip) {
+      const fall = rig.mixer.clipAction(tpl.fallClip);
+      fall.setLoop(LoopOnce, 1);
+      fall.clampWhenFinished = true;
+      rig.actFall = fall;
+    }
+    const worldScale = GENERATED_AGENT_HEIGHT / Math.max(0.001, tpl.sizeY);
+    rig.walkClipSpeed = tpl.walkClip
+      ? (tpl.clipGroundSpeed.get(tpl.walkClip) ?? 0) * worldScale
+      : 0;
+  }
+  rig.joints.root.add(clone);
+  rig.modelRoot = clone;
+  rig.modelMats = mats;
+  rig.modelReady = true;
+  // augment dress stays parented to the procedural joints, which keep being
+  // posed beneath the GLB so attachments track the limbs; only the procedural
+  // body meshes hide
+  for (const m of rig.procMeshes) m.visible = false;
+}
+
+// the fall clip animates only the GLB skeleton, so dressed rigs take the
+// procedural corpse roll instead and their attachments lie with the body
+function useFallClip(rig: AgentRig): boolean {
+  return rig.modelReady && rig.mixer !== null && rig.actFall !== null && rig.augMeshes.length === 0;
+}
+
+// play the walk at the rate that matches ground speed so the feet grip
+// instead of gliding; stimmed agents just stride faster
+function walkActionTimeScale(rig: AgentRig, dist2: number, dtSec: number): number {
+  if (rig.walkClipSpeed <= 0) return 1;
+  const speed = Math.sqrt(dist2) / dtSec;
+  return Math.min(4, Math.max(0.5, speed / rig.walkClipSpeed));
+}
+
+function poseAugmentJoints(rig: AgentRig, clip: number): void {
+  if (rig.augMeshes.length === 0) return;
+  pose(rig.joints, clip, rig.phase);
 }
 
 function createNeonStrips(state: SimState): { mesh: InstancedMesh; spillSources: PoolSource[] } {
@@ -4052,22 +4120,28 @@ export function createGameScene(
   // waves after scene creation.
   const hideNpc = new Uint8Array(NPC_CAP);
   const rivalRigs: AgentRig[] = [];
-  const rivalLook = buildAppearanceManifest({
-    variant: 'male',
-    levels: rivalAugmentLevels(appearance.rivalElite === true, appearance.rivalLoadoutTier ?? 2),
-    faction: 'rival',
-    trimSlot: 0,
-  });
+  const rivalPeerContract = appearance.rivalPeerContract === true;
+  const rivalLevels = rivalAugmentLevels(
+    appearance.rivalElite === true,
+    appearance.rivalLoadoutTier ?? 2,
+  );
+  const rivalLooks = (['male', 'female'] as const).map((variant) =>
+    buildAppearanceManifest({ variant, levels: rivalLevels, faction: 'rival', trimSlot: 0 }),
+  );
   for (let ni = 0; ni < Math.min(state.npcs.length, NPC_CAP); ni++) {
     const n = state.npcs[ni]!;
-    if (!shouldUseRivalChassis(n)) continue;
+    if (!shouldUseRivalChassis(n, rivalPeerContract)) continue;
     hideNpc[ni] = 1;
     rivalRigs.push(
-      createAgentRig(scene, rivalRigs.length, rivalLook, { rival: true, npcIndex: ni }),
+      createAgentRig(scene, rivalRigs.length, rivalLooks[rivalRigs.length % 2]!, {
+        rival: true,
+        npcIndex: ni,
+      }),
     );
   }
 
-  loadGeneratedAgentModel([...agentRigs, ...rivalRigs]);
+  const chassisCache = createChassisLoadCache();
+  loadGeneratedAgentModel([...agentRigs, ...rivalRigs], chassisCache);
 
   // environmental zones (chem, EMP): flat ground markers built once at setup
   // since zones never move. Chem is a filled disc with a rim; EMP is a pair of
@@ -4266,7 +4340,9 @@ export function createGameScene(
     billboard,
     agentRigs,
     rivalRigs,
-    rivalLook,
+    rivalLooks,
+    rivalPeerContract,
+    chassisCache,
     hideNpc,
     ringMeshes,
     blobMeshes,
@@ -4671,15 +4747,15 @@ export function syncScene(
       blob.visible = false;
       if (!rig.downed) {
         rig.downed = true;
-        if (rig.modelReady && rig.mixer && rig.actFall) {
+        if (useFallClip(rig)) {
           rig.activeAction?.fadeOut(0.08);
-          rig.actFall.reset().fadeIn(0.05).play();
+          rig.actFall!.reset().fadeIn(0.05).play();
           rig.activeAction = rig.actFall;
-          rig.mixer.update(0.016);
+          rig.mixer!.update(0.016);
           root.rotation.set(0, rig.heading, 0);
           root.position.y = 0;
         } else {
-          if (!rig.modelReady) pose(rig.joints, CLIP_IDLE, 0);
+          pose(rig.joints, CLIP_IDLE, 0);
           root.rotation.set(0, rig.heading, Math.PI / 2);
           root.position.y = 0.3;
         }
@@ -4699,8 +4775,8 @@ export function syncScene(
         for (const m of rig.augMeshes) {
           (m.material as MeshPhongMaterial | MeshBasicMaterial).opacity = 1;
         }
-      } else if (rig.modelReady && rig.mixer && rig.actFall) {
-        rig.mixer.update(dtSec);
+      } else if (useFallClip(rig)) {
+        rig.mixer!.update(dtSec);
       }
       return;
     }
@@ -4773,11 +4849,7 @@ export function syncScene(
           // a clip set without an idle preset parks the walk on its first frame
           act.timeScale = rig.actIdle ? 1 : 0;
         } else {
-          // play the walk at the rate that matches ground speed so the feet
-          // grip instead of gliding; stimmed agents just stride faster
-          const speed = Math.sqrt(dist2) / dtSec;
-          act.timeScale =
-            rig.walkClipSpeed > 0 ? Math.min(4, Math.max(0.5, speed / rig.walkClipSpeed)) : 1;
+          act.timeScale = walkActionTimeScale(rig, dist2, dtSec);
         }
         if (act !== rig.activeAction) {
           rig.activeAction?.fadeOut(0.2);
@@ -4786,10 +4858,12 @@ export function syncScene(
         }
         rig.mixer.update(dtSec);
       }
+      poseAugmentJoints(rig, clip);
       bounce = 0;
     } else if (rig.modelReady) {
       // the static hero mesh has no gait clips: a subtle idle breathe and a
       // stride-locked bob stand in for them
+      poseAugmentJoints(rig, CLIP_IDLE);
       bounce =
         clip === CLIP_IDLE
           ? 0.015 + Math.sin(nowMs / 900 + i) * 0.015
@@ -4819,16 +4893,16 @@ export function syncScene(
   const appendedRigs: AgentRig[] = [];
   for (let ni = 0; ni < Math.min(state.npcs.length, NPC_CAP); ni++) {
     const n = state.npcs[ni]!;
-    if (gs.hideNpc[ni] || !shouldUseRivalChassis(n)) continue;
+    if (gs.hideNpc[ni] || !shouldUseRivalChassis(n, gs.rivalPeerContract)) continue;
     gs.hideNpc[ni] = 1;
-    const peer = createAgentRig(gs.scene, gs.rivalRigs.length, gs.rivalLook, {
+    const peer = createAgentRig(gs.scene, gs.rivalRigs.length, gs.rivalLooks[gs.rivalRigs.length % 2]!, {
       rival: true,
       npcIndex: ni,
     });
     gs.rivalRigs.push(peer);
     appendedRigs.push(peer);
   }
-  if (appendedRigs.length > 0) loadGeneratedAgentModel(appendedRigs);
+  if (appendedRigs.length > 0) loadGeneratedAgentModel(appendedRigs, gs.chassisCache);
 
   // rival peer chassis: same locomotion path as agents, driven from NPC state
   for (let ri = 0; ri < gs.rivalRigs.length; ri++) {
@@ -4839,22 +4913,34 @@ export function syncScene(
     if (!n || n.state === ST_DEAD) {
       if (!rig.downed) {
         rig.downed = true;
-        if (rig.modelReady && rig.mixer && rig.actFall) {
+        if (useFallClip(rig)) {
           rig.activeAction?.fadeOut(0.08);
-          rig.actFall.reset().fadeIn(0.05).play();
+          rig.actFall!.reset().fadeIn(0.05).play();
           rig.activeAction = rig.actFall;
           root.rotation.set(0, rig.heading, 0);
           root.position.y = 0;
         } else {
-          if (!rig.modelReady) pose(rig.joints, CLIP_IDLE, 0);
+          pose(rig.joints, CLIP_IDLE, 0);
           root.rotation.set(0, rig.heading, Math.PI / 2);
           root.position.y = 0.3;
         }
         if (rig.rimColor) rig.rimColor.value.copy(SCENE_COLORS.dead).multiplyScalar(0.25);
         rig.bodyMat.color.copy(SCENE_COLORS.dead);
-        for (const m of rig.modelMats) m.color.copy(SCENE_COLORS.dead);
-      } else if (rig.modelReady && rig.mixer && rig.actFall) {
-        rig.mixer.update(dtSec);
+        // corpses drop any live cloak fade; a kill in the same tick the cloak
+        // breaks would otherwise leave a permanently translucent body
+        rig.bodyMat.opacity = 1;
+        rig.gearMat.opacity = 1;
+        rig.visorMat.opacity = 1;
+        rig.stripeMat.opacity = 1;
+        for (const m of rig.modelMats) {
+          m.color.copy(SCENE_COLORS.dead);
+          m.opacity = 1;
+        }
+        for (const m of rig.augMeshes) {
+          (m.material as MeshPhongMaterial | MeshBasicMaterial).opacity = 1;
+        }
+      } else if (useFallClip(rig)) {
+        rig.mixer!.update(dtSec);
       }
       continue;
     }
@@ -4919,7 +5005,7 @@ export function syncScene(
       const idling = clip === CLIP_IDLE;
       const act = idling ? (rig.actIdle ?? rig.actWalk) : rig.actWalk;
       if (act) {
-        act.timeScale = idling ? (rig.actIdle ? 1 : 0) : 1;
+        act.timeScale = idling ? (rig.actIdle ? 1 : 0) : walkActionTimeScale(rig, dist2, dtSec);
         if (act !== rig.activeAction) {
           rig.activeAction?.fadeOut(0.2);
           act.reset().fadeIn(0.2).play();
@@ -4927,8 +5013,10 @@ export function syncScene(
         }
         rig.mixer.update(dtSec);
       }
+      poseAugmentJoints(rig, clip);
       bounce = 0;
     } else if (rig.modelReady) {
+      poseAugmentJoints(rig, CLIP_IDLE);
       bounce =
         clip === CLIP_IDLE
           ? 0.015 + Math.sin(nowMs / 900 + ri) * 0.015
