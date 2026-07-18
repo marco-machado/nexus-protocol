@@ -1,5 +1,5 @@
 import { fxLen, type Fx } from './fixed';
-import { cellIdx, losClear, MAP_W, type MapData } from './map';
+import { cellIdx, losClear, MAP_W } from './map';
 import { findPath, nearestWalkable } from './path';
 import {
   MISSION_DEFENSE,
@@ -201,8 +201,4 @@ export function routeQuery(s: SimState, agentId: number, x: Fx, z: Fx): number {
   const from = nearestWalkable(s.map, cellOfFx(a.x, a.z));
   const to = nearestWalkable(s.map, cellOfFx(x, z));
   return findPath(s.map, from, to) ? ORDER_OK : DENY_NO_ROUTE;
-}
-
-export function hasMapRoute(map: MapData, fromCell: number, toCell: number): boolean {
-  return findPath(map, nearestWalkable(map, fromCell), nearestWalkable(map, toCell)) !== null;
 }
