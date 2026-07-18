@@ -84,12 +84,12 @@ export function createVehicle(id: number, kind: number, cell: number): Vehicle {
   };
 }
 
-// streets are the BLOCK margins; buildings only ever occupy cells with both
-// coordinate mods in 5..14 (block start + STREET + inset 1)
-export function isStreetCell(x: number, z: number): boolean {
-  return x % 16 < 4 || z % 16 < 4;
+// streets are the block margins: cells whose coordinate mod falls under the
+// street width; block and street come from the district's grammar parameters
+export function isStreetCell(x: number, z: number, block = 16, street = 4): boolean {
+  return x % block < street || z % block < street;
 }
 
-export function isIntersection(x: number, z: number): boolean {
-  return x % 16 < 4 && z % 16 < 4;
+export function isIntersection(x: number, z: number, block = 16, street = 4): boolean {
+  return x % block < street && z % block < street;
 }

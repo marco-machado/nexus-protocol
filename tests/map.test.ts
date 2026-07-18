@@ -13,7 +13,11 @@ function gridHash(seed: number, params?: Parameters<typeof generateMap>[1]): num
   return h >>> 0;
 }
 
-const GOLDEN_GRID_HASH_SEED_11 = 0x88ad2f49;
+// Re-pinned for the world-grammar milestone (issue #15): every district now
+// carves exactly one landmark anchor into the central corner lot (previous
+// pin 0x88ad2f49). The building rand stream and the street mask rule are
+// unchanged; only the landmark footprint differs from the old default grid.
+const GOLDEN_GRID_HASH_SEED_11 = 0xe1e71326;
 
 describe('map generation', () => {
   it('default layout for seed 11 is unchanged', () => {

@@ -55,7 +55,7 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 import { clone as skeletonClone } from 'three/examples/jsm/utils/SkeletonUtils.js';
 import { objectiveComplete } from '../sim/contract';
 import { fromFx } from '../sim/fixed';
-import { BLOCK, MAP_W, STREET } from '../sim/map';
+import { MAP_W } from '../sim/map';
 import { PROJ_SUBSTEPS } from '../sim/weapons';
 import {
   DEP_CHARGE,
@@ -1533,6 +1533,7 @@ type WetSpot = { x: number; z: number; rx: number; rz: number; rot: number; deep
 // puddle spots shared by the albedo stain pass and the clearcoat wet mask so
 // each dark patch and its mirror sheen land on the same stretch of asphalt
 function groundWetSpots(state: SimState): WetSpot[] {
+  const BLOCK = state.map.block;
   const next = seededNext({ rng: ((state.mapSeed | 0) ^ 0x9dd7) || 1 });
   const spots: WetSpot[] = [];
   const push = (x: number, z: number) => {
@@ -1610,6 +1611,8 @@ function buildWetMaskTexture(state: SimState): CanvasTexture {
 }
 
 function buildGroundTexture(state: SimState): CanvasTexture {
+  const BLOCK = state.map.block;
+  const STREET = state.map.street;
   const px = 2048;
   const canvas = document.createElement('canvas');
   canvas.width = px;
@@ -3463,6 +3466,8 @@ function createStreetLamps(
   scene: Scene,
   neonI: number,
 ): { pole: InstancedMesh; head: InstancedMesh; sources: PoolSource[] } | null {
+  const BLOCK = state.map.block;
+  const STREET = state.map.street;
   const spots: { x: number; z: number }[] = [];
   if (state.map.visualTest) {
     // the staging map has no block grid: ring the square road from its outer

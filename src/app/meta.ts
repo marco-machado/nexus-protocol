@@ -183,15 +183,18 @@ export interface RegionDef {
   missionMix: number[];
 }
 
+// each region owns a distinct grammar parameter set (block scale, street
+// width, height distribution, alley density) and its landmark kind, so the 8
+// regions read structurally different, not just renamed (GDD drafts 17-18)
 export const REGIONS: RegionDef[] = [
-  { name: 'HOME ARC', mapParams: {}, missionMix: [MISSION_ASSASSINATE, MISSION_PERSUADE, MISSION_ASSASSINATE, MISSION_RAID, MISSION_PERSUADE] },
-  { name: 'GREY HARBOR', mapParams: { skipMod: 5 }, missionMix: [MISSION_RAID, MISSION_CONVOY, MISSION_PERSUADE, MISSION_RAID, MISSION_PURGE] },
-  { name: 'IRONFIELD SPRAWL', mapParams: { splitMod: 2, heightBase: 5 }, missionMix: [MISSION_PURGE, MISSION_SABOTAGE, MISSION_HEIST, MISSION_ASSASSINATE, MISSION_RAID] },
-  { name: 'MERIDIAN FLATS', mapParams: { skipMod: 4, heightVar: 8 }, missionMix: [MISSION_ASSASSINATE, MISSION_ESCORT, MISSION_PERSUADE, MISSION_HEIST, MISSION_BROADCAST] },
-  { name: 'NEON BASIN', mapParams: { skipMod: 8, heightBase: 6 }, missionMix: [MISSION_PURGE, MISSION_HEIST, MISSION_BLACKOUT, MISSION_PERSUADE, MISSION_PURGE] },
-  { name: 'SPIRE DISTRICT', mapParams: { splitMod: 4, heightVar: 20 }, missionMix: [MISSION_HEIST, MISSION_RAID, MISSION_RECOVERY, MISSION_ASSASSINATE, MISSION_PERSUADE] },
-  { name: 'CORDON BELT', mapParams: { skipMod: 9, splitMod: 2, heightBase: 8 }, missionMix: [MISSION_BLACKOUT, MISSION_ASSASSINATE, MISSION_ESCORT, MISSION_SABOTAGE, MISSION_BROADCAST] },
-  { name: 'ARCOLOGY CORE', mapParams: { skipMod: 10, splitMod: 2, heightBase: 10, heightVar: 18 }, missionMix: [MISSION_PERSUADE, MISSION_HEIST, MISSION_HQ, MISSION_HQ, MISSION_HQ] },
+  { name: 'HOME ARC', mapParams: { landmark: 0 }, missionMix: [MISSION_ASSASSINATE, MISSION_PERSUADE, MISSION_ASSASSINATE, MISSION_RAID, MISSION_PERSUADE] },
+  { name: 'GREY HARBOR', mapParams: { block: 24, street: 6, skipMod: 5, splitMod: 3, heightBase: 3, heightVar: 6, landmark: 1 }, missionMix: [MISSION_RAID, MISSION_CONVOY, MISSION_PERSUADE, MISSION_RAID, MISSION_PURGE] },
+  { name: 'IRONFIELD SPRAWL', mapParams: { splitMod: 2, alleyMod: 1, heightBase: 5, heightVar: 10, landmark: 2 }, missionMix: [MISSION_PURGE, MISSION_SABOTAGE, MISSION_HEIST, MISSION_ASSASSINATE, MISSION_RAID] },
+  { name: 'MERIDIAN FLATS', mapParams: { skipMod: 4, street: 5, heightVar: 8, landmark: 3 }, missionMix: [MISSION_ASSASSINATE, MISSION_ESCORT, MISSION_PERSUADE, MISSION_HEIST, MISSION_BROADCAST] },
+  { name: 'NEON BASIN', mapParams: { block: 12, splitMod: 1, skipMod: 8, heightBase: 6, heightVar: 12, landmark: 4 }, missionMix: [MISSION_PURGE, MISSION_HEIST, MISSION_BLACKOUT, MISSION_PERSUADE, MISSION_PURGE] },
+  { name: 'SPIRE DISTRICT', mapParams: { block: 24, splitMod: 4, alleyMod: 3, heightBase: 10, heightVar: 20, landmark: 5 }, missionMix: [MISSION_HEIST, MISSION_RAID, MISSION_RECOVERY, MISSION_ASSASSINATE, MISSION_PERSUADE] },
+  { name: 'CORDON BELT', mapParams: { street: 6, skipMod: 9, splitMod: 2, alleyMod: 4, heightBase: 8, landmark: 6 }, missionMix: [MISSION_BLACKOUT, MISSION_ASSASSINATE, MISSION_ESCORT, MISSION_SABOTAGE, MISSION_BROADCAST] },
+  { name: 'ARCOLOGY CORE', mapParams: { block: 32, street: 6, skipMod: 10, splitMod: 2, alleyMod: 2, heightBase: 12, heightVar: 18, landmark: 7 }, missionMix: [MISSION_PERSUADE, MISSION_HEIST, MISSION_HQ, MISSION_HQ, MISSION_HQ] },
 ];
 
 const DISTRICT_NAMES = [

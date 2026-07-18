@@ -14,7 +14,7 @@ import {
   Scene,
 } from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
-import { BLOCK, MAP_W, STREET, cellIdx } from '../sim/map';
+import { MAP_W, cellIdx } from '../sim/map';
 import type { SimState } from '../sim/state';
 
 type WetProfile = {
@@ -196,6 +196,8 @@ export function createStreetDress(
   neonI: number,
 ): void {
   if (state.map.visualTest) return;
+  const BLOCK = state.map.block;
+  const STREET = state.map.street;
   const next = seededNext({ rng: ((state.mapSeed | 0) ^ 0x57ee) || 1 });
   const curbs: Matrix4[] = [];
   const manholes: Matrix4[] = [];
@@ -331,6 +333,8 @@ export function createStreetDress(
  */
 export function createPropScatter(state: SimState, scene: Scene, neonI: number): void {
   if (state.map.visualTest) return;
+  const BLOCK = state.map.block;
+  const STREET = state.map.street;
   const next = seededNext({ rng: ((state.mapSeed | 0) ^ 0xc0ff) || 1 });
   const barriers: Matrix4[] = [];
   const dumps: Matrix4[] = [];
@@ -548,6 +552,8 @@ function addTintedInstanced(
  */
 export function createParkedVehicleDress(state: SimState, scene: Scene, wet: WetProfile): void {
   if (state.map.visualTest) return;
+  const BLOCK = state.map.block;
+  const STREET = state.map.street;
   const next = seededNext({ rng: ((state.mapSeed | 0) ^ 0x9a7c) || 1 });
   const cars: { m: Matrix4; c: Color }[] = [];
   const trams: Matrix4[] = [];
@@ -625,6 +631,8 @@ export function createParkedVehicleDress(state: SimState, scene: Scene, wet: Wet
  */
 export function createSignageBoards(state: SimState, scene: Scene, neonI: number): void {
   if (state.map.visualTest) return;
+  const BLOCK = state.map.block;
+  const STREET = state.map.street;
   const next = seededNext({ rng: ((state.mapSeed | 0) ^ 0x51b0) || 1 });
   const boards: { m: Matrix4; c: Color }[] = [];
   const frames: Matrix4[] = [];

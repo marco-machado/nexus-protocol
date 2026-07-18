@@ -32,13 +32,17 @@ const CHECKPOINT_EVERY = 200;
 
 // If this hash changes, sim behavior changed: either the change was an
 // intentional gameplay edit (update the constant) or determinism broke.
-// Re-pinned for the world-and-input track (issue #15): the attack-move
-// command landed as a real sim command (agent attackMove flag added to
-// hashState, tick 750 of the golden script now issues one), so the golden
-// replay exercises engage-while-moving. Behavior of every other command is
-// unchanged; the previous pin 0x4bc18742 reproduces exactly when the
-// attackmove entry is removed from the script.
-const GOLDEN_FINAL_HASH = 0xef2e7707;
+// Re-pinned for the world-and-input track (issue #15), twice:
+// 1. Attack-move landed as a real sim command (agent attackMove flag added
+//    to hashState, tick 750 of the golden script now issues one), so the
+//    golden replay exercises engage-while-moving. Pin at that point:
+//    0xef2e7707; the pre-track pin 0x4bc18742 reproduced exactly with the
+//    attackmove entry removed from the script.
+// 2. The world-grammar milestone: every generated district carves one
+//    landmark anchor (obstacle plus streetBlocked patch), which shifts the
+//    walkable list and therefore civilian placement and the tick rand
+//    stream. Sim rules are unchanged; the map is what moved.
+const GOLDEN_FINAL_HASH = 0xdaa627b1;
 
 function specs() {
   const lead = defaultSpec();

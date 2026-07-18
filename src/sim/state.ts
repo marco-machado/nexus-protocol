@@ -172,6 +172,9 @@ export interface MissionState {
   captiveFreed: boolean;
   // counter-broadcast conversion-pressure meter (glossary: not "unrest")
   saturation: number;
+  // signature-site flag for the presentation ladder (HQ core, heist vault,
+  // defense relay); static after setup, so it stays out of hashState
+  siteCell: number;
   contract: ContractState;
 }
 
@@ -303,6 +306,7 @@ export function baseState(seed: number, mapSeed: number, mapParams?: MapParams):
       captiveId: -1,
       captiveFreed: false,
       saturation: 0,
+      siteCell: -1,
       contract: {
         failures: [],
         lossReason: REASON_NONE,
