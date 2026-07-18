@@ -24,6 +24,8 @@ Measured baselines for the **current** (pre high-fidelity pivot) presentation st
 | MacBook, AAA presentation pass, night/rain, alarm RED | WebGL fallback | 160 | 159.6 | 142.9 | 0.12 | pass (display-capped) |
 | MacBook, mock-parity pass (streak reflections, grain/grade, HUD redesign) | WebGPU | 172 | 160.0 | 147.1 | 0.12 | pass (display-capped) |
 | Mid-range Windows laptop (iGPU) | both | | | | | pending manual run |
+| MacBook, continuous smooth camera (eased rotate/zoom, inertial pan) | WebGPU + WebGL | | | | | pending measurement |
+| MacBook, tilt-shift prototype (`?perf&tiltshift`, post on) | WebGPU + WebGL | | | | | pending measurement |
 
 Measured 2026-07-04 during alarm level RED with active combat. fps is capped by the display refresh rate (ProMotion 160 Hz); the 1% low staying above 140 and the sim costing well under the 50 ms tick budget indicate large headroom.
 
@@ -36,6 +38,8 @@ The VAT crowd rows were measured 2026-07-05 after the Phase D skeletal-crowd pas
 The worst-tick assertion is wall-clock and load-sensitive: under concurrent host CPU load the probe can breach the 25 ms bound (observed 35 ms while parallel tooling saturated the cores) while mean/p99 stay in budget. Re-run the file in isolation before treating a failure as a regression.
 
 ## Notes
+
+- World-and-input track camera (2026-07-18): the stepped 45-degree yaw rig was replaced by the continuous smooth rig (eased rotation with shortest-arc wraparound, eased zoom clamped 10 to 70, velocity-integrated pan with light inertia; `src/render/camera.ts`), and the tilt-shift perspective frame prototype sits behind `?tiltshift` with an optional focus-band gaussian pass in `src/render/post.ts` (ADR-0003, still open). Both rows above are pending measurement on the reference machines because this change landed in a headless run; the harness is `/?perf` versus `/?perf&tiltshift` on both backends with post enabled. Per-frame cost expectations: the smooth rig is the same one-matrix update as the stepped rig; the tilt-shift pass adds one gaussian blur chain, which is why its row must be measured before the ADR closes.
 
 - R3F migration stage 3 (2026-07-17): mission setup/teardown moved into component lifecycle (`MissionView` in `src/app/canvasHost.tsx` mounts `createMissionSystems` and disposes it on unmount), and palette/post/rain/shadow settings bind reactively. Per-frame systems are unchanged imperative modules; the only new per-frame cost is zero (React work happens on mount, unmount, and settings changes). Post pipeline and rain now also release on toggle-off mid-mission. Reference-machine fps rows pending the same manual run as stage 2.
 - R3F migration stage 2 (2026-07-17): the mission scene now mounts inside a persistent React Three Fiber root (`src/app/canvasHost.tsx`) that adopts the existing `WebGPURenderer` with `frameloop: 'never'`. The mission runner's fixed-tick accumulator keeps sole ownership of `step()` and `render()`, and no Three object ownership moved, so there is zero R3F reconciliation during a mission frame — the wrap costs one mount/unmount per mission. Verified as a behavioral no-op in headless Chromium (`?webgl&debug` and `?webgl&visualtest`: identical frames vs pre-wrap, renderer draw stats live, sim ticking). Bundle: 408.77 → 539.72 kB gzip (react + react-dom + @react-three/fiber), inside the Section 17 sub-5 MB menu-interactive budget. Reference-machine fps rows (per tier) pending the next manual run on target hardware; no per-frame code path changed, so the prior rows remain the baseline.

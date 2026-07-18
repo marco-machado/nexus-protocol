@@ -16,11 +16,14 @@ import {
   vec4,
 } from 'three/tsl';
 import { bloom } from 'three/examples/jsm/tsl/display/BloomNode.js';
+import { gaussianBlur } from 'three/examples/jsm/tsl/display/GaussianBlurNode.js';
 
 export const BLOOM_STRENGTH = 0.55;
 export const BLOOM_THRESHOLD = 0.55;
 const GRAIN_AMOUNT = 0.045;
 const GRADE_STRENGTH = 0.5;
+const TILT_FOCUS_BAND = 0.18;
+const TILT_BLUR_SIGMA = 3;
 
 export interface PostHandles {
   bloomStrength: { value: number };
@@ -36,10 +39,18 @@ export function createPost(
   renderer: WebGPURenderer,
   scene: Scene,
   camera: Camera,
+  tiltShift = false,
 ): Post {
   const pipeline = new RenderPipeline(renderer);
   const scenePass = pass(scene, camera);
-  const color = scenePass.getTextureNode('output');
+  let color = scenePass.getTextureNode('output');
+  if (tiltShift) {
+    // miniature-lens focus band: sharp at the screen-height focus line,
+    // blurring toward the top and bottom edges (prototype for ADR-0003)
+    const blurred = gaussianBlur(color, 1, TILT_BLUR_SIGMA);
+    const focus = smoothstep(TILT_FOCUS_BAND, 0.5, screenUV.y.sub(0.5).abs());
+    color = mix(color, blurred, focus) as typeof color;
+  }
   // threshold keeps the dark night palette out of the bloom; saturated
   // neon strips, markers, agents, and projectiles cross it
   const bloomPass = bloom(color, BLOOM_STRENGTH, 0.4, BLOOM_THRESHOLD);
