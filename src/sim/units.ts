@@ -93,6 +93,12 @@ export const WORK_NONE = 0;
 export const WORK_BREACH = 1;
 export const WORK_HACK = 2;
 
+// alive and actually in the field; a held captive is neither commandable
+// nor targetable
+export function fielded(a: Agent): boolean {
+  return a.alive && !a.held;
+}
+
 export interface Npc {
   id: number;
   kind: number;

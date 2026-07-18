@@ -4,6 +4,17 @@ import { fxDiv, fxLen, fxMul, type Fx } from './fixed';
 import { cellIdx, inBounds, losClear, MAP_W, type MapData } from './map';
 import { findPath, nearestWalkable } from './path';
 import {
+  engageAt,
+  hijackTarget,
+  influence,
+  losUnits,
+  ORDER_OK,
+  PERSUADE_RADIUS,
+  persuadeNeed,
+  persuadeQuery,
+  placeQuery,
+} from './queries';
+import {
   rand,
   SimState,
   STATUS_ACTIVE,
@@ -45,6 +56,7 @@ import {
   Agent,
   AGENT_SPEED,
   createNpc,
+  fielded,
   DOCTRINE_STEALTH,
   DOCTRINE_SWARM,
   Npc,
@@ -77,7 +89,6 @@ import {
   FUSE_CHAIN,
   FUSE_SHOT,
   HALT_T,
-  HIJACK_RADIUS,
   isIntersection,
   PED_AHEAD,
   PED_LATERAL,
@@ -108,10 +119,8 @@ import {
 export const TICK_RATE = 20;
 export const TICK_MS = 1000 / TICK_RATE;
 
-export const INFLUENCE_POLICE = 5;
-export const INFLUENCE_VIP = 8;
-export const INFLUENCE_GUARD = 15;
-const PERSUADE_RADIUS = 4 << 16;
+export { influence } from './queries';
+export { fielded } from './units';
 const EXFIL_NEED_OBJECTIVE = true;
 
 const CLOAK_DURATION = 200;
@@ -134,7 +143,6 @@ const TURRET_RANGE = 8 << 16;
 const MEDBAY_RADIUS = 3 << 16;
 const SMOKE_TTL = 240;
 const VAULT_CRACK_TICKS = 300;
-const PLACE_RADIUS = 14 << 16;
 export const BREACH_TICKS = 120;
 export const HACK_TICKS = 160;
 // centers of diagonal-adjacent cells are ~1.41 cells apart
@@ -159,18 +167,6 @@ const CQC_RANGE = 5 << 15;
 interface Noise {
   x: Fx;
   z: Fx;
-}
-
-// alive and actually in the field; a held captive is neither commandable
-// nor targetable
-export function fielded(a: Agent): boolean {
-  return a.alive && !a.held;
-}
-
-export function influence(s: SimState): number {
-  let n = 0;
-  for (const npc of s.npcs) if (npc.state === ST_PERSUADED) n++;
-  return n;
 }
 
 function cellOfFx(x: Fx, z: Fx): number {
@@ -653,35 +649,6 @@ function hostileToPlayer(n: Npc): boolean {
   );
 }
 
-function smokeBlocked(s: SimState, x0: number, z0: number, x1: number, z1: number): boolean {
-  let err = Math.abs(x1 - x0) - Math.abs(z1 - z0);
-  const dx = Math.abs(x1 - x0);
-  const dz = Math.abs(z1 - z0);
-  const sx = x0 < x1 ? 1 : -1;
-  const sz = z0 < z1 ? 1 : -1;
-  let x = x0;
-  let z = z0;
-  for (;;) {
-    if (s.smokeGrid[cellIdx(x, z)]) return true;
-    if (x === x1 && z === z1) return false;
-    const e2 = 2 * err;
-    if (e2 > -dz) {
-      err -= dz;
-      x += sx;
-    }
-    if (e2 < dx) {
-      err += dx;
-      z += sz;
-    }
-  }
-}
-
-function losUnits(s: SimState, ax: Fx, az: Fx, bx: Fx, bz: Fx, throughSmoke = false): boolean {
-  if (!losClear(s.map, ax >> 16, az >> 16, bx >> 16, bz >> 16)) return false;
-  if (throughSmoke || s.smoke.length === 0) return true;
-  return !smokeBlocked(s, ax >> 16, az >> 16, bx >> 16, bz >> 16);
-}
-
 function applyCommand(s: SimState, c: Command): void {
   switch (c.type) {
     case 'move': {
@@ -727,22 +694,14 @@ function applyCommand(s: SimState, c: Command): void {
       }
       break;
     case 'persuade': {
-      const a = s.agents[c.id];
-      if (!a || !fielded(a) || !a.spec.persuadertron || a.persuadeCd > 0 || a.driving >= 0) break;
+      if (persuadeQuery(s, c.id) !== ORDER_OK) break;
+      const a = s.agents[c.id]!;
       a.persuadeCd = 30;
       const inf = influence(s);
       for (const n of s.npcs) {
         if (n.state === ST_DEAD || n.state === ST_PERSUADED) continue;
         if (distFx(a.x, a.z, n.x, n.z) > PERSUADE_RADIUS) continue;
-        const need =
-          n.kind === NPC_CIV
-            ? n.vip
-              ? INFLUENCE_VIP
-              : 0
-            : n.kind === NPC_GUARD || n.kind === NPC_ENEMY
-              ? INFLUENCE_GUARD
-              : INFLUENCE_POLICE;
-        if (inf >= need) {
+        if (inf >= persuadeNeed(n)) {
           n.state = ST_PERSUADED;
           n.followAgent = c.id;
           n.path = [];
@@ -819,18 +778,10 @@ function applyCommand(s: SimState, c: Command): void {
       break;
     }
     case 'place': {
+      if (placeQuery(s, c.kind, c.cell) !== ORDER_OK) break;
       const m = s.mission;
-      if (m.type !== MISSION_DEFENSE || m.status !== STATUS_ACTIVE) break;
       const isTurret = c.kind === DEP_TURRET;
-      if (!isTurret && c.kind !== DEP_TRAP) break;
-      if (isTurret ? m.turretBudget <= 0 : m.trapBudget <= 0) break;
-      if (c.cell < 0 || c.cell >= s.map.obstacle.length || s.map.obstacle[c.cell]) break;
-      if (s.deployables.some((d) => d.alive && d.cell === c.cell)) break;
-      const anchor = m.assets[0];
-      if (!anchor) break;
-      const [ax, az] = centerFx(anchor.cell);
       const [px, pz] = centerFx(c.cell);
-      if (distFx(px, pz, ax, az) > PLACE_RADIUS) break;
       if (isTurret) m.turretBudget--;
       else m.trapBudget--;
       s.deployables.push({
@@ -864,18 +815,7 @@ function applyCommand(s: SimState, c: Command): void {
         a.moving = false;
         break;
       }
-      let best: Fx = HIJACK_RADIUS + 1;
-      let pick: Vehicle | null = null;
-      for (const v of s.vehicles) {
-        // the convoy is armored and crewed; it cannot be commandeered
-        if (v.kind === VEH_FUEL || v.kind === VEH_CONVOY) continue;
-        if (v.state === V_WRECK || v.fuseT > 0 || v.driver >= 0) continue;
-        const d = distFx(a.x, a.z, v.x, v.z);
-        if (d < best) {
-          best = d;
-          pick = v;
-        }
-      }
+      const pick = hijackTarget(s, a);
       if (!pick) break;
       pick.driver = a.id;
       pick.state = V_HIJACK;
@@ -1050,7 +990,7 @@ function updateAgent(s: SimState, a: Agent, noises: Noise[]): void {
   if (tx === null && a.attackTarget >= 0) {
     const t = s.npcs[a.attackTarget];
     if (t && t.state !== ST_DEAD) {
-      if (distFx(a.x, a.z, t.x, t.z) <= rangeFx && losUnits(s, a.x, a.z, t.x, t.z, a.spec.smokeVision)) {
+      if (engageAt(s, a, t.x, t.z) === ORDER_OK) {
         tx = t.x;
         tz = t.z;
         targetNpc = t;
