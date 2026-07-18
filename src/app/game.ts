@@ -152,7 +152,7 @@ export class Game {
     const roster = this.meta.agents.filter((a) => a.alive);
     const specs = roster.map((a) => buildSpec(a));
     // codenames and appearance travel as parallel app-layer arrays so AgentSpec
-    // and the sim boundary stay untouched; indices align with state.agents
+    // and the sim boundary stay untouched (FR-017); indices align with state.agents
     const codenames = roster.map((a) => a.name);
     const appearances = roster.map((a, i) => agentAppearance(a, i));
     if (specs.length === 0) {

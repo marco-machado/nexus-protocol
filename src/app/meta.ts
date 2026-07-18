@@ -111,7 +111,7 @@ export interface MetaGear {
 export interface MetaAgent {
   name: string;
   alive: boolean;
-  // male/female chassis key; latent until the two R5 models land
+  // cosmetic male/female chassis key; never enters the sim
   variant: BodyVariant;
   augments: Partial<Record<AugKey, number>>;
   kills: number;
@@ -486,8 +486,12 @@ export function pickVariant(i: number, name = ''): BodyVariant {
   return (h & 1) === 0 ? 'male' : 'female';
 }
 
+function isBodyVariant(v: unknown): v is BodyVariant {
+  return v === 'male' || v === 'female';
+}
+
 export function ensureAgentVariant(a: MetaAgent, i = 0): BodyVariant {
-  if (a.variant === 'male' || a.variant === 'female') return a.variant;
+  if (isBodyVariant(a.variant)) return a.variant;
   a.variant = pickVariant(i, a.name);
   return a.variant;
 }
@@ -534,8 +538,7 @@ function appearanceWithAugmentLevel(
     const lvl = prospective?.slot === slot.key ? prospective.level : augLevel(a, slot.key);
     if (lvl > 0) levels[slot.key as AttachmentSlot] = lvl;
   }
-  const variant: BodyVariant =
-    a.variant === 'female' || a.variant === 'male' ? a.variant : pickVariant(trimSlot, a.name);
+  const variant: BodyVariant = isBodyVariant(a.variant) ? a.variant : pickVariant(trimSlot, a.name);
   return buildAppearanceManifest({
     variant,
     levels,
@@ -781,19 +784,16 @@ export function loadMeta(): MetaState | null {
     m.captured ??= [];
     // legacy saves predate cosmetic variants; assign once and persist
     let migrated = false;
-    for (let i = 0; i < m.agents.length; i++) {
-      const a = m.agents[i]!;
-      if (a.variant !== 'male' && a.variant !== 'female') {
-        ensureAgentVariant(a, i);
+    const pools: Array<[MetaAgent[], number]> = [
+      [m.agents, 0],
+      [m.captured, 100],
+    ];
+    for (const [list, base] of pools) {
+      list.forEach((a, i) => {
+        if (isBodyVariant(a.variant)) return;
+        ensureAgentVariant(a, base + i);
         migrated = true;
-      }
-    }
-    for (let i = 0; i < m.captured.length; i++) {
-      const a = m.captured[i]!;
-      if (a.variant !== 'male' && a.variant !== 'female') {
-        ensureAgentVariant(a, i + 100);
-        migrated = true;
-      }
+      });
     }
     if (migrated) saveMeta(m);
     return m;

@@ -1,5 +1,4 @@
-// Pure agent appearance manifest: single source of truth for field models,
-// equip previews, and headless tests. No Three.js, no sim state.
+// Pure agent appearance-manifest data. No Three.js imports, no sim state.
 
 export type BodyVariant = 'male' | 'female';
 export type ChassisId = 'operative';
@@ -58,8 +57,8 @@ const ALL_SLOTS: AttachmentSlot[] = ['legs', 'arms', 'torso', 'eyes', 'brain', '
 // GDD primary reads: these four must change the manifest at each version step.
 export const PRIMARY_SLOTS: AttachmentSlot[] = ['legs', 'arms', 'torso', 'eyes'];
 
-// Chassis URLs are a data table so the two R5 body models drop in without
-// systems changes. Both variants share the current hero until those land.
+// Chassis URLs are a data table so a body-model swap is a data change, not a
+// systems change; both variants sharing one URL is intentional, not a bug.
 export const CHASSIS_URLS: Record<ChassisId, Record<BodyVariant, string>> = {
   operative: {
     male: '/models/agent-operative.glb',

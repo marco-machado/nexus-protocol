@@ -11,7 +11,8 @@ import { mountScreenRoot } from './app/ui/root';
 import { settings } from './app/settings';
 import { defaultSpec } from './sim/units';
 
-// staging ladder: blank, mixed V1/V2, heavy V2, full V3 — eye-check augment reads
+// staging ladder (blank, mixed V1/V2, heavy V2, full V3) so every augment
+// read tier can be eye-checked in the staging scenes
 function stagingAppearances(): AppearanceManifest[] {
   return [
     buildAppearanceManifest({ variant: 'male', trimSlot: 0 }),
