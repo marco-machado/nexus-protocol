@@ -45,6 +45,12 @@ import {
   type ActiveProject,
   type BreakthroughOffer,
 } from './research';
+import {
+  emptyNarrativeHistory,
+  resetNarrativeForNgPlus,
+  upgradeNarrativeHistory,
+  type NarrativeHistory,
+} from './narrative/history';
 
 export const AUG_SLOTS = [
   {
@@ -187,6 +193,7 @@ export interface MetaState {
   territories: Territory[];
   syndicates: Syndicate[];
   log: string[];
+  narrative: NarrativeHistory;
 }
 
 export interface RegionDef {
@@ -478,6 +485,7 @@ export function newMeta(now: number = Date.now()): MetaState {
       strikes: 0,
     })),
     log: ['Nexus divisional charter granted. One district under management.'],
+    narrative: emptyNarrativeHistory(),
   };
 }
 
@@ -754,6 +762,7 @@ export function startNgPlus(m: MetaState, now: number = Date.now()): void {
     syn.nextStrikeAt = 0;
     syn.strikes = 0;
   }
+  resetNarrativeForNgPlus(m.narrative);
   m.log = [
     `New operation authorized (NG+${m.ngPlus}). Rival dispositions remixed; assets, arsenal, and research carry over.`,
   ];
@@ -790,6 +799,7 @@ export function loadMeta(): MetaState | null {
     m.active ??= [];
     m.completed ??= [];
     m.offers ??= [];
+    if (upgradeNarrativeHistory(m)) migrated = true;
     // legacy saves predate cosmetic variants; assign once and persist
     const pools: Array<[MetaAgent[], number]> = [
       [m.agents, 0],
