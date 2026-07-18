@@ -85,6 +85,8 @@ export interface Agent {
   workKind: number;
   workCell: number;
   workT: number;
+  // attack-move: the current move order may be interrupted by engagement
+  attackMove: boolean;
   // a captured asset awaiting recovery: inert and uncommandable until freed
   held: boolean;
 }
@@ -222,6 +224,7 @@ export function createAgent(id: number, x: Fx, z: Fx, spec: AgentSpec): Agent {
     workKind: WORK_NONE,
     workCell: -1,
     workT: 0,
+    attackMove: false,
     held: false,
   };
 }

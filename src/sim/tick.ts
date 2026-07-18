@@ -649,39 +649,48 @@ function hostileToPlayer(n: Npc): boolean {
   );
 }
 
+function applyMoveOrder(s: SimState, ids: number[], x: Fx, z: Fx, attackMove: boolean): void {
+  const cell = nearestWalkable(s.map, cellOfFx(x, z));
+  const bx = cell % MAP_W;
+  const bz = (cell / MAP_W) | 0;
+  let offset = 0;
+  for (const id of ids) {
+    const a = s.agents[id];
+    if (!a || !fielded(a)) continue;
+    a.workKind = WORK_NONE;
+    a.attackMove = false;
+    if (a.driving >= 0) {
+      const v = s.vehicles[a.driving];
+      if (v) driveTo(s, v, x, z);
+      continue;
+    }
+    const ox = Math.max(0, Math.min(MAP_W - 1, bx + (offset % 2 === 1 ? (offset + 1) >> 1 : -(offset >> 1))));
+    const oz = Math.max(0, Math.min(MAP_W - 1, bz + (offset > 1 ? 1 : 0)));
+    const target = offset === 0 ? cell : nearestWalkable(s.map, cellIdx(ox, oz));
+    if (setPath(s.map, a, target)) {
+      a.moving = true;
+      a.attackTarget = -1;
+      a.attackMove = attackMove;
+    }
+    offset++;
+  }
+}
+
 function applyCommand(s: SimState, c: Command): void {
   switch (c.type) {
-    case 'move': {
-      const cell = nearestWalkable(s.map, cellOfFx(c.x, c.z));
-      const bx = cell % MAP_W;
-      const bz = (cell / MAP_W) | 0;
-      let offset = 0;
-      for (const id of c.ids) {
-        const a = s.agents[id];
-        if (!a || !fielded(a)) continue;
-        a.workKind = WORK_NONE;
-        if (a.driving >= 0) {
-          const v = s.vehicles[a.driving];
-          if (v) driveTo(s, v, c.x, c.z);
-          continue;
-        }
-        const ox = Math.max(0, Math.min(MAP_W - 1, bx + (offset % 2 === 1 ? (offset + 1) >> 1 : -(offset >> 1))));
-        const oz = Math.max(0, Math.min(MAP_W - 1, bz + (offset > 1 ? 1 : 0)));
-        const target = offset === 0 ? cell : nearestWalkable(s.map, cellIdx(ox, oz));
-        if (setPath(s.map, a, target)) {
-          a.moving = true;
-          a.attackTarget = -1;
-        }
-        offset++;
-      }
+    case 'move':
+      applyMoveOrder(s, c.ids, c.x, c.z, false);
       break;
-    }
+    case 'attackmove':
+      applyMoveOrder(s, c.ids, c.x, c.z, true);
+      break;
     case 'attack':
       for (const id of c.ids) {
         const a = s.agents[id];
         if (a && fielded(a)) {
           a.attackTarget = c.npcId;
           a.workKind = WORK_NONE;
+          a.attackMove = false;
         }
       }
       break;
@@ -825,6 +834,7 @@ function applyCommand(s: SimState, c: Command): void {
       a.cloakT = 0;
       a.attackTarget = -1;
       a.attackVeh = -1;
+      a.attackMove = false;
       a.moving = false;
       a.path = [];
       a.pathI = 0;
@@ -858,6 +868,7 @@ function applyCommand(s: SimState, c: Command): void {
         a.workT = 0;
         a.attackTarget = -1;
         a.attackVeh = -1;
+        a.attackMove = false;
       }
       break;
     }
@@ -951,9 +962,19 @@ function updateAgent(s: SimState, a: Agent, noises: Noise[]): void {
   if (a.workKind !== WORK_NONE && updateWork(s, a, noises)) return;
 
   if (a.moving) {
-    let speed = agentSpeed(a);
-    if (s.mission.carrier === a.id) speed = ((speed * CARRY_SPEED_PCT) / 100) | 0;
-    if (moveAlong(a, speed)) a.moving = false;
+    let hold = false;
+    if (a.attackMove && a.aggression > 0) {
+      const slot = a.weapons[a.active];
+      if (slot && slot.ammo > 0) hold = huntTarget(s, a, WEAPONS[slot.wid]!.range << 16) !== null;
+    }
+    if (!hold) {
+      let speed = agentSpeed(a);
+      if (s.mission.carrier === a.id) speed = ((speed * CARRY_SPEED_PCT) / 100) | 0;
+      if (moveAlong(a, speed)) {
+        a.moving = false;
+        a.attackMove = false;
+      }
+    }
   }
 
   loot(s, a.x, a.z, a);
@@ -1005,17 +1026,11 @@ function updateAgent(s: SimState, a: Agent, noises: Noise[]): void {
     }
   }
   if (tx === null && a.aggression > 0) {
-    let best: Fx = a.aggression === 1 ? rangeFx >> 1 : rangeFx;
-    for (const n of s.npcs) {
-      if (!hostileToPlayer(n)) continue;
-      const d = distFx(a.x, a.z, n.x, n.z);
-      if (n.cloakT > 0 && !a.spec.scanner && d > cloakRevealRange(s)) continue;
-      if (d <= best && losUnits(s, a.x, a.z, n.x, n.z, a.spec.smokeVision)) {
-        best = d;
-        tx = n.x;
-        tz = n.z;
-        targetNpc = n;
-      }
+    const hunted = huntTarget(s, a, rangeFx);
+    if (hunted) {
+      tx = hunted.x;
+      tz = hunted.z;
+      targetNpc = hunted;
     }
   }
   if (
@@ -1065,6 +1080,23 @@ function updateAgent(s: SimState, a: Agent, noises: Noise[]): void {
     if (c > 0) cd = ((cd * (100 - 25 * c)) / 100) | 0;
     a.cooldown = Math.max(1, cd);
   }
+}
+
+// the aggression-scoped opportunistic target scan, shared by open fire and
+// the attack-move halt check; pure, so extra calls cannot shift the rng
+function huntTarget(s: SimState, a: Agent, rangeFx: Fx): Npc | null {
+  let best: Fx = a.aggression === 1 ? rangeFx >> 1 : rangeFx;
+  let pick: Npc | null = null;
+  for (const n of s.npcs) {
+    if (!hostileToPlayer(n)) continue;
+    const d = distFx(a.x, a.z, n.x, n.z);
+    if (n.cloakT > 0 && !a.spec.scanner && d > cloakRevealRange(s)) continue;
+    if (d <= best && losUnits(s, a.x, a.z, n.x, n.z, a.spec.smokeVision)) {
+      best = d;
+      pick = n;
+    }
+  }
+  return pick;
 }
 
 // returns true while the agent is committed to the channel this tick
