@@ -99,6 +99,11 @@ async function encodeTextures() {
       // UASTC preserves normal-map detail; ETC1S carries color and roughness;
       // Zstd supercompression tames UASTC transfer size (three's KTX2Loader
       // ships a Zstd decoder)
+      // KTX2Loader returns CompressedTexture (flipY=false, cannot flip at
+      // upload) while the dev JPEG path samples with three's default
+      // flipY=true; encoding pre-flipped keeps both paths reading the same
+      // orientation (sign-atlas sub-rects and normal-map relief depend on it)
+      isYFlip: true,
       isUASTC: isNormal,
       isNormalMap: isNormal,
       needSupercompression: isNormal,
