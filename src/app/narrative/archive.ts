@@ -57,6 +57,28 @@ export const ARCHIVE: ArchiveDoc[] = [
     ],
   ),
   doc(
+    'arch-vip-handling',
+    'INTERNAL MEMO',
+    'EXECUTIVE ACQUISITION: HANDLING STANDARDS',
+    (f) => f.history.counters.vipsAcquired >= 1,
+    [
+      'Persuaded executives are booked as acquisitions, not hires. The distinction spares Payroll and satisfies Legal, whose only note was to avoid the word abduction in writing.',
+      'An acquired executive retains title, biometrics, and signing authority. Retention of prior opinions is not supported in the current hardware revision.',
+      'Deliver acquisitions upright and presentable. A board that receives its newest colleague folded develops questions the onboarding deck does not answer.',
+    ],
+  ),
+  doc(
+    'arch-holding-recovery',
+    'TECHNICAL BULLETIN',
+    'COUNTERPARTY HOLDING AND RECOVERY',
+    (f) => f.history.counters.assetsCaptured >= 1,
+    [
+      'An asset held by a counterparty is neither written off nor on the active roster. Accounting carries it as goodwill, which the auditors have agreed not to examine.',
+      'Rivals hold assets for leverage, study, or resale. In all three cases the loadout snapshot remains company property, and the recovery contract prices it accordingly.',
+      'Recovery is a standard contract with a nonstandard deliverable. Field teams are reminded that the deliverable walks out under its own power and retains opinions about the extraction route.',
+    ],
+  ),
+  doc(
     'arch-remediation-report',
     'INCIDENT REPORT',
     'QUARTERLY REMEDIATION SUMMARY',

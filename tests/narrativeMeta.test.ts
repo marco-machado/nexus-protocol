@@ -23,6 +23,7 @@ function outcome(over: Partial<ContractOutcome> = {}): ContractOutcome {
     hqRazed: false,
     siegeRepelled: false,
     vipAcquired: false,
+    assetCaptured: false,
     writeOffs: 0,
     civKills: 0,
     persuaded: 0,

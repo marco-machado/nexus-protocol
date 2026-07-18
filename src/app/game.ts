@@ -306,6 +306,7 @@ export class Game {
       persuaded: result.persuaded,
       kills: result.kills,
     });
+    const capturedBefore = this.meta.captured?.length ?? 0;
     const info = applyResult(this.meta, t, result.won, result.kills, result.civKills, survivors, {
       loot: result.loot,
       defense,
@@ -340,6 +341,7 @@ export class Game {
       hqRazed: result.won && !defense && !wasOwned && rivalId >= 0 && t.hq === true,
       siegeRepelled: defense && result.won && siegeRival >= 0,
       vipAcquired: result.won && missionType === MISSION_PERSUADE,
+      assetCaptured: (this.meta.captured?.length ?? 0) > capturedBefore,
       writeOffs: result.survivors.filter((s) => !s).length,
       civKills: result.civKills,
       persuaded: result.persuaded,

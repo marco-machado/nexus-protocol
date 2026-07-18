@@ -48,6 +48,7 @@ function sampleCampaignFacts(): CampaignFacts {
       hqRazed: false,
       siegeRepelled: false,
       vipAcquired: true,
+      assetCaptured: false,
       writeOffs: 1,
       civKills: 2,
       persuaded: 4,
