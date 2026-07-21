@@ -999,6 +999,12 @@
       .pop .taxrow { margin: 8px 0; }
       .pop button { width: 100%; margin: 6px 0 0; min-height: 40px; }
       .pop .fine { margin: 8px 0 0; }
+      .infrarows { margin-top: 8px; border-top: 1px solid #1b2940; padding-top: 6px; }
+      .infrarow { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 10.5px; }
+      .infrarow span { color: #8fa3bd; letter-spacing: 0.5px; }
+      .infrarow span small { display: block; color: #5a677f; font-size: 9px; letter-spacing: 0.3px; }
+      .infrarow button { width: auto; flex: 0 0 auto; margin: 3px 0; min-height: 28px; padding: 3px 10px; font-size: 10.5px; }
+      .infrarow.installed b { color: var(--good); font-size: 9.5px; letter-spacing: 1px; font-weight: normal; }
 
       .legend {
         position: absolute;
@@ -1037,22 +1043,10 @@
         font-weight: normal;
         font-variant-numeric: tabular-nums;
       }
-      .drawer b[data-asplit] { text-align: right; }
       .drawer input { flex: 1; min-width: 120px; }
       .drawer .dnext { color: #6c7c96; font-variant-numeric: tabular-nums; }
+      .drawer .doffer { color: var(--gold); letter-spacing: 1px; }
       .drawer button { margin: 0; padding: 6px 12px; font-size: 11px; min-height: 34px; }
-      .rdgrid { flex-basis: 100%; display: grid; grid-template-columns: 1fr 1fr; gap: 4px 24px; font-size: 10.5px; padding-top: 4px; }
-      .rdrow { display: flex; align-items: center; gap: 10px; }
-      .rdrow .rdlbl { flex: 0 0 128px; letter-spacing: 1px; color: #8fa3bd; }
-      .rdrow .rdval {
-        flex: 0 0 64px;
-        text-align: right;
-        color: #c7d2e4;
-        font-weight: normal;
-        font-variant-numeric: tabular-nums;
-      }
-      .rdrow.done .rdlbl { color: var(--good); }
-      .rdrow.done .rdval { color: var(--good); letter-spacing: 1px; }
       .ticker {
         padding: 7px 16px calc(7px + env(safe-area-inset-bottom));
         background: rgba(6, 9, 14, 0.82);
@@ -1075,8 +1069,70 @@
         .terrlist { max-height: 32vh; }
         .mapcenter { flex: none; min-height: 88px; order: 4; }
         .legend { position: static; margin: 4px 8px 0; align-self: flex-start; order: 6; }
-        .rdgrid { grid-template-columns: 1fr; }
       }
+      /* ---- R&D board: project cards pair border position and text labels so
+         state never rides on color alone ---- */
+      .panel.research {
+        max-width: 1280px;
+        width: 94%;
+        height: 90vh;
+        display: flex;
+        flex-direction: column;
+        padding: 0;
+        overflow: hidden;
+      }
+      .labrows { display: flex; flex-wrap: wrap; gap: 6px 14px; padding: 10px 24px 0; }
+      .labrow {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        border: 1px solid #24354d;
+        border-left: 3px solid #24354d;
+        padding: 6px 12px;
+        font-size: 11px;
+        color: #c7d2e4;
+        font-variant-numeric: tabular-nums;
+      }
+      .labrow.busy { border-left-color: var(--accent); }
+      .labrow .lablbl { color: var(--accent); letter-spacing: 1.5px; }
+      .labrow .labidle { color: #6c7c96; letter-spacing: 0.5px; }
+      .offerbar { display: flex; flex-wrap: wrap; gap: 6px 10px; padding: 8px 24px 0; }
+      .offerchip {
+        border: 1px dashed var(--gold);
+        color: var(--gold);
+        font-size: 10px;
+        letter-spacing: 0.5px;
+        padding: 4px 8px;
+        font-variant-numeric: tabular-nums;
+      }
+      .prjbody { flex: 1; overflow-y: auto; padding: 0 24px 12px; }
+      .prjgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 8px; }
+      .prj {
+        border: 1px solid #24354d;
+        border-left: 3px solid #45526b;
+        padding: 8px 10px;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        font-size: 11px;
+      }
+      .prj-h { display: flex; align-items: baseline; gap: 8px; }
+      .prj-h b { color: #c7d2e4; letter-spacing: 0.5px; font-weight: normal; }
+      .prj-state { margin-left: auto; font-size: 9px; letter-spacing: 1px; color: #7d8aa0; white-space: nowrap; }
+      .prj-marquee { font-size: 9px; letter-spacing: 1px; color: var(--gold); border: 1px solid var(--gold); padding: 0 4px; }
+      .prj-out { color: #7d8aa0; font-size: 10px; }
+      .prj-meta { display: flex; flex-wrap: wrap; gap: 4px 12px; color: #5f86b0; font-size: 10px; font-variant-numeric: tabular-nums; }
+      .prj-meta .prj-req { color: #6c7c96; }
+      .prj-meta .prj-offer { color: var(--gold); }
+      .prj button { margin: 4px 0 0; min-height: 30px; padding: 4px 10px; font-size: 10.5px; }
+      .prj.delivered { border-left-color: var(--good); }
+      .prj.delivered .prj-state { color: var(--good); }
+      .prj.active { border-left-color: var(--accent); }
+      .prj.active .prj-state { color: var(--accent); }
+      .prj.locked { opacity: 0.62; }
+      .prj.locked .prj-state { color: #45526b; }
+      .prj.marquee { border-top: 1px solid var(--gold); }
+      .panel.research .btnbar { border-top: 1px solid #1b2940; }
       /* ---- Squad Provisioning: full-height console with a fixed launch bar ---- */
       .panel.equip {
         max-width: 1280px;

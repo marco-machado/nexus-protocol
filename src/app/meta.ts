@@ -35,6 +35,16 @@ import {
   type WeaponSlot,
 } from '../sim/units';
 import { WEAPONS } from '../sim/weapons';
+import {
+  expireOffers,
+  hasInfra,
+  migrateResearch,
+  needsResearchMigration,
+  tickProjects,
+  unrestCeiling,
+  type ActiveProject,
+  type BreakthroughOffer,
+} from './research';
 
 export const AUG_SLOTS = [
   {
@@ -140,6 +150,7 @@ export interface Territory {
   baseIncome: number;
   hq?: boolean;
   siege?: Siege;
+  infra?: string[];
 }
 
 export interface Syndicate {
@@ -166,9 +177,10 @@ export interface MetaState {
   drones: number;
   shields: number;
   medbays: number;
-  researchSplit: number;
-  weaponPts: number;
-  augPts: number;
+  labSlots: number;
+  active: ActiveProject[];
+  completed: string[];
+  offers: BreakthroughOffer[];
   agents: MetaAgent[];
   // agents lost to a rival holding facility, loadout snapshot intact
   captured: MetaAgent[];
@@ -287,8 +299,6 @@ export const CONTRACT_NAMES = [
 
 export const CYCLE_MS = 30 * 60 * 1000;
 export const OFFLINE_CAP_MS = 24 * 60 * 60 * 1000;
-const RESEARCH_BASE = 6;
-const RESEARCH_DIV = 150;
 
 export function incomePerCycle(m: MetaState): number {
   let income = 0;
@@ -296,10 +306,6 @@ export function incomePerCycle(m: MetaState): number {
     if (t.owned) income += Math.round((t.baseIncome * t.taxRate) / 100);
   }
   return income;
-}
-
-export function researchPerCycle(m: MetaState): number {
-  return RESEARCH_BASE + Math.floor(incomePerCycle(m) / RESEARCH_DIV);
 }
 
 export const SIEGE_DEADLINE_MS = 4 * 60 * 60 * 1000;
@@ -370,10 +376,13 @@ export function processSieges(m: MetaState, now: number): void {
     if (now < syn.nextStrikeAt) continue;
     const target = pickSiegeTarget(m, syn.doctrine);
     if (!target) continue;
-    target.siege = { rival: syn.id, deadline: now + SIEGE_DEADLINE_MS };
+    const deadlineMs = SIEGE_DEADLINE_MS * (hasInfra(target, 'bulwark') ? 2 : 1);
+    target.siege = { rival: syn.id, deadline: now + deadlineMs };
     syn.strikes++;
     syn.nextStrikeAt = now + strikeInterval(act, m.ngPlus) + (hash32(syn.id, syn.strikes) % STRIKE_JITTER_MS);
-    m.log.unshift(`${syn.name} moving on ${target.name}. Defense contract posted; deadline 4 hours.`);
+    m.log.unshift(
+      `${syn.name} moving on ${target.name}. Defense contract posted; deadline ${deadlineMs / 3_600_000} hours.`,
+    );
   }
 }
 
@@ -388,7 +397,7 @@ export function advanceTime(m: MetaState, now: number): void {
     m.credits += income;
     for (const t of m.territories) {
       if (!t.owned) continue;
-      t.unrest = Math.max(0, Math.min(120, t.unrest + Math.round((t.taxRate - 20) / 5)));
+      t.unrest = Math.max(0, Math.min(unrestCeiling(t), t.unrest + Math.round((t.taxRate - 20) / 5)));
     }
     for (const t of m.territories) {
       if (t.owned && t.unrest >= 100) {
@@ -398,10 +407,9 @@ export function advanceTime(m: MetaState, now: number): void {
         m.log.unshift(`${t.name} lost to civil unrest. Re-acquisition contract issued.`);
       }
     }
-    const pts = RESEARCH_BASE + Math.floor(income / RESEARCH_DIV);
-    m.weaponPts += Math.round((pts * m.researchSplit) / 100);
-    m.augPts += Math.round((pts * (100 - m.researchSplit)) / 100);
   }
+  tickProjects(m, elapsed);
+  expireOffers(m, now);
   processSieges(m, now);
   m.log.length = Math.min(m.log.length, 12);
 }
@@ -432,22 +440,11 @@ export function makeTerritories(ngPlus = 0): Territory[] {
   });
 }
 
-// research points needed per weapon tier (index = tier) and augment level (index = level)
-export const WEAPON_TIER_PTS = [0, 0, 100, 200, 340, 520];
-export const AUG_LEVEL_PTS = [0, 80, 200, 380];
 export const DEFENSE_UNREST = 60;
 const CODENAMES = [
   'VULTURE', 'CIPHER', 'HALCYON', 'MANTIS', 'TALOS', 'NYX', 'GAUNT', 'SABLE',
   'RASP', 'ONYX', 'FERAL', 'DIRGE', 'HELIX', 'VESPER', 'CAIRN', 'LOTUS',
 ];
-
-export function weaponTierUnlocked(m: MetaState, tier: number): boolean {
-  return m.weaponPts >= (WEAPON_TIER_PTS[tier] ?? Infinity);
-}
-
-export function augLevelUnlocked(m: MetaState, level: number): boolean {
-  return m.augPts >= (AUG_LEVEL_PTS[level] ?? Infinity);
-}
 
 export function newMeta(now: number = Date.now()): MetaState {
   return {
@@ -466,9 +463,10 @@ export function newMeta(now: number = Date.now()): MetaState {
     drones: 0,
     shields: 0,
     medbays: 0,
-    researchSplit: 50,
-    weaponPts: 0,
-    augPts: 0,
+    labSlots: 1,
+    active: [],
+    completed: [],
+    offers: [],
     agents: Array.from({ length: 4 }, (_, i) => newAgent(i)),
     captured: [],
     territories: makeTerritories(),
@@ -733,11 +731,6 @@ export function applyResult(
     lines.push(`PR remediation invoice: ${collateralFine}cr (${civKills} demographic units).`);
   }
 
-  const pts = won ? 15 : 5;
-  m.weaponPts += Math.round((pts * m.researchSplit) / 100);
-  m.augPts += Math.round((pts * (100 - m.researchSplit)) / 100);
-  lines.push(`Field data forwarded to R&D: +${pts} research.`);
-
   updateRegionUnlocks(m);
 
   const info: DebriefInfo = { won, territory: t, collateralFine, salvage, loot, lines, review };
@@ -785,8 +778,19 @@ export function loadMeta(): MetaState | null {
     const m = JSON.parse(raw) as MetaState;
     if (m.version !== 2) return null;
     m.captured ??= [];
-    // legacy saves predate cosmetic variants; assign once and persist
     let migrated = false;
+    // pre-board saves carry point pools and the split slider; the upgrade is
+    // in place (version stays 2): unlocks become completed projects and banked
+    // points liquidate to credits at the documented POINTS_TO_CREDITS rate
+    if (needsResearchMigration(m)) {
+      migrateResearch(m);
+      migrated = true;
+    }
+    m.labSlots ??= 1;
+    m.active ??= [];
+    m.completed ??= [];
+    m.offers ??= [];
+    // legacy saves predate cosmetic variants; assign once and persist
     const pools: Array<[MetaAgent[], number]> = [
       [m.agents, 0],
       [m.captured, 100],

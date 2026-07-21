@@ -5,6 +5,7 @@ import type { ScreenStore } from '../screenState';
 import { DebriefScreen } from './debrief';
 import { EquipScreen } from './equip';
 import { MenuScreen } from './menu';
+import { ResearchScreen } from './research';
 import { SettingsScreen } from './settingsScreen';
 import { VictoryScreen } from './victory';
 import { WorldMapScreen } from './worldMap';
@@ -23,7 +24,17 @@ function ScreenRoot({ el, store }: { el: HTMLElement; store: ScreenStore }) {
     case 'settings':
       return <SettingsScreen onBack={screen.onBack} />;
     case 'worldMap':
-      return <WorldMapScreen meta={screen.meta} rev={screen.rev} globe={screen.globe} onContract={screen.onContract} />;
+      return (
+        <WorldMapScreen
+          meta={screen.meta}
+          rev={screen.rev}
+          globe={screen.globe}
+          onContract={screen.onContract}
+          onResearch={screen.onResearch}
+        />
+      );
+    case 'research':
+      return <ResearchScreen meta={screen.meta} rev={screen.rev} onStart={screen.onStart} onBack={screen.onBack} />;
     case 'equip':
       return (
         <EquipScreen

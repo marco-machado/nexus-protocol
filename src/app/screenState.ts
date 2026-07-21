@@ -28,6 +28,15 @@ export type Screen =
       rev: number;
       globe: GlobeHandle | null;
       onContract: (t: Territory, defense?: boolean) => void;
+      onResearch: () => void;
+    }
+  | {
+      kind: 'research';
+      meta: MetaState;
+      // bumped on live economy updates, same convention as the world map
+      rev: number;
+      onStart: (id: string) => void;
+      onBack: () => void;
     }
   | {
       kind: 'equip';

@@ -21,6 +21,7 @@ import {
   type Territory,
 } from './meta';
 import { buildReview, evaluateClauses, generateClauses } from './clauses';
+import { generateBreakthroughOffers, projectCost, startProject } from './research';
 import { lossDebriefLine } from './contractCard';
 import { ScreenStore, type GlobeHandle } from './screenState';
 import { hintsFor } from './tutorial';
@@ -101,7 +102,40 @@ export class Game {
       rev: this.mapRev++,
       globe: this.ensureGlobe(),
       onContract: (t, defense) => this.equip(t, defense),
+      onResearch: () => this.research(),
     });
+  }
+
+  private setResearchScreen(): void {
+    this.deps.screen.set({
+      kind: 'research',
+      meta: this.meta,
+      rev: this.mapRev++,
+      onStart: (id) => {
+        const now = Date.now();
+        // the board prices offers from lastSeen; refuse the commit when the
+        // displayed discount lapsed so the click never charges more than shown
+        const shown = projectCost(this.meta, id, this.meta.lastSeen);
+        advanceTime(this.meta, now);
+        if (projectCost(this.meta, id, now) <= shown) startProject(this.meta, id, now);
+        saveMeta(this.meta);
+        this.setResearchScreen();
+      },
+      onBack: () => this.map(),
+    });
+  }
+
+  private research(): void {
+    this.stopMapTimer();
+    this.globe?.stop();
+    advanceTime(this.meta, Date.now());
+    saveMeta(this.meta);
+    this.setResearchScreen();
+    this.mapTimer = setInterval(() => {
+      advanceTime(this.meta, Date.now());
+      saveMeta(this.meta);
+      if (this.deps.screen.get().kind === 'research') this.setResearchScreen();
+    }, 30_000);
   }
 
   private map(): void {
@@ -218,6 +252,19 @@ export class Game {
       captureEligible: !defense && !isRecovery,
       recovery: isRecovery && captive !== undefined,
     });
+    // seeded from mission facts so offer generation stays deterministic
+    const offerLines = generateBreakthroughOffers(
+      this.meta,
+      {
+        seed,
+        won: result.won,
+        missionType,
+        writeOffs: result.survivors.filter((s) => !s).length,
+        persuaded: result.persuaded,
+      },
+      Date.now(),
+    );
+    info.lines.push(...offerLines);
     saveMeta(this.meta);
     this.deps.screen.set({ kind: 'debrief', info, meta: this.meta, onContinue: () => this.map() });
   }

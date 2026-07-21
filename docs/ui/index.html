@@ -412,7 +412,7 @@
             <h2>GLOBAL OPERATIONS</h2>
             <span class="credits">1400cr</span>
             <span>+2424cr/hr</span>
-            <span>R&amp;D +28/hr</span>
+            <span>R&amp;D LABS 1/1</span>
             <span>ACT 1</span>
             <span class="cyc">CYCLE 0 · next in 27m</span>
           </div>
@@ -420,11 +420,11 @@
       </div>
       <dl class="spec">
         <dt>Used in</dt><dd>Top of the <b>worldMap</b> screen, above the region tabs. Built by <code>mapHud</code>. <span class="path">screens.ts:253</span></dd>
-        <dt>Communicates</dt><dd>Treasury, passive income rate, research rate, story act, and the countdown to the next economy payout, all at a glance.</dd>
+        <dt>Communicates</dt><dd>Treasury, passive income rate, committed lab capacity, story act, and the countdown to the next economy payout, all at a glance.</dd>
         <dt>Fields</dt><dd><ul>
           <li><b>1400cr</b> — treasury, <code>m.credits</code></li>
           <li><b>+2424cr/hr</b> — <code>incomePerCycle(m) * 2</code> (a cycle is 30&nbsp;min, so per-cycle is doubled to per-hour)</li>
-          <li><b>R&amp;D +28/hr</b> — <code>researchPerCycle(m) * 2</code></li>
+          <li><b>R&amp;D LABS 1/1</b> — <code>m.active.length</code> of <code>m.labSlots</code> lab slots committed to running projects</li>
           <li><b>ACT 1</b> — <code>campaignAct(m)</code>, story progression 1&ndash;3</li>
           <li><b>CYCLE 0 · next in 27m</b> — <code>m.cycle</code> plus <code>ceil((CYCLE_MS - m.econMs)/60000)</code>; pushed to the right edge via <code>.cyc</code></li>
         </ul></dd>
@@ -616,48 +616,29 @@
 
     <section class="cmp" id="c-drawer">
       <div class="cmp-head"><span class="cmp-num">08</span><h3>R&amp;D drawer</h3><span class="cmp-selector">.drawer</span></div>
-      <p class="cmp-lede">Where passive research points go, docked below the stage. Collapsed, it is a single split slider plus the nearest unlock on each track; expanded, it lists all seven thresholds.</p>
+      <p class="cmp-lede">The R&amp;D status strip docked below the stage: committed lab capacity, what each lab is delivering and when, any open breakthrough discounts, and the gateway to the full-screen project board.</p>
       <div class="specimen">
-        <div class="cap">rendered · collapsed, then expanded</div>
+        <div class="cap">rendered · idle, then committed with an open offer</div>
         <div class="stage" style="display:flex; flex-direction:column; gap:16px;"><div class="g">
           <div class="drawer">
-            <span>R&amp;D</span><b>WEAPONS 60%</b>
-            <input type="range" min="0" max="100" step="10" value="60" aria-label="Research split"/>
-            <b>AUGMENTS 40%</b>
-            <span>NEXT: WPN T2 8/100 · AUG V1 8/80</span>
-            <button>ALL THRESHOLDS</button>
+            <span>R&amp;D</span><b>LABS 0/1</b>
+            <span>ALL LABS IDLE · CAPACITY UNALLOCATED</span>
+            <button>OPEN PROJECT BOARD</button>
           </div>
         </div><div class="g">
           <div class="drawer">
-            <span>R&amp;D</span><b>WEAPONS 60%</b>
-            <input type="range" min="0" max="100" step="10" value="60" aria-label="Research split"/>
-            <b>AUGMENTS 40%</b>
-            <span>NEXT: WPN T2 8/100 · AUG V1 8/80</span>
-            <button>LESS</button>
-            <div class="rdgrid">
-              <div>Weapons tier 2: <progress value="8" max="100"></progress> 8/100</div>
-              <div>Augmentation V1: <progress value="8" max="80"></progress> 8/80</div>
-              <div>Weapons tier 3: <progress value="8" max="200"></progress> 8/200</div>
-              <div>Augmentation V2: <progress value="8" max="200"></progress> 8/200</div>
-              <div>Weapons tier 4: <progress value="8" max="340"></progress> 8/340</div>
-              <div>Augmentation V3: <progress value="8" max="380"></progress> 8/380</div>
-              <div>Weapons tier 5: <progress value="8" max="520"></progress> 8/520</div>
-            </div>
+            <span>R&amp;D</span><b>LABS 1/2</b>
+            <span>SMG FABRICATION LINE · 22m</span>
+            <span>1 BREAKTHROUGH OFFER OPEN</span>
+            <button>OPEN PROJECT BOARD</button>
           </div>
         </div></div>
       </div>
       <dl class="spec">
-        <dt>Used in</dt><dd>Docked below the stage on <b>worldMap</b>. Built by <code>rdDrawer</code>. <span class="path">screens.ts:319</span></dd>
-        <dt>Communicates</dt><dd>How research is split and, at a glance, the next unlock on each track. Both pools read <code>8/x</code> here because they hold 8 points each.</dd>
-        <dt>Controls</dt><dd><ul>
-          <li><b>Split slider</b> &mdash; 0&ndash;100 in steps of 10 (<code>data-split</code>), writes <code>m.researchSplit</code>; the <code>WEAPONS%</code> / <code>AUGMENTS%</code> labels update in place without a full re-render</li>
-          <li><b>ALL THRESHOLDS / LESS</b> (<code>data-act="rd"</code>) &mdash; toggles <code>this.rdOpen</code> to show or hide the seven-bar <code>.rdgrid</code>; the flag persists across re-renders</li>
-        </ul></dd>
-        <dt>Thresholds</dt><dd><ul>
-          <li>Weapons tiers 2&ndash;5: <code>WEAPON_TIER_PTS</code> = 100 / 200 / 340 / 520</li>
-          <li>Augment V1&ndash;V3: <code>AUG_LEVEL_PTS</code> = 80 / 200 / 380</li>
-        </ul></dd>
-        <dt>States</dt><dd>Each expanded bar shows <code>pts/need</code>; once <code>pts &ge; need</code> it reads <b>ONLINE</b> and the matching gear drops its "R&amp;D REQUIRED" lock in the equip shop. When a whole track is maxed, the "NEXT" hint reads <b>WPN MAXED</b> / <b>AUG MAXED</b>.</dd>
+        <dt>Used in</dt><dd>Docked below the stage on <b>worldMap</b>. Built by <code>RdDrawer</code>. <span class="path">src/app/ui/worldMap.tsx</span></dd>
+        <dt>Communicates</dt><dd>Lab occupancy (<code>m.active.length</code> of <code>m.labSlots</code>), each active project with its delivery countdown, and how many breakthrough discount windows are open.</dd>
+        <dt>Controls</dt><dd><b>OPEN PROJECT BOARD</b>: <code>onResearch()</code>, navigates to the full-screen R&amp;D project board where projects are committed for credits (supersedes the split-slider point model, issue #16).</dd>
+        <dt>States</dt><dd>With no active project the status line reads <b>ALL LABS IDLE · CAPACITY UNALLOCATED</b>; the offer chip renders only while <code>m.offers</code> holds unexpired breakthrough offers.</dd>
       </dl>
     </section>
 
@@ -667,7 +648,7 @@
       <div class="specimen">
         <div class="cap">rendered · foot of screen</div>
         <div class="stage"><div class="g">
-          <div class="ticker" title="&gt; SECTOR 03 &quot;ESCROW&quot; transferred to Nexus management.&#10;&gt; Field data forwarded to R&amp;D: +15 research.&#10;&gt; Nexus divisional charter granted. One district under management.">&gt; SECTOR 03 "ESCROW" transferred to Nexus management.</div>
+          <div class="ticker" title="&gt; SECTOR 03 &quot;ESCROW&quot; transferred to Nexus management.&#10;&gt; Breakthrough offer (persuaded VIP intel): SMG FABRICATION LINE at -25%.&#10;&gt; Nexus divisional charter granted. One district under management.">&gt; SECTOR 03 "ESCROW" transferred to Nexus management.</div>
         </div></div>
       </div>
       <dl class="spec">
@@ -680,7 +661,7 @@
 
     <div class="wiring">
       <h4>How it's all wired</h4>
-      <p>There are no per-component event listeners. The whole screen is one <code>innerHTML</code> template assembled from string-builder helpers (<code>mapHud</code>, <code>stage</code>, <code>terrBlock</code>, <code>popover</code>, <code>rdDrawer</code>) with exactly two delegated handlers on the <code>#screen</code> element. <code>onclick</code> dispatches, in priority order, on <code>data-contract</code> / <code>data-defend</code> (mission handoff), <code>data-act="rd"</code> (toggle the R&amp;D drawer), <code>data-region</code> (switch region, via <code>closest</code> so the stage gateway works too), then <code>data-sel</code> (select a block, matched with <code>closest('[data-sel]')</code> because blocks have children); a click on empty stage clears the selection. <code>oninput</code> dispatches on <code>data-tax</code> / <code>data-split</code>. Selection and drawer state live on the <code>Screens</code> instance (<code>selRegion</code>, <code>selTerr</code>, <code>rdOpen</code>) so they survive the whole-screen re-render that runs on every state change and on the 60-second economy tick. This <code>innerHTML</code>-plus-<code>dataset</code> pattern is the shared convention for every screen in <code>src/app/screens.ts</code> &mdash; follow it when adding components.</p>
+      <p>There are no per-component event listeners. The whole screen is one <code>innerHTML</code> template assembled from string-builder helpers (<code>mapHud</code>, <code>stage</code>, <code>terrBlock</code>, <code>popover</code>, <code>rdDrawer</code>) with exactly two delegated handlers on the <code>#screen</code> element. <code>onclick</code> dispatches, in priority order, on <code>data-contract</code> / <code>data-defend</code> (mission handoff), <code>data-region</code> (switch region, via <code>closest</code> so the stage gateway works too), then <code>data-sel</code> (select a block, matched with <code>closest('[data-sel]')</code> because blocks have children); a click on empty stage clears the selection. <code>oninput</code> dispatches on <code>data-tax</code>. Selection state lives on the <code>Screens</code> instance (<code>selRegion</code>, <code>selTerr</code>) so they survive the whole-screen re-render that runs on every state change and on the 60-second economy tick. This <code>innerHTML</code>-plus-<code>dataset</code> pattern is the shared convention for every screen in <code>src/app/screens.ts</code> &mdash; follow it when adding components.</p>
     </div>
 
     <p class="cmp-foot">Specimens reproduce the in-game dark skin, since they represent a fixed in-game surface. Data and line references from <code>src/app/screens.ts</code> and <code>src/app/meta.ts</code>.</p>

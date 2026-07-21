@@ -1,7 +1,6 @@
 import { useEffect, useReducer, useRef, useState } from 'react';
 import { factionHex, OWNER_NEUTRAL, OWNER_NEXUS, type GlobeSnapshot } from '../../render/globe';
 import {
-  AUG_LEVEL_PTS,
   campaignAct,
   CONTRACT_NAMES,
   CYCLE_MS,
@@ -10,14 +9,13 @@ import {
   REGION_UNLOCK_OWNED,
   REGIONS,
   regionUnlocked,
-  researchPerCycle,
   saveMeta,
-  WEAPON_TIER_PTS,
   type MetaState,
   type Territory,
 } from '../meta';
+import { buyInfrastructure, fmtDuration, hasInfra, INFRA, projectById, taxCeiling } from '../research';
 import type { GlobeHandle } from '../screenState';
-import { fillPct, RangeInput } from './controls';
+import { RangeInput } from './controls';
 
 
 function shortName(t: Territory): string {
@@ -47,10 +45,10 @@ function MapHud({ m }: { m: MetaState }) {
         </b>
       </div>
       <div className="stat">
-        <label>R&D</label>
+        <label>R&D LABS</label>
         <b className="accentv">
-          +{researchPerCycle(m) * 2}
-          <small>/hr</small>
+          {m.active.length}
+          <small>/{m.labSlots}</small>
         </b>
       </div>
       <div className="stat">
@@ -153,7 +151,7 @@ function Popover({
           <RangeInput
             value={t.taxRate}
             min={10}
-            max={50}
+            max={taxCeiling(t)}
             step={5}
             ariaLabel={`Tax rate for ${shortName(t)}`}
             onValue={(v) => {
@@ -163,6 +161,34 @@ function Popover({
             }}
           />{' '}
           <b>{t.taxRate}%</b>
+        </div>
+        <div className="infrarows">
+          {INFRA.map((def) =>
+            hasInfra(t, def.id) ? (
+              <div key={def.id} className="infrarow installed">
+                <span>{def.name}</span>
+                <b>COMMISSIONED</b>
+              </div>
+            ) : (
+              <div key={def.id} className="infrarow" title={def.capability}>
+                <span>
+                  {def.name}
+                  <small>{def.capability}</small>
+                </span>
+                <button
+                  disabled={m.credits < def.cost || (def.id === 'bulwark' && t.siege !== undefined)}
+                  onClick={() => {
+                    if (buyInfrastructure(m, t, def.id)) {
+                      saveMeta(m);
+                      onEdited();
+                    }
+                  }}
+                >
+                  {def.cost}cr
+                </button>
+              </div>
+            ),
+          )}
         </div>
         {t.siege ? (
           <button className="primary" onClick={() => onContract(t, true)}>
@@ -210,51 +236,29 @@ function Legend({ m }: { m: MetaState }) {
   );
 }
 
-function RdDrawer({ m, open, onToggle, onEdited }: { m: MetaState; open: boolean; onToggle: () => void; onEdited: () => void }) {
-  const bar = (label: string, pts: number, need: number) => {
-    const done = pts >= need;
-    return (
-      <div key={label} className={`rdrow${done ? ' done' : ''}`}>
-        <span className="rdlbl">{label}</span>
-        <span className={`meterbar${done ? ' done' : ''}`}>
-          <i style={{ width: `${Math.min(100, fillPct(pts, 0, need))}%` }}></i>
-        </span>
-        <b className="rdval">{done ? 'ONLINE' : `${pts}/${need}`}</b>
-      </div>
-    );
-  };
-  const wNext = [2, 3, 4, 5]
-    .map((tier) => ({ label: `WPN T${tier}`, need: WEAPON_TIER_PTS[tier]! }))
-    .find((x) => m.weaponPts < x.need);
-  const aNext = [1, 2, 3]
-    .map((lvl) => ({ label: `AUG V${lvl}`, need: AUG_LEVEL_PTS[lvl]! }))
-    .find((x) => m.augPts < x.need);
-  const nextTxt = `NEXT: ${wNext ? `${wNext.label} ${m.weaponPts}/${wNext.need}` : 'WPN MAXED'} · ${aNext ? `${aNext.label} ${m.augPts}/${aNext.need}` : 'AUG MAXED'}`;
+function RdDrawer({ m, onResearch }: { m: MetaState; onResearch: () => void }) {
+  const activeTxt =
+    m.active.length === 0
+      ? 'ALL LABS IDLE · CAPACITY UNALLOCATED'
+      : m.active
+          .map((a) => {
+            const def = projectById(a.id);
+            return `${def?.name ?? a.id} · ${fmtDuration(a.remainingMs)}`;
+          })
+          .join(' · ');
   return (
     <div className="drawer">
-      <span>R&D ALLOCATION</span>
-      <b data-wsplit="1">WEAPONS {m.researchSplit}%</b>
-      <RangeInput
-        value={m.researchSplit}
-        min={0}
-        max={100}
-        step={10}
-        ariaLabel="R&D allocation to weapons"
-        onValue={(v) => {
-          m.researchSplit = v;
-          saveMeta(m);
-          onEdited();
-        }}
-      />
-      <b data-asplit="1">AUGMENTS {100 - m.researchSplit}%</b>
-      <span className="dnext">{nextTxt}</span>
-      <button onClick={onToggle}>{open ? 'LESS' : 'ALL THRESHOLDS'}</button>
-      {open ? (
-        <div className="rdgrid">
-          {[2, 3, 4, 5].map((tier) => bar(`WEAPONS TIER ${tier}`, m.weaponPts, WEAPON_TIER_PTS[tier]!))}
-          {[1, 2, 3].map((lvl) => bar(`AUGMENTATION V${lvl}`, m.augPts, AUG_LEVEL_PTS[lvl]!))}
-        </div>
+      <span>R&D</span>
+      <b>
+        LABS {m.active.length}/{m.labSlots}
+      </b>
+      <span className="dnext">{activeTxt}</span>
+      {m.offers.length > 0 ? (
+        <span className="doffer">
+          {m.offers.length} BREAKTHROUGH OFFER{m.offers.length > 1 ? 'S' : ''} OPEN
+        </span>
       ) : null}
+      <button onClick={onResearch}>OPEN PROJECT BOARD</button>
     </div>
   );
 }
@@ -264,15 +268,16 @@ export function WorldMapScreen({
   rev,
   globe,
   onContract,
+  onResearch,
 }: {
   meta: MetaState;
   rev: number;
   globe: GlobeHandle | null;
   onContract: (t: Territory, defense?: boolean) => void;
+  onResearch: () => void;
 }) {
   const [selRegion, setSelRegion] = useState(-1);
   const [selTerr, setSelTerr] = useState(-1);
-  const [rdOpen, setRdOpen] = useState(false);
   const [, bump] = useReducer((x: number) => x + 1, 0);
   void rev; // live economy updates arrive as a new rev prop; render reads meta fresh
 
@@ -385,7 +390,7 @@ export function WorldMapScreen({
         </div>
         <Legend m={m} />
       </div>
-      <RdDrawer m={m} open={rdOpen} onToggle={() => setRdOpen((o) => !o)} onEdited={bump} />
+      <RdDrawer m={m} onResearch={onResearch} />
       <div className="ticker" title={m.log.slice(0, 4).join('\n')}>
         &gt; {m.log[0] ?? 'Awaiting first directive.'}
       </div>

@@ -6,7 +6,6 @@ import {
   agentAppearance,
   AUG_SLOTS,
   augLevel,
-  augLevelUnlocked,
   buildSpec,
   CONDITION_NAMES,
   CONTRACT_NAMES,
@@ -15,12 +14,20 @@ import {
   nextMissionSeed,
   prospectiveAgentAppearance,
   saveMeta,
-  weaponTierUnlocked,
   type AugKey,
   type MetaAgent,
   type MetaState,
   type Territory,
 } from '../meta';
+import {
+  augVersionUnlocked,
+  gearUnlocked,
+  projectForAug,
+  projectForGear,
+  projectForWeapon,
+  weaponUnlocked,
+  type GearItem,
+} from '../research';
 import { ChassisPreview } from './chassisPreview';
 
 function appearancePreview(m: AppearanceManifest): string {
@@ -82,6 +89,7 @@ function ShopRow({
   tier,
   tierClass,
   locked,
+  lockLabel,
   name,
   detail,
   stock,
@@ -92,6 +100,8 @@ function ShopRow({
   tier: string;
   tierClass?: string;
   locked: boolean;
+  // names the R&D project that unlocks the row, so shop and board tell one story
+  lockLabel?: string;
   name: string;
   detail: string;
   stock: ReactNode;
@@ -111,9 +121,13 @@ function ShopRow({
         <small>{detail}</small>
       </span>
       <span className="s-stock">{stock}</span>
-      {locked ? <span className="rd">R&D REQUIRED</span> : children}
+      {locked ? <span className="rd">{lockLabel ?? 'R&D REQUIRED'}</span> : children}
     </div>
   );
+}
+
+function isGearItem(g: string): g is GearItem {
+  return g === 'cloak' || g === 'drone' || g === 'shield' || g === 'medbay' || g === 'charge' || g === 'emp';
 }
 
 export function EquipScreen({
@@ -376,7 +390,8 @@ export function EquipScreen({
             ARMORY<span className="h3tag">SQUAD ARSENAL</span>
           </h3>
           {WEAPONS.map((w) => {
-            const locked = w.tier > 1 && !weaponTierUnlocked(m, w.tier);
+            const prj = projectForWeapon(w.id);
+            const locked = !weaponUnlocked(m, w.id);
             const owned = m.arsenal[w.id] ?? 0;
             return (
               <ShopRow
@@ -384,6 +399,7 @@ export function EquipScreen({
                 tier={`T${w.tier}`}
                 tierClass={`t${w.tier}`}
                 locked={locked}
+                lockLabel={prj ? `R&D: ${prj.name}` : undefined}
                 name={w.name}
                 detail={`DMG ${w.damage}${w.pellets > 1 ? `x${w.pellets}` : ''} · RNG ${w.range} · MAG ${w.ammoMax}`}
                 stock={`x${owned}`}
@@ -420,11 +436,21 @@ export function EquipScreen({
           </h3>
           {(Object.keys(POOL_GEAR) as (keyof typeof POOL_GEAR)[]).map((g) => {
             const def = POOL_GEAR[g];
-            const locked = def.tier > 1 && !weaponTierUnlocked(m, def.tier);
+            const prj = isGearItem(g) ? projectForGear(g) : null;
+            const locked = isGearItem(g) && !gearUnlocked(m, g);
             const stock = m[def.stock];
             const carried = sel.alive && sel.gear[g] === true;
             return (
-              <ShopRow key={g} tier={`T${def.tier}`} tierClass={`t${def.tier}`} locked={locked} name={def.name} detail={def.desc} stock={`x${stock}`}>
+              <ShopRow
+                key={g}
+                tier={`T${def.tier}`}
+                tierClass={`t${def.tier}`}
+                locked={locked}
+                lockLabel={prj ? `R&D: ${prj.name}` : undefined}
+                name={def.name}
+                detail={def.desc}
+                stock={`x${stock}`}
+              >
                 <button
                   disabled={m.credits < def.price}
                   onClick={() => {
@@ -457,11 +483,21 @@ export function EquipScreen({
           </h3>
           {(Object.keys(CONSUMABLES) as (keyof typeof CONSUMABLES)[]).map((g) => {
             const def = CONSUMABLES[g];
-            const locked = def.tier > 1 && !weaponTierUnlocked(m, def.tier);
+            const prj = isGearItem(g) ? projectForGear(g) : null;
+            const locked = isGearItem(g) && !gearUnlocked(m, g);
             const count = sel.alive ? sel.gear[def.field] : 0;
             const canBuy = m.credits >= def.price && sel.alive && (count > 0 || !selFull);
             return (
-              <ShopRow key={g} tier={`T${def.tier}`} tierClass={`t${def.tier}`} locked={locked} name={def.name} detail={def.desc} stock={`x${count}`}>
+              <ShopRow
+                key={g}
+                tier={`T${def.tier}`}
+                tierClass={`t${def.tier}`}
+                locked={locked}
+                lockLabel={prj ? `R&D: ${prj.name}` : undefined}
+                name={def.name}
+                detail={def.desc}
+                stock={`x${count}`}
+              >
                 <button
                   className="wide"
                   disabled={!canBuy}
@@ -511,7 +547,8 @@ export function EquipScreen({
               );
             }
             const def = slot.levels[lvl]!;
-            const locked = !augLevelUnlocked(m, lvl + 1);
+            const augPrj = projectForAug(slot.key, lvl + 1);
+            const locked = !augVersionUnlocked(m, slot.key, lvl + 1);
             const prospective = sel.alive
               ? prospectiveAgentAppearance(sel, slot.key, lvl + 1, deploySlot(selAgent))
               : null;
@@ -524,6 +561,7 @@ export function EquipScreen({
                 tier={`V${lvl + 1}`}
                 tierClass={lvl + 1 >= 3 ? 't5' : lvl + 1 === 2 ? 't3' : undefined}
                 locked={locked}
+                lockLabel={augPrj ? `R&D: ${augPrj.name}` : undefined}
                 name={slot.name}
                 detail={`${def.desc}${preview ? ` · reads: ${preview}` : ''}`}
                 stock={pips}
@@ -541,7 +579,7 @@ export function EquipScreen({
                   onClick={() => {
                     const cur = augLevel(sel, slot.key);
                     const level = slot.levels[cur];
-                    if (sel.alive && level && m.credits >= level.price && augLevelUnlocked(m, cur + 1)) {
+                    if (sel.alive && level && m.credits >= level.price && augVersionUnlocked(m, slot.key, cur + 1)) {
                       m.credits -= level.price;
                       sel.augments[slot.key] = cur + 1;
                       commit();

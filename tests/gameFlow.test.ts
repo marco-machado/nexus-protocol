@@ -101,6 +101,41 @@ describe('game screen flow', () => {
     game.dispose();
   });
 
+  it('opens the R&D board from the world map, starts a project, and returns', () => {
+    const { game, store } = makeGame();
+    game.start();
+    expectKind(store, 'menu').onStart(true);
+    expectKind(store, 'worldMap').onResearch();
+
+    const board = expectKind(store, 'research');
+    expect(board.meta.labSlots).toBe(1);
+    board.meta.credits = 100000;
+    board.onStart('w-smg');
+    const after = expectKind(store, 'research');
+    expect(after.meta.active.map((a) => a.id)).toEqual(['w-smg']);
+    after.onStart('w-longrifle');
+    expect(expectKind(store, 'research').meta.active.length).toBe(1);
+    expectKind(store, 'research').onBack();
+    expectKind(store, 'worldMap');
+    game.dispose();
+  });
+
+  it('surfaces breakthrough offers in the debrief when mission facts qualify', async () => {
+    const { game, store } = makeGame();
+    game.start();
+    expectKind(store, 'menu').onStart(true);
+    const map = expectKind(store, 'worldMap');
+    map.onContract(map.meta.territories.find((t) => !t.owned && t.region === 0)!);
+    expectKind(store, 'equip').onLaunch();
+    await settle();
+
+    const debrief = expectKind(store, 'debrief');
+    // okResult persuades 2, so the intel source must post an offer
+    expect(debrief.info.lines.some((l) => l.includes('Breakthrough offer'))).toBe(true);
+    expect(debrief.meta.offers.length).toBeGreaterThan(0);
+    game.dispose();
+  });
+
   it('equip back returns to the world map', () => {
     const { game, store } = makeGame();
     game.start();
