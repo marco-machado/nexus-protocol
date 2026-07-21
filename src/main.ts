@@ -1,11 +1,13 @@
 import { createRenderer } from './render/renderer';
+import { detectCapabilities, resolveTier, tierProfile } from './render/tier';
+import { initAssetPipeline } from './render/assets';
 import { applyPalette } from './render/palette';
 import { WorldGlobe } from './render/globe';
 import { buildAppearanceManifest, type AppearanceManifest } from './render/appearance';
 import { audio } from './app/audio';
 import { createCanvasHost } from './app/canvasHost';
 import { Game } from './app/game';
-import { runMission } from './app/missionRunner';
+import { loadManifest } from './app/streaming';
 import { ScreenStore } from './app/screenState';
 import { mountScreenRoot } from './app/ui/root';
 import { settings } from './app/settings';
@@ -47,8 +49,19 @@ async function main(): Promise<void> {
   const canvas = document.getElementById('app') as HTMLCanvasElement;
   const hud = document.getElementById('hud') as HTMLElement;
   const screenEl = document.getElementById('screen') as HTMLElement;
-  const renderer = await createRenderer(canvas, settings.shadows);
-  const host = createCanvasHost(canvas, renderer, settings.shadows);
+  const tier = resolveTier(detectCapabilities(navigator, location.search));
+  const renderer = await createRenderer(canvas, tier, settings.shadows);
+  initAssetPipeline(renderer, await loadManifest());
+  // createRenderer records the real backend's tier; read it back so the host
+  // and globe follow the profile the renderer actually landed on
+  const host = createCanvasHost(
+    canvas,
+    renderer,
+    settings.shadows && tierProfile().shadowClass === 'pcf',
+  );
+  // mission content is a split chunk so the menu shell stays inside the
+  // Section 17 menu-interactive transfer budget as R5 assets land
+  const loadMissionRunner = () => import('./app/missionRunner');
 
   const params = new URLSearchParams(location.search);
   if (params.has('visualtest')) {
@@ -58,6 +71,7 @@ async function main(): Promise<void> {
       spec.weapons = [{ wid: 0, ammo: 100000 }];
       return spec;
     });
+    const { runMission } = await loadMissionRunner();
     void runMission(
       renderer,
       0xcafe,
@@ -86,6 +100,7 @@ async function main(): Promise<void> {
     });
     const tod = Number(params.get('tod') ?? '2');
     const rain = Number(params.get('rain') ?? '0');
+    const { runMission } = await loadMissionRunner();
     void runMission(
       renderer,
       0xbeef,
@@ -111,6 +126,7 @@ async function main(): Promise<void> {
       spec.weapons = [{ wid: 0, ammo: 100000 }];
       return spec;
     });
+    const { runMission } = await loadMissionRunner();
     void runMission(
       renderer,
       0xd00d,
@@ -132,9 +148,14 @@ async function main(): Promise<void> {
   mountScreenRoot(screenEl, store);
   const game = new Game({
     screen: store,
-    runMission: (seed, missionType, specs, simParams, opts) =>
-      runMission(renderer, seed, missionType, specs, hud, simParams, { ...opts, host }),
-    createGlobe: () => new WorldGlobe(renderer, { postFx: settings.postFx }),
+    runMission: async (seed, missionType, specs, simParams, opts) => {
+      const { runMission } = await loadMissionRunner();
+      return runMission(renderer, seed, missionType, specs, hud, simParams, { ...opts, host });
+    },
+    createGlobe: () =>
+      new WorldGlobe(renderer, {
+        postFx: settings.postFx && tierProfile().postPipeline !== 'off',
+      }),
   });
   game.start();
 }

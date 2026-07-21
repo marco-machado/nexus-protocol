@@ -86,8 +86,8 @@ Visual and presentation tracks only; the systems and meta tracks of the AAA upgr
 - [x] Uniform hero chassis with visible augments (draft 14, 16; issue #14 ships the appearance machinery and procedural attachments on the current hero; the two R5 male/female chassis models remain asset production)
 - [ ] Hybrid audio layer (draft 44)
 - [ ] Combat feel pass (draft 46)
-- [ ] Delivery: streaming, budgets, two-tier perf rows (draft 6, 7)
-- [ ] Measured gates on every milestone (draft 47)
+- [~] Delivery: streaming, budgets, two-tier perf rows (draft 6, 7): tiers, pipeline, streaming manifest, and CI budget audit landed 2026-07-18 (issue #18); compatibility-tier perf row pending manual measurement (`docs/perf.md`)
+- [~] Measured gates on every milestone (draft 47): harness and scorecard written (`docs/quality-gates.md`, `scripts/check-gates.mjs`) 2026-07-18; first recorded evidence set due at the next presentation milestone
 
 ## Work tracks (R3)
 
@@ -186,6 +186,7 @@ Start only after R3 checklist is mostly green.
 | `docs/game-design.md` §13–17 | North star and quality dimensions |
 | `docs/roadmap.md` | Systems/phases; links here for presentation ladder |
 | `docs/perf.md` | Measured frames; re-baseline as R3 content lands |
+| `docs/quality-gates.md` | The measured gate harness and per-milestone evidence schema |
 | `AGENTS.md` (Core Principles, constitution 2.1.0) | High-fid visual gate + measured perf; browser-first; browser AAA amendment |
 | `docs/presentation-roadmap.md` (this file) | Ladder, R3/R4 DoD, ordered tracks |
 

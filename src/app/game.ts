@@ -33,6 +33,7 @@ import { campaignFacts, repeatCollateralAt, VETERAN_MISSIONS } from './narrative
 import { recordContractOutcome, recordFired, type ContractOutcome } from './narrative/history';
 import { arcStageFor, CAMPAIGN_LINES, DEBRIEF_LINE_CAP, updateArcStages } from './narrative/rivalArcs';
 import { pendingVignette } from './narrative/vignettes';
+import { ensureRegionResident } from './streaming';
 
 // everything the flow controller needs from the outside world, injected so
 // headless tests can drive the full screen flow with stubs (no renderer, no
@@ -261,6 +262,9 @@ export class Game {
     const rivalId = defense && t.siege ? t.siege.rival : t.rival;
     const wasOwned = t.owned;
     const siegeRival = t.siege ? t.siege.rival : -1;
+    // launch only proceeds once the district's region pack is resident, so
+    // streaming never causes pop-in mid-contract (no-op without a manifest)
+    await ensureRegionResident(t.region);
     const history = this.meta.narrative;
     const arcStage =
       rivalId >= 0

@@ -51,6 +51,8 @@ import {
 import { MeshPhongNodeMaterial, PMREMGenerator, type WebGPURenderer } from 'three/webgpu';
 import { color as tslColor, dot, normalView, oneMinus, positionViewDirection, pow, saturate, texture as tslTexture, uniform } from 'three/tsl';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { configureGltfLoader, ktx2TextureLoader, ktx2UrlFor } from './assets';
+import { tierProfile } from './tier';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { clone as skeletonClone } from 'three/examples/jsm/utils/SkeletonUtils.js';
 import { objectiveComplete } from '../sim/contract';
@@ -468,23 +470,25 @@ type TexOpts = {
 
 /** Load a texture asynchronously; on success configure wrap/colorSpace and call onLoad. Failures are silent (keep fallbacks). */
 function loadMap(url: string, opts: TexOpts, onLoad: (t: Texture) => void): void {
-  texLoader.load(
-    url,
-    (t) => {
-      // albedo/UI sRGB; normal and roughness stay linear
-      t.colorSpace = opts.srgb ? SRGBColorSpace : LinearSRGBColorSpace;
-      const wrap = opts.wrap ?? RepeatWrapping;
-      t.wrapS = wrap;
-      t.wrapT = wrap;
-      const rep = opts.repeat ?? 1;
-      t.repeat.set(rep, rep);
-      t.anisotropy = opts.anisotropy ?? 8;
-      t.needsUpdate = true;
-      onLoad(t);
-    },
-    undefined,
-    () => {},
-  );
+  const configure = (t: Texture) => {
+    // albedo/UI sRGB; normal and roughness stay linear
+    t.colorSpace = opts.srgb ? SRGBColorSpace : LinearSRGBColorSpace;
+    const wrap = opts.wrap ?? RepeatWrapping;
+    t.wrapS = wrap;
+    t.wrapT = wrap;
+    const rep = opts.repeat ?? 1;
+    t.repeat.set(rep, rep);
+    t.anisotropy = opts.anisotropy ?? 8;
+    t.needsUpdate = true;
+    onLoad(t);
+  };
+  const loadSource = () => texLoader.load(url, configure, undefined, () => {});
+  const compressed = ktx2UrlFor(url);
+  if (compressed) {
+    ktx2TextureLoader()!.load(compressed, configure, undefined, loadSource);
+    return;
+  }
+  loadSource();
 }
 
 function applyFacadeMaps(mat: MeshStandardMaterial): void {
@@ -889,7 +893,7 @@ function buildTramLightsGeometry(): BufferGeometry {
 }
 
 function loadGeneratedCarModel(scene: Scene, roots: Object3D[], lightsMesh: InstancedMesh): void {
-  const loader = new GLTFLoader();
+  const loader = configureGltfLoader(new GLTFLoader());
   loader.load(
     GENERATED_CAR_URL,
     (gltf) => {
@@ -1137,7 +1141,8 @@ function createAgentRig(
   const bodyMat: AgentRig['bodyMat'] = opts.preview
     ? new MeshPhongMaterial(bodyOpts)
     : new MeshPhongNodeMaterial(bodyOpts);
-  const rimUniform = opts.preview ? null : createRimUniform();
+  const rimUniform =
+    opts.preview || !tierProfile().effects.agentRim ? null : createRimUniform();
   // emissiveNode exists on every node material at runtime; the installed
   // typings only declare it on MeshStandardNodeMaterial
   if (rimUniform) {
@@ -1311,7 +1316,7 @@ function loadGeneratedAgentModel(rigs: AgentRig[], cache: ChassisLoadCache): voi
 }
 
 function loadChassisTemplate(url: string, cache: ChassisLoadCache): void {
-  const loader = new GLTFLoader();
+  const loader = configureGltfLoader(new GLTFLoader());
   loader.load(
     url,
     (gltf) => {
@@ -3780,8 +3785,9 @@ export function createGameScene(
   const billboard = district ? createBillboard(scene, light, district.hulls) : null;
   // colored pools on wet asphalt: lamps first (primary street lighting),
   // then signage, then low facade strips, all under one overlap budget
+  const tierFx = tierProfile();
   const spillMats: MeshBasicMaterial[] = [signMesh.material as MeshBasicMaterial, strips.material as MeshBasicMaterial];
-  if (light.neon >= 1) {
+  if (light.neon >= 1 && tierFx.effects.signSpill) {
     const pools = createLightPools(scene, [
       ...(lamps?.sources ?? []),
       ...(district?.spill ?? []),
@@ -3793,7 +3799,7 @@ export function createGameScene(
   // mirrored smears under every static emitter plus per-car slots; lamps get
   // the warm lamp-head tint, district signage its own neon
   let streaks: StreakHandles | null = null;
-  if (light.neon >= 1) {
+  if (light.neon >= 1 && tierFx.reflectionClass === 'streak') {
     const warmHead = new Color(0xffd9a0);
     const streakSources: StreakSource[] = [
       ...(lamps?.sources.map((p) => ({ x: p.x, z: p.z, h: 3.4, c: warmHead, w: 0.6 })) ?? []),

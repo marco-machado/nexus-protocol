@@ -1,0 +1,19 @@
+{
+  "source": "docs/game-design.md Section 17 (Delivery row); GDD v3.0 draft 7",
+  "transfer": {
+    "menuInteractiveBytes": 5000000,
+    "firstContractBytes": 20000000,
+    "campaignBytes": 150000000
+  },
+  "assetClassFirstContractBytes": {
+    "textures": 8000000,
+    "models": 6000000,
+    "audio": 4000000,
+    "portraits": 1000000
+  },
+  "packBytes": {
+    "core": 16000000,
+    "region": 12000000
+  },
+  "regions": 8
+}

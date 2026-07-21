@@ -3,6 +3,7 @@ import type { WebGPURenderer } from 'three/webgpu';
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { createRoot as createFiberRoot } from '@react-three/fiber';
 import { applyPalette, type PaletteName } from '../render/palette';
+import { tierProfile } from '../render/tier';
 import { settings, settingsVersion, subscribeSettings } from './settings';
 import { Store } from './store';
 
@@ -60,9 +61,12 @@ function MissionView({ create }: { create: () => MissionHandle }) {
     };
   }, [create]);
   useSyncExternalStore(subscribeSettings, settingsVersion);
-  const postFx = settings.postFx;
-  const rain = settings.rain;
-  const shadows = settings.shadows;
+  // the tier profile owns the quality envelope; user settings only disable
+  // within it, so a compat-tier degradation edit takes effect here
+  const tier = tierProfile();
+  const postFx = settings.postFx && tier.postPipeline !== 'off';
+  const rain = settings.rain && tier.effects.rain;
+  const shadows = settings.shadows && tier.shadowClass === 'pcf';
   useEffect(() => {
     handle?.setPost(postFx);
   }, [handle, postFx]);
