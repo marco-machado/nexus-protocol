@@ -80,6 +80,9 @@ export interface MapParams {
   heightBase?: number;
   heightVar?: number;
   landmark?: number;
+  // false skips building lots and the landmark entirely: clear obstacle
+  // grid, empty buildings list, null landmark, no wallHp
+  buildings?: boolean;
 }
 
 // origin of the central street band; streets sit at multiples of block
@@ -126,8 +129,9 @@ export function generateMap(seed: number, params: MapParams = {}): MapData {
 
   const obstacle = new Uint8Array(MAP_W * MAP_H);
   const buildings: Building[] = [];
+  const withBuildings = params.buildings ?? true;
 
-  for (let bz = 0; bz * block < MAP_H; bz++) {
+  if (withBuildings) for (let bz = 0; bz * block < MAP_H; bz++) {
     for (let bx = 0; bx * block < MAP_W; bx++) {
       const x0 = bx * block + street;
       const z0 = bz * block + street;
@@ -168,29 +172,32 @@ export function generateMap(seed: number, params: MapParams = {}): MapData {
   // exactly one landmark anchor per district, on the corner lot facing the
   // central crossing so both street axes give it a long sightline; placement
   // is deterministic (no rand), so region identity costs no determinism
-  const def = LANDMARKS[landmarkKind % LANDMARKS.length]!;
-  const k = centralCross(block);
-  const lotSize = block - street;
-  const lw = Math.min(def.w, lotSize);
-  const ld = Math.min(def.d, lotSize);
-  const lx = k + street;
-  const lz = k + street;
-  for (let i = buildings.length - 1; i >= 0; i--) {
-    const b = buildings[i]!;
-    if (b.x < lx + lw && b.x + b.w > lx && b.z < lz + ld && b.z + b.d > lz) {
-      for (let z = b.z; z < b.z + b.d; z++) {
-        for (let x = b.x; x < b.x + b.w; x++) {
-          obstacle[cellIdx(x, z)] = 0;
+  let landmark: Landmark | null = null;
+  if (withBuildings) {
+    const def = LANDMARKS[landmarkKind % LANDMARKS.length]!;
+    const k = centralCross(block);
+    const lotSize = block - street;
+    const lw = Math.min(def.w, lotSize);
+    const ld = Math.min(def.d, lotSize);
+    const lx = k + street;
+    const lz = k + street;
+    for (let i = buildings.length - 1; i >= 0; i--) {
+      const b = buildings[i]!;
+      if (b.x < lx + lw && b.x + b.w > lx && b.z < lz + ld && b.z + b.d > lz) {
+        for (let z = b.z; z < b.z + b.d; z++) {
+          for (let x = b.x; x < b.x + b.w; x++) {
+            obstacle[cellIdx(x, z)] = 0;
+          }
         }
+        buildings.splice(i, 1);
       }
-      buildings.splice(i, 1);
     }
-  }
-  const landmark: Landmark = { kind: landmarkKind % LANDMARKS.length, x: lx, z: lz, w: lw, d: ld, h: def.h };
-  buildings.push({ x: lx, z: lz, w: lw, d: ld, h: def.h });
-  for (let z = lz; z < lz + ld; z++) {
-    for (let x = lx; x < lx + lw; x++) {
-      obstacle[cellIdx(x, z)] = 1;
+    landmark = { kind: landmarkKind % LANDMARKS.length, x: lx, z: lz, w: lw, d: ld, h: def.h };
+    buildings.push({ x: lx, z: lz, w: lw, d: ld, h: def.h });
+    for (let z = lz; z < lz + ld; z++) {
+      for (let x = lx; x < lx + lw; x++) {
+        obstacle[cellIdx(x, z)] = 1;
+      }
     }
   }
 
@@ -221,9 +228,11 @@ export function generateMap(seed: number, params: MapParams = {}): MapData {
   }
   // the standing invariant: every setup-time obstacle write patches street
   // blocking, so traffic never routes through the monument
-  for (let z = lz; z < lz + ld; z++) {
-    for (let x = lx; x < lx + lw; x++) {
-      streetBlocked[cellIdx(x, z)] = 1;
+  if (landmark) {
+    for (let z = landmark.z; z < landmark.z + landmark.d; z++) {
+      for (let x = landmark.x; x < landmark.x + landmark.w; x++) {
+        streetBlocked[cellIdx(x, z)] = 1;
+      }
     }
   }
 

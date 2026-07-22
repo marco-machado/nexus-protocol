@@ -1881,12 +1881,16 @@ function buildGroundTexture(state: SimState): CanvasTexture {
   ctx.strokeStyle = '#9e9e9e';
   ctx.lineWidth = Math.max(1, s * 0.1);
   for (const b of state.map.buildings) ctx.strokeRect(b.x * s, b.z * s, b.w * s, b.d * s);
-  // sidewalk speckle keeps the aprons from reading as flat paint
-  for (let i = 0; i < 6000; i++) {
-    const b = state.map.buildings[next(state.map.buildings.length)]!;
-    const v = 168 + next(40);
-    ctx.fillStyle = `rgb(${v},${v},${v})`;
-    ctx.fillRect((b.x - 1) * s + next(((b.w + 2) * s) | 0), (b.z - 1) * s + next(((b.d + 2) * s) | 0), 2, 2);
+  // sidewalk speckle keeps the aprons from reading as flat paint; the random
+  // building pick divides by the building count, so a building-less campaign
+  // map must skip it
+  if (state.map.buildings.length > 0) {
+    for (let i = 0; i < 6000; i++) {
+      const b = state.map.buildings[next(state.map.buildings.length)]!;
+      const v = 168 + next(40);
+      ctx.fillStyle = `rgb(${v},${v},${v})`;
+      ctx.fillRect((b.x - 1) * s + next(((b.w + 2) * s) | 0), (b.z - 1) * s + next(((b.d + 2) * s) | 0), 2, 2);
+    }
   }
   // lane dashes down each street band's center line
   ctx.strokeStyle = '#ffffff';
@@ -2677,6 +2681,7 @@ function createOutskirts(
 
   // the bare staging scene keeps the ground apron but drops the tower rings
   if (state.map.visualTest && !STAGING_DRESS) return;
+  if (!PROPS_ENABLED) return;
 
   const next = seededNext({ rng: ((state.mapSeed | 0) ^ 0x0575) || 1 });
   const near: { m: Matrix4; c: Color }[] = [];
@@ -2960,6 +2965,12 @@ const SIGN_TINTS = [0xff3344, 0x00e5ff, 0xff2fd6, 0xff9f1c] as const;
 // district, billboard, skyline ring, curbs, or lamps) so the agents read
 // against an empty road; flip to true to restore the dressed staging scene
 const STAGING_DRESS = false;
+
+// campaign prop switch: false drops the render-only street dress (curbs,
+// manholes, scatter props, parked dress vehicles, signage, street lamps,
+// skyline tower rings); flip to true to restore it. The ground, mission
+// assets, and combat feedback (rubble, decals, smoke) are not props and stay.
+const PROPS_ENABLED = false;
 
 // render-only perimeter district for the staging scene: building hulls with
 // lit window grids and neon boards ringing the square, so the camera never
@@ -3787,7 +3798,7 @@ export function createGameScene(
     strips.instanceColor.needsUpdate = true;
   }
   scene.add(strips);
-  const lamps = createStreetLamps(state, scene, light.neon);
+  const lamps = PROPS_ENABLED ? createStreetLamps(state, scene, light.neon) : null;
   const district = STAGING_DRESS && state.map.visualTest
     ? createVisualTestDistrict(state, scene, light, shadows, wet)
     : null;
@@ -3828,7 +3839,7 @@ export function createGameScene(
   createOutskirts(state, scene, light, wet);
   if (state.map.visualTest) {
     if (STAGING_DRESS) createVisualTestCurbs(scene, light.neon);
-  } else {
+  } else if (PROPS_ENABLED) {
     createStreetDress(state, scene, wet, light.neon);
     createPropScatter(state, scene, light.neon);
     createParkedVehicleDress(state, scene, wet);

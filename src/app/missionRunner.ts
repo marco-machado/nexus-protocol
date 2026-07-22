@@ -110,6 +110,12 @@ import { tickerLine } from './narrative/cast';
 import { createNarrativeChannel, type NarrativeEntry } from './narrative/engine';
 import { createMissionFactTracker, type MissionFactOpts, type MissionFacts } from './narrative/facts';
 
+// content kill switches for every mission scene: ambient vehicles and
+// generated buildings are off until these flip back to true; the convoy
+// objective vehicle is exempt (see MissionParams.vehicles)
+const VEHICLES_ENABLED = false;
+const BUILDINGS_ENABLED = false;
+
 export interface MissionResult {
   won: boolean;
   // latched failure-mode kind when lost; REASON_NONE otherwise
@@ -237,7 +243,12 @@ function createMissionSystems(
   opts: MissionOptions,
   onEnd: (result: MissionResult) => void,
 ): MissionHandle {
-  const state = createMission(seed, missionType, specs, { ...simParams, civCount: opts.civCount ?? simParams.civCount });
+  const state = createMission(seed, missionType, specs, {
+    ...simParams,
+    civCount: opts.civCount ?? simParams.civCount,
+    vehicles: VEHICLES_ENABLED,
+    map: { ...simParams.map, buildings: BUILDINGS_ENABLED },
+  });
   const gs = createGameScene(state, settings.shadows, {
     agentManifests: opts.appearances,
     rivalElite: simParams.elite === true,

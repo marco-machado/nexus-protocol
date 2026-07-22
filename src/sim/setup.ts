@@ -61,6 +61,10 @@ export interface MissionParams {
   modifiers?: number;
   // asset recovery: loadout snapshot of the captured agent, taken at capture
   captiveSpec?: AgentSpec;
+  // false skips ambient traffic, trams, and fuel pumps; the convoy mission
+  // objective vehicle spawns regardless, since the contract cannot complete
+  // without it
+  vehicles?: boolean;
   visualTest?: boolean;
   debug?: boolean;
 }
@@ -479,7 +483,7 @@ export function createMission(
     spawnNpc(s, NPC_CIV, cell);
   }
 
-  spawnVehicles(s);
+  if (params.vehicles ?? true) spawnVehicles(s);
   placeZones(s);
   initContract(s);
 
