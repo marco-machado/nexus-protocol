@@ -55,9 +55,9 @@
     "semantic_hash": "c53797544f4d470e44354aa55796dd9b"
   },
   "src/app/missionRunner.ts": {
-    "mtime": 1784696688.430462,
-    "ast_hash": "6aec5f0205370c67d7e4bc5281b3d41f",
-    "semantic_hash": "6aec5f0205370c67d7e4bc5281b3d41f"
+    "mtime": 1784711903.8206217,
+    "ast_hash": "e21f2a64de28b98d35351ca457faa00e",
+    "semantic_hash": ""
   },
   "src/app/nameplates.ts": {
     "mtime": 1783750246.5095832,
@@ -175,9 +175,9 @@
     "semantic_hash": "3d6154dc12291bdfa2ad6d7357d1c330"
   },
   "src/app/ui/menu.tsx": {
-    "mtime": 1784254549.5946767,
-    "ast_hash": "d88440bbee065caa340ba9f379129a5a",
-    "semantic_hash": "d88440bbee065caa340ba9f379129a5a"
+    "mtime": 1784711903.8210196,
+    "ast_hash": "1fcd9745ae91b76838f98df69d773159",
+    "semantic_hash": ""
   },
   "src/app/ui/research.tsx": {
     "mtime": 1784602982.750701,
@@ -220,9 +220,9 @@
     "semantic_hash": "92d96713869899772838b1399ee08391"
   },
   "src/render/appearance.ts": {
-    "mtime": 1784360107.7254279,
-    "ast_hash": "0382989a7f623e2bd8c52996e60fba89",
-    "semantic_hash": "0382989a7f623e2bd8c52996e60fba89"
+    "mtime": 1784711846.334482,
+    "ast_hash": "8b6fbb3d09792d49ac7676987cbb2d93",
+    "semantic_hash": ""
   },
   "src/render/assets.ts": {
     "mtime": 1784605072.9259872,
@@ -245,9 +245,9 @@
     "semantic_hash": "a07b15d1681d49c9bdd25a388d846f87"
   },
   "src/render/globe.ts": {
-    "mtime": 1784254549.5961573,
-    "ast_hash": "661a704f618ac77dce780fc675d3f324",
-    "semantic_hash": "661a704f618ac77dce780fc675d3f324"
+    "mtime": 1784711911.4413717,
+    "ast_hash": "532c20b405a7d88a42d6faad0f7f91bf",
+    "semantic_hash": ""
   },
   "src/render/palette.ts": {
     "mtime": 1784602982.751431,
@@ -275,9 +275,9 @@
     "semantic_hash": "7aaa67f4349e3e38baa4d1567ff2ed59"
   },
   "src/render/scene.ts": {
-    "mtime": 1784696726.828402,
-    "ast_hash": "15a4822a92ceadcdd64267806599d3d7",
-    "semantic_hash": "15a4822a92ceadcdd64267806599d3d7"
+    "mtime": 1784711857.3100824,
+    "ast_hash": "a7c42c6e18858f9f276c6f0450b14760",
+    "semantic_hash": ""
   },
   "src/render/tier.ts": {
     "mtime": 1784605072.9266765,
@@ -370,9 +370,9 @@
     "semantic_hash": "e9408bd9aa3e0c2aaec9cb58246ec956"
   },
   "tests/appearance.test.ts": {
-    "mtime": 1784360107.7270098,
-    "ast_hash": "3c27bd8655f5bdef5a5ab7a83c398405",
-    "semantic_hash": "3c27bd8655f5bdef5a5ab7a83c398405"
+    "mtime": 1784711903.8222406,
+    "ast_hash": "5811360151bdaf47877d4455d3a26d9a",
+    "semantic_hash": ""
   },
   "tests/attackMove.test.ts": {
     "mtime": 1784602982.7533777,
@@ -415,9 +415,9 @@
     "semantic_hash": "2e84ced7ff1d133d10dcaef39ee9a4af"
   },
   "tests/delivery.test.ts": {
-    "mtime": 1784605072.9270258,
-    "ast_hash": "b4b0e0f6676a4805be43480d8a8ee72b",
-    "semantic_hash": "b4b0e0f6676a4805be43480d8a8ee72b"
+    "mtime": 1784711903.8228374,
+    "ast_hash": "b8c6f341aa45799d4509ab6057bb4d9f",
+    "semantic_hash": ""
   },
   "tests/determinism.test.ts": {
     "mtime": 1784602982.7539737,
@@ -568,5 +568,4225 @@
     "mtime": 1784707627.6454523,
     "ast_hash": "8ca40647f1a0c737fc72694ff0250666",
     "semantic_hash": "8ca40647f1a0c737fc72694ff0250666"
+  },
+  ".agents/skills/diagnosing-bugs/scripts/hitl-loop.template.sh": {
+    "mtime": 1784180596.4590263,
+    "ast_hash": "46a2a00761be2785e59661f0e3c11471",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-3d-generator/scripts/threejs_3d_asset.py": {
+    "mtime": 1784180674.4836228,
+    "ast_hash": "a75b4ee9c83048f6b4f7e8951daec2f6",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-atmosphere-aerial-perspective/examples/lut-aerial-perspective/atmosphere-effect.js": {
+    "mtime": 1784180877.0032387,
+    "ast_hash": "ec3c25d8083832156406431ae86a0b4d",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-atmosphere-aerial-perspective/examples/lut-aerial-perspective/source/atmosphere/AerialPerspectiveEffect.ts": {
+    "mtime": 1784180877.0081768,
+    "ast_hash": "b5fce2c5cf993bfbf53b5cfdedec70dc",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-atmosphere-aerial-perspective/examples/lut-aerial-perspective/source/atmosphere/AtmosphereMaterialBase.ts": {
+    "mtime": 1784180877.0044763,
+    "ast_hash": "2efb5698765f5d1e2b5e971d1cd913a8",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-atmosphere-aerial-perspective/examples/lut-aerial-perspective/source/atmosphere/AtmosphereParameters.ts": {
+    "mtime": 1784180877.005549,
+    "ast_hash": "21c4e83625752ee3091725b4978f8a5d",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-atmosphere-aerial-perspective/examples/lut-aerial-perspective/source/atmosphere/IrradianceMaskPass.ts": {
+    "mtime": 1784180877.005259,
+    "ast_hash": "f08f3c971d7b9076182cd7a8fb56ad40",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-atmosphere-aerial-perspective/examples/lut-aerial-perspective/source/atmosphere/PrecomputedTexturesLoader.ts": {
+    "mtime": 1784180877.0091388,
+    "ast_hash": "b688e4f8fd8a936dfaab387b58052bca",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-atmosphere-aerial-perspective/examples/lut-aerial-perspective/source/atmosphere/SkyLightProbe.ts": {
+    "mtime": 1784180877.007261,
+    "ast_hash": "f9920a1bf6d98f5d4d8d2975b3a3dc91",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-atmosphere-aerial-perspective/examples/lut-aerial-perspective/source/atmosphere/SkyMaterial.ts": {
+    "mtime": 1784180877.0142903,
+    "ast_hash": "864d59a1fb5722a00d948ad555300660",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-atmosphere-aerial-perspective/examples/lut-aerial-perspective/source/atmosphere/StarsGeometry.ts": {
+    "mtime": 1784180877.0136812,
+    "ast_hash": "4cf46caf2b39fda61bcab9823b8d0537",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-atmosphere-aerial-perspective/examples/lut-aerial-perspective/source/atmosphere/StarsMaterial.ts": {
+    "mtime": 1784180877.006532,
+    "ast_hash": "3480f49a696554f40bd105d2dce5ed13",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-atmosphere-aerial-perspective/examples/lut-aerial-perspective/source/atmosphere/SunDirectionalLight.ts": {
+    "mtime": 1784180877.005938,
+    "ast_hash": "dbb63d78ac8ff988a8d551b45fa0c19f",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-atmosphere-aerial-perspective/examples/lut-aerial-perspective/source/atmosphere/blackBodyChromaticity.ts": {
+    "mtime": 1784180877.004151,
+    "ast_hash": "863575cb6c60a41e552bbd537391b4a6",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-atmosphere-aerial-perspective/examples/lut-aerial-perspective/source/atmosphere/celestialDirections.ts": {
+    "mtime": 1784180877.0140047,
+    "ast_hash": "8fe1b4235c2ee8a9b2db71bc60f0d703",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-atmosphere-aerial-perspective/examples/lut-aerial-perspective/source/atmosphere/constants.ts": {
+    "mtime": 1784180877.0087824,
+    "ast_hash": "024b94217ddd9d6050589506361dbc43",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-atmosphere-aerial-perspective/examples/lut-aerial-perspective/source/atmosphere/getAltitudeCorrectionOffset.ts": {
+    "mtime": 1784180877.0062022,
+    "ast_hash": "1a9c423e6c104741e8aa8591d274fcf4",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-atmosphere-aerial-perspective/examples/lut-aerial-perspective/source/atmosphere/getSunLightColor.ts": {
+    "mtime": 1784180877.004912,
+    "ast_hash": "1c99957da05f6de67f8aa1f098628b35",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-atmosphere-aerial-perspective/examples/lut-aerial-perspective/source/atmosphere/helpers/functions.ts": {
+    "mtime": 1784180877.015148,
+    "ast_hash": "b9edc2e71466be5cce6f0844e8cf625d",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-atmosphere-aerial-perspective/examples/lut-aerial-perspective/source/atmosphere/helpers/sampleTexture.ts": {
+    "mtime": 1784180877.014923,
+    "ast_hash": "7218ac6487a3af2bbb59526dda54f486",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-atmosphere-aerial-perspective/examples/lut-aerial-perspective/source/atmosphere/index.ts": {
+    "mtime": 1784180877.013452,
+    "ast_hash": "02a88cb384c8cda2ea965d5892d0f720",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-atmosphere-aerial-perspective/examples/lut-aerial-perspective/source/atmosphere/shaders/index.ts": {
+    "mtime": 1784180877.01198,
+    "ast_hash": "2eeb7e9e6c7f7478e6490beb687ef78f",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-atmosphere-aerial-perspective/examples/lut-aerial-perspective/source/atmosphere/types.ts": {
+    "mtime": 1784180877.0069535,
+    "ast_hash": "da8a75814ea36ce9c27a050f1a5b1fc9",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-atmosphere-aerial-perspective/examples/lut-aerial-perspective/source/effects/DepthEffect.ts": {
+    "mtime": 1784180877.0160909,
+    "ast_hash": "1c73798d47a4ab867f42a8aca2d26fb1",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-atmosphere-aerial-perspective/examples/lut-aerial-perspective/source/effects/DitheringEffect.ts": {
+    "mtime": 1784180877.0213401,
+    "ast_hash": "387feafb6a08fe02b863970f85f5d1c6",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-atmosphere-aerial-perspective/examples/lut-aerial-perspective/source/effects/DownsampleThresholdMaterial.ts": {
+    "mtime": 1784180877.02074,
+    "ast_hash": "b096f2d8d2dc26fe28821224ebe02d18",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-atmosphere-aerial-perspective/examples/lut-aerial-perspective/source/effects/GeometryEffect.ts": {
+    "mtime": 1784180877.017122,
+    "ast_hash": "d71b2a385348a9bf09b3ae1995288aac",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-atmosphere-aerial-perspective/examples/lut-aerial-perspective/source/effects/GeometryPass.ts": {
+    "mtime": 1784180877.0163312,
+    "ast_hash": "dbd579dc94b14b1635f835b1a617f384",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-atmosphere-aerial-perspective/examples/lut-aerial-perspective/source/effects/LensFlareEffect.ts": {
+    "mtime": 1784180877.0165906,
+    "ast_hash": "acb85a53da7ee4685e739aef696b1f86",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-atmosphere-aerial-perspective/examples/lut-aerial-perspective/source/effects/LensFlareFeaturesMaterial.ts": {
+    "mtime": 1784180877.021003,
+    "ast_hash": "cc1c5d3c5829a7d3975fa39a03539fc2",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-atmosphere-aerial-perspective/examples/lut-aerial-perspective/source/effects/NormalEffect.ts": {
+    "mtime": 1784180877.0157785,
+    "ast_hash": "e11c98681f009bc2ac710bf834bf9449",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-atmosphere-aerial-perspective/examples/lut-aerial-perspective/source/effects/createHaldLookupTexture.ts": {
+    "mtime": 1784180877.0204773,
+    "ast_hash": "64c582e82b8e0101405bafd4badd68ed",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-atmosphere-aerial-perspective/examples/lut-aerial-perspective/source/effects/index.ts": {
+    "mtime": 1784180877.0202022,
+    "ast_hash": "b362d67538cc76e02a35a435c3fe5599",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-atmosphere-aerial-perspective/examples/lut-aerial-perspective/source/effects/setupMaterialsForGeometryPass.ts": {
+    "mtime": 1784180877.01682,
+    "ast_hash": "f5aac7414f6a4296e6129c1cd2360cc1",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-atmosphere-aerial-perspective/examples/lut-aerial-perspective/source/geospatial/ArrayBufferLoader.ts": {
+    "mtime": 1784180877.023534,
+    "ast_hash": "22d03bd7df6d93a2861fc7f6cb1ebdbf",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-atmosphere-aerial-perspective/examples/lut-aerial-perspective/source/geospatial/DataLoader.ts": {
+    "mtime": 1784180877.0225003,
+    "ast_hash": "fbb3efe174db5bc2718eb31c0a5ed259",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-atmosphere-aerial-perspective/examples/lut-aerial-perspective/source/geospatial/EXR3DLoader.ts": {
+    "mtime": 1784180877.02421,
+    "ast_hash": "4c810a22e9970aa4643161afcd176bea",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-atmosphere-aerial-perspective/examples/lut-aerial-perspective/source/geospatial/Ellipsoid.ts": {
+    "mtime": 1784180877.0298643,
+    "ast_hash": "637ff714b345cf5f7736997dfee2a498",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-atmosphere-aerial-perspective/examples/lut-aerial-perspective/source/geospatial/EllipsoidGeometry.ts": {
+    "mtime": 1784180877.03056,
+    "ast_hash": "8b930ff1f29788dbb513150e1d8898aa",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-atmosphere-aerial-perspective/examples/lut-aerial-perspective/source/geospatial/Geodetic.ts": {
+    "mtime": 1784180877.0254285,
+    "ast_hash": "34308fa5eb3b1e64a3b0cc8385c96a92",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-atmosphere-aerial-perspective/examples/lut-aerial-perspective/source/geospatial/PointOfView.ts": {
+    "mtime": 1784180877.0247045,
+    "ast_hash": "e85d026c228f9eab28841f3b103f4613",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-atmosphere-aerial-perspective/examples/lut-aerial-perspective/source/geospatial/Rectangle.ts": {
+    "mtime": 1784180877.0229862,
+    "ast_hash": "3028fda444200ad1c5e03b05b7dac18a",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-atmosphere-aerial-perspective/examples/lut-aerial-perspective/source/geospatial/STBNLoader.ts": {
+    "mtime": 1784180877.0237637,
+    "ast_hash": "63f8189d9410501cf1f0aa7d953cc008",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-atmosphere-aerial-perspective/examples/lut-aerial-perspective/source/geospatial/Texture3DLoader.ts": {
+    "mtime": 1784180877.0312676,
+    "ast_hash": "79800176634795e64cc8016969263ae5",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-atmosphere-aerial-perspective/examples/lut-aerial-perspective/source/geospatial/TileCoordinate.ts": {
+    "mtime": 1784180877.0315185,
+    "ast_hash": "e42f45783546dc64b21d001afd459ff1",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-atmosphere-aerial-perspective/examples/lut-aerial-perspective/source/geospatial/TilingScheme.ts": {
+    "mtime": 1784180877.0221703,
+    "ast_hash": "2ee6ef1b045ba89a4f93b4426932d646",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-atmosphere-aerial-perspective/examples/lut-aerial-perspective/source/geospatial/TypedArrayLoader.ts": {
+    "mtime": 1784180877.0295968,
+    "ast_hash": "900c4fecae225fca8426cb3fdb78c70a",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-atmosphere-aerial-perspective/examples/lut-aerial-perspective/source/geospatial/assertions.ts": {
+    "mtime": 1784180877.025154,
+    "ast_hash": "28e5789d2c6140acbc56f88fce979796",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-atmosphere-aerial-perspective/examples/lut-aerial-perspective/source/geospatial/bufferGeometry.ts": {
+    "mtime": 1784180877.0244436,
+    "ast_hash": "12a2876299eeac2ca2d5765f48332e3f",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-atmosphere-aerial-perspective/examples/lut-aerial-perspective/source/geospatial/constants.ts": {
+    "mtime": 1784180877.0256824,
+    "ast_hash": "425a8c60ed18c98489431e1f6ada87a0",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-atmosphere-aerial-perspective/examples/lut-aerial-perspective/source/geospatial/decorators.ts": {
+    "mtime": 1784180877.0219312,
+    "ast_hash": "d393b1d1abeb52be1be8a558321a4044",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-atmosphere-aerial-perspective/examples/lut-aerial-perspective/source/geospatial/defineShorthand.ts": {
+    "mtime": 1784180877.0261567,
+    "ast_hash": "ff4889e73490b3136166b77cab8dadba",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-atmosphere-aerial-perspective/examples/lut-aerial-perspective/source/geospatial/helpers/projectOnEllipsoidSurface.ts": {
+    "mtime": 1784180877.0309732,
+    "ast_hash": "1454d60cbaf2064a5b53c3a6a49943e6",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-atmosphere-aerial-perspective/examples/lut-aerial-perspective/source/geospatial/index.ts": {
+    "mtime": 1784180877.030325,
+    "ast_hash": "4502e8f535a10218b093e01b49257417",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-atmosphere-aerial-perspective/examples/lut-aerial-perspective/source/geospatial/math.ts": {
+    "mtime": 1784180877.0227554,
+    "ast_hash": "9377c2734f08b337c0be5656f7457902",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-atmosphere-aerial-perspective/examples/lut-aerial-perspective/source/geospatial/resolveIncludes.ts": {
+    "mtime": 1784180877.0239596,
+    "ast_hash": "eed74d627260f8937f769db6ed48aa71",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-atmosphere-aerial-perspective/examples/lut-aerial-perspective/source/geospatial/shaders/index.ts": {
+    "mtime": 1784180877.0285594,
+    "ast_hash": "ec2959f7aacc636b2e01ab5e95b26ccb",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-atmosphere-aerial-perspective/examples/lut-aerial-perspective/source/geospatial/typedArray.ts": {
+    "mtime": 1784180877.0259287,
+    "ast_hash": "25e17f27948fd70b8d4ec71670d8b956",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-atmosphere-aerial-perspective/examples/lut-aerial-perspective/source/geospatial/typedArrayParsers.ts": {
+    "mtime": 1784180877.0301151,
+    "ast_hash": "ccd9b72163fc2f568792775c60551713",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-atmosphere-aerial-perspective/examples/lut-aerial-perspective/source/geospatial/types.ts": {
+    "mtime": 1784180877.024934,
+    "ast_hash": "c46790a2ade3cf37d6e9555e9a83b940",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-atmosphere-aerial-perspective/examples/lut-aerial-perspective/source/geospatial/unrollLoops.ts": {
+    "mtime": 1784180877.0232327,
+    "ast_hash": "e32d7520c44bff345151f20fc8ced47d",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-atmosphere-aerial-perspective/examples/lut-aerial-perspective/source/vendor/tiny-invariant.ts": {
+    "mtime": 1784180877.0323267,
+    "ast_hash": "f49736bb5d24bdc8f3cb45fca5855c31",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-atmosphere-aerial-perspective/examples/lut-aerial-perspective/source/vendor/url-join.ts": {
+    "mtime": 1784180877.0320725,
+    "ast_hash": "cd8edbd1e98020f4bdc0ccae0c2a9c50",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-audio-generator/scripts/threejs_audio_asset.py": {
+    "mtime": 1784180674.5803447,
+    "ast_hash": "991cb4078116f7236edf7a0d938a9085",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-game-director/scripts/audit_reference_report.py": {
+    "mtime": 1784180674.6262076,
+    "ast_hash": "3c958d9caefdcc4356e38948ea856363",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-game-director/scripts/probe_asset_credentials.sh": {
+    "mtime": 1784180674.626196,
+    "ast_hash": "ad22d60670445e17a89fbee88b0a182a",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-gameplay-systems/assets/threejs-vite-game/package.json": {
+    "mtime": 1784180674.744599,
+    "ast_hash": "2b70fbfd5af868a3794aee271dc901c6",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-gameplay-systems/assets/threejs-vite-game/playwright.config.ts": {
+    "mtime": 1784180674.7446926,
+    "ast_hash": "9b050a2b66844f0f54657935595c73a0",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-gameplay-systems/assets/threejs-vite-game/scripts/inspect-threejs-canvas.mjs": {
+    "mtime": 1784180674.7454345,
+    "ast_hash": "db45bc3f871ec5a15ad1eebfe8ae7252",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-gameplay-systems/assets/threejs-vite-game/src/core/InputController.ts": {
+    "mtime": 1784180674.746181,
+    "ast_hash": "fbc89bb12a2a448152ec988731f764c7",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-gameplay-systems/assets/threejs-vite-game/src/core/Loop.ts": {
+    "mtime": 1784180674.7460473,
+    "ast_hash": "b5a417a0d6900077653865ff43ce58d5",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-gameplay-systems/assets/threejs-vite-game/src/core/Renderer.ts": {
+    "mtime": 1784180674.746048,
+    "ast_hash": "7545ad927a313d21334491fc9102ba06",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-gameplay-systems/assets/threejs-vite-game/src/entities/Pickup.ts": {
+    "mtime": 1784180674.7461843,
+    "ast_hash": "a2972a90a9e40e27968c1f46fd96c440",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-gameplay-systems/assets/threejs-vite-game/src/entities/Player.ts": {
+    "mtime": 1784180674.7460463,
+    "ast_hash": "26f147bbf78194bcdecfeaf30fdc9dee",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-gameplay-systems/assets/threejs-vite-game/src/game/Game.ts": {
+    "mtime": 1784180674.7462826,
+    "ast_hash": "f3c2a16cf37d9cccde4e23c6dfb4b048",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-gameplay-systems/assets/threejs-vite-game/src/main.ts": {
+    "mtime": 1784180674.7454383,
+    "ast_hash": "b9063b4972ff52a6e2c56c03ababf595",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-gameplay-systems/assets/threejs-vite-game/src/systems/AudioSystem.ts": {
+    "mtime": 1784180674.7462752,
+    "ast_hash": "c2859acc31bdecb181c0fba4d229e816",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-gameplay-systems/assets/threejs-vite-game/src/systems/CameraRig.ts": {
+    "mtime": 1784180674.7465024,
+    "ast_hash": "41149e267f992d23ac2d959b42eb9800",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-gameplay-systems/assets/threejs-vite-game/src/systems/CollisionSystem.ts": {
+    "mtime": 1784180674.7466779,
+    "ast_hash": "93adfe8f07c3cd84e219671a55385f6c",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-gameplay-systems/assets/threejs-vite-game/src/systems/DebugTools.ts": {
+    "mtime": 1784180674.746449,
+    "ast_hash": "00ea10b9161334a0e5c75a4961628f8b",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-gameplay-systems/assets/threejs-vite-game/src/systems/Hud.ts": {
+    "mtime": 1784180674.7465067,
+    "ast_hash": "62d17c4c883725f38b6234faad0bca4f",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-gameplay-systems/assets/threejs-vite-game/src/utils/dispose.ts": {
+    "mtime": 1784180674.7466624,
+    "ast_hash": "18aeb2ea525d46f5af473fdb88f422e3",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-gameplay-systems/assets/threejs-vite-game/src/utils/random.ts": {
+    "mtime": 1784180674.7465289,
+    "ast_hash": "bb5a88110213e1252fac1b3a8b89379d",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-gameplay-systems/assets/threejs-vite-game/src/vite-env.d.ts": {
+    "mtime": 1784180674.745558,
+    "ast_hash": "84625e32f1fc216ddc7e26ab20b2e9e4",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-gameplay-systems/assets/threejs-vite-game/tests/bot-playtest.template.ts": {
+    "mtime": 1784180674.745653,
+    "ast_hash": "5e2322a8299e65e8f9874bcbf9f3d263",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-gameplay-systems/assets/threejs-vite-game/tests/visual-regression.template.ts": {
+    "mtime": 1784180674.745735,
+    "ast_hash": "43833e09fa726b027fd6d39e6405b697",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-gameplay-systems/assets/threejs-vite-game/tests/visual.spec.ts": {
+    "mtime": 1784180674.745745,
+    "ast_hash": "c13fea508c3b4bf77d176dc96ee04347",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-gameplay-systems/assets/threejs-vite-game/tsconfig.json": {
+    "mtime": 1784180674.7449143,
+    "ast_hash": "7c8f6996964481e920fc9e2227f9fa04",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-gameplay-systems/assets/threejs-vite-game/vite.config.ts": {
+    "mtime": 1784180674.7447937,
+    "ast_hash": "2517e01b1a7d6f563fc28641e8e1dd2e",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-gameplay-systems/scripts/create_threejs_game.py": {
+    "mtime": 1784180674.7441838,
+    "ast_hash": "d0cf3fabd1f58b6e7be12cec758ed7b5",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-image-generator/scripts/generate_image.py": {
+    "mtime": 1784180674.7602715,
+    "ast_hash": "c08d45efd3eb9f979700e3be019398cb",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-parallax-occlusion-mapping/examples/silhouette-relief/ParallaxOcclusion.js": {
+    "mtime": 1784180877.0668929,
+    "ast_hash": "4024b34b190158606867342a5a07eedc",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-parallax-occlusion-mapping/examples/silhouette-relief/bulkhead-height-maps.js": {
+    "mtime": 1784180877.066392,
+    "ast_hash": "5fdbcc35b8dd18d39e45433eeceb1e79",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-parallax-occlusion-mapping/examples/silhouette-relief/silhouette-relief-system.js": {
+    "mtime": 1784180877.0674243,
+    "ast_hash": "1821ca810cd5a7f5348491b271b03525",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-precipitation-surfaces/examples/snow-accumulation/snow-system.js": {
+    "mtime": 1784180877.0698912,
+    "ast_hash": "735d43eb5a01e223cc832ad36591583d",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-precipitation-surfaces/examples/wet-puddle-rain/rain-puddle-system.js": {
+    "mtime": 1784180877.0706766,
+    "ast_hash": "a7db31ba8067289d90e3a424f6ec9457",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-procedural-architecture/examples/procedural-financial-tower/building-system.js": {
+    "mtime": 1784180877.0962443,
+    "ast_hash": "02df55db309b8afa4cb6bdb5d1172b44",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-procedural-architecture/examples/procedural-financial-tower/shadow-clipmaps.js": {
+    "mtime": 1784180877.0953224,
+    "ast_hash": "2d9510c248077bc3e8328ec13318352f",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-procedural-geometry/examples/porcelain-brass-submarine/source/design-contract.js": {
+    "mtime": 1784180877.1246846,
+    "ast_hash": "af582b405f612e315c507cdac334eba8",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-procedural-geometry/examples/porcelain-brass-submarine/source/mesh-kit.js": {
+    "mtime": 1784180877.1241965,
+    "ast_hash": "ae63c59c09a947fd075ad2530afa8f97",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-procedural-geometry/examples/porcelain-brass-submarine/source/submarine-materials.js": {
+    "mtime": 1784180877.1250026,
+    "ast_hash": "39c5e97c7c6c49257999270c4e9839ca",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-procedural-geometry/examples/porcelain-brass-submarine/source/submarine-model.js": {
+    "mtime": 1784180877.1236062,
+    "ast_hash": "6dc1a548c256e9a30f967de2c472a415",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-procedural-geometry/examples/porcelain-brass-submarine/submarine-model.js": {
+    "mtime": 1784180877.122896,
+    "ast_hash": "35184bf679fca0e2648ca7cb8b2c0a30",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-procedural-geometry/examples/sculpted-gallery-frame/frame-geometry.js": {
+    "mtime": 1784180877.1257918,
+    "ast_hash": "7200e8a190e272ac7564302c8badfdfa",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-procedural-materials/examples/hybrid-soil-moss-surface/hybrid-soil-moss-surface.js": {
+    "mtime": 1784180877.1331882,
+    "ast_hash": "c625773324900281a53819eeafb2d5ef",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-procedural-materials/examples/hybrid-soil-moss-surface/model-moss-accumulation.js": {
+    "mtime": 1784180877.1327965,
+    "ast_hash": "880d171b437bd674663dc2eb1120a4c5",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-procedural-materials/examples/lava-flow-surface/lava-surface.js": {
+    "mtime": 1784180877.1321206,
+    "ast_hash": "da08aca2e0eb6f3c0325b7254ab6868c",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-procedural-planets/examples/procedural-planet-surface/planet-system.js": {
+    "mtime": 1784180877.1632276,
+    "ast_hash": "5234057370fec6c2e84ed60d14f35b88",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-procedural-planets/examples/procedural-planet-surface/terrain-field.js": {
+    "mtime": 1784180877.1625686,
+    "ast_hash": "047273286e4b0f4bdf1d6fa980429bcf",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-procedural-vegetation/examples/gpu-computed-grass/gpu-grass-system.js": {
+    "mtime": 1784180877.1703732,
+    "ast_hash": "c5b8fc96906754bfe8f1a0b8c4df465b",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-procedural-vegetation/examples/procedural-surface-ivy/ivy-effect.js": {
+    "mtime": 1784180877.168289,
+    "ast_hash": "ab809d9f200d40e30c064bd235c17d8d",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-procedural-vegetation/examples/procedural-surface-ivy/source/bvh.ts": {
+    "mtime": 1784180877.1674433,
+    "ast_hash": "77827ea1f37935e803a097756909af69",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-procedural-vegetation/examples/procedural-surface-ivy/source/flowers.ts": {
+    "mtime": 1784180877.166652,
+    "ast_hash": "020f2919ebae1157d67e106acecf3544",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-procedural-vegetation/examples/procedural-surface-ivy/source/ivy.ts": {
+    "mtime": 1784180877.1669936,
+    "ast_hash": "dc8734488e870a02d5ce874b1c3d07ea",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-procedural-vegetation/examples/procedural-surface-ivy/source/leafTexture.ts": {
+    "mtime": 1784180877.1680014,
+    "ast_hash": "288448a27cebacd5945f42e951f0fe94",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-procedural-vegetation/examples/procedural-surface-ivy/source/wind.ts": {
+    "mtime": 1784180877.1677182,
+    "ast_hash": "940fa8d70c5718f03a1cd8d1953b6916",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-procedural-vegetation/examples/structured-ash-growth/ash-preset.js": {
+    "mtime": 1784180877.1692564,
+    "ast_hash": "2031781701769ed5443dd7ebdc936345",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-procedural-vegetation/examples/structured-ash-growth/tree-system.js": {
+    "mtime": 1784180877.1696432,
+    "ast_hash": "12cf9586f81a1d1fb1e9485e247837c9",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-procedural-vegetation/examples/stylized-meadow-grass/grass-system.js": {
+    "mtime": 1784180877.168768,
+    "ast_hash": "696ba905659d9c68179d963bb5c9d77a",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-procedural-vfx/examples/reentry-plasma/reentry-plasma.js": {
+    "mtime": 1784180877.1828527,
+    "ast_hash": "bb44615a9897cb921816a2ea309cf616",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-qa-release/scripts/inspect-threejs-canvas.mjs": {
+    "mtime": 1784180674.7927935,
+    "ast_hash": "db45bc3f871ec5a15ad1eebfe8ae7252",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-raymarched-space-effects/examples/curved-ray-accretion-volume/curved-ray-effect.js": {
+    "mtime": 1784180877.18547,
+    "ast_hash": "3c01f7e4e7f157f555d360400d5b93a6",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-raymarched-space-effects/examples/schwarzschild-geodesic-black-hole/geodesic-black-hole-effect.js": {
+    "mtime": 1784180877.1861937,
+    "ast_hash": "e29e4e35ca9c7ac769120a57b26ebead",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-spectral-ocean/examples/hybrid-clear-water-ocean/hybrid-ocean-material.js": {
+    "mtime": 1784180877.2026436,
+    "ast_hash": "9ac5a524b25ee7774c46adce6b5355ca",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-spectral-ocean/examples/spectral-cascade-ocean/detail-texture.js": {
+    "mtime": 1784180877.2009673,
+    "ast_hash": "3a89bcbba07d03c639f2e2af7ad89001",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-spectral-ocean/examples/spectral-cascade-ocean/fft-pipeline.js": {
+    "mtime": 1784180877.2018616,
+    "ast_hash": "6506c931fca020f48e962faed520b420",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-spectral-ocean/examples/spectral-cascade-ocean/ocean-material.js": {
+    "mtime": 1784180877.2015152,
+    "ast_hash": "13125d418591ca4ba03001fe6f6eb745",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-spectral-ocean/examples/spectral-cascade-ocean/ocean-system.js": {
+    "mtime": 1784180877.2012084,
+    "ast_hash": "81613c40eb12c0f0025b538010fd1803",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-spectral-ocean/examples/spectral-cascade-ocean/spectrum.js": {
+    "mtime": 1784180877.2021239,
+    "ast_hash": "754b3a8cdf2147a975c01e0bafdb14fc",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-spectral-ocean/examples/stylized-above-below-ocean/stylized-ocean-material.js": {
+    "mtime": 1784180877.1963444,
+    "ast_hash": "23b441f60c3135fa11a91e29e591b774",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-spectral-ocean/examples/submerged-snell-ocean/source/caustics.ts": {
+    "mtime": 1784180877.2002065,
+    "ast_hash": "e0731c9b3b2b9509e7709d39c066a9a8",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-spectral-ocean/examples/submerged-snell-ocean/source/current.ts": {
+    "mtime": 1784180877.1993709,
+    "ast_hash": "a22df5669644dc39a97299fa10aacee1",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-spectral-ocean/examples/submerged-snell-ocean/source/fft-compute.ts": {
+    "mtime": 1784180877.2004607,
+    "ast_hash": "4f75db90a3137b0d960cfbac96f04b3c",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-spectral-ocean/examples/submerged-snell-ocean/source/grade.ts": {
+    "mtime": 1784180877.1977475,
+    "ast_hash": "896676afdfeb6766473b4eb6456cf458",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-spectral-ocean/examples/submerged-snell-ocean/source/noise.ts": {
+    "mtime": 1784180877.1983557,
+    "ast_hash": "6b099b663f8cff59c496a7a1bb26958f",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-spectral-ocean/examples/submerged-snell-ocean/source/ocean-material.ts": {
+    "mtime": 1784180877.1997156,
+    "ast_hash": "c9024a5e325e443a2bcb37d92e49e722",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-spectral-ocean/examples/submerged-snell-ocean/source/ocean-spectrum.ts": {
+    "mtime": 1784180877.1986194,
+    "ast_hash": "df0a453df4e142455fb6ff42e4a001c0",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-spectral-ocean/examples/submerged-snell-ocean/source/ocean-system.ts": {
+    "mtime": 1784180877.1999826,
+    "ast_hash": "81cd7a8598d9b8abe1bab58626c23bd2",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-spectral-ocean/examples/submerged-snell-ocean/source/random.ts": {
+    "mtime": 1784180877.1991255,
+    "ast_hash": "3aea86f601ed3b34c8d9730147f0ed71",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-spectral-ocean/examples/submerged-snell-ocean/source/sky.ts": {
+    "mtime": 1784180877.1988776,
+    "ast_hash": "84cfa0635a766ece43556006133fed24",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-spectral-ocean/examples/submerged-snell-ocean/source/underwater-medium.ts": {
+    "mtime": 1784180877.1980233,
+    "ast_hash": "15a9af94487e585d88c83e099f466bde",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-spectral-ocean/examples/submerged-snell-ocean/source/wave-sim.ts": {
+    "mtime": 1784180877.1974337,
+    "ast_hash": "b6ed32407d02125fd706f66952e99342",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-spectral-ocean/examples/submerged-snell-ocean/underwater-snell-ocean.ts": {
+    "mtime": 1784180877.1969993,
+    "ast_hash": "9dce3b3e07049b69515c0ddacfbdafbf",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-temporal-surfaces/examples/refractive-window-rain/window-rain-effect.js": {
+    "mtime": 1784180877.2080126,
+    "ast_hash": "8fc51b649a166d04d9d73e4e8d666e11",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-temporal-surfaces/examples/touch-history-frost/frost-surface-effect.js": {
+    "mtime": 1784180877.207182,
+    "ast_hash": "196058feef9b4ef7dfe386b14ca252ca",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/cloud-effect.js": {
+    "mtime": 1784180877.253696,
+    "ast_hash": "fcfd4feb607ca98d292dd76cd30938aa",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/atmosphere/AerialPerspectiveEffect.ts": {
+    "mtime": 1784180877.2307243,
+    "ast_hash": "b5fce2c5cf993bfbf53b5cfdedec70dc",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/atmosphere/AtmosphereMaterialBase.ts": {
+    "mtime": 1784180877.2280583,
+    "ast_hash": "2efb5698765f5d1e2b5e971d1cd913a8",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/atmosphere/AtmosphereParameters.ts": {
+    "mtime": 1784180877.2289321,
+    "ast_hash": "21c4e83625752ee3091725b4978f8a5d",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/atmosphere/IrradianceMaskPass.ts": {
+    "mtime": 1784180877.2286353,
+    "ast_hash": "f08f3c971d7b9076182cd7a8fb56ad40",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/atmosphere/PrecomputedTexturesLoader.ts": {
+    "mtime": 1784180877.2313573,
+    "ast_hash": "b688e4f8fd8a936dfaab387b58052bca",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/atmosphere/SkyLightProbe.ts": {
+    "mtime": 1784180877.2303123,
+    "ast_hash": "f9920a1bf6d98f5d4d8d2975b3a3dc91",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/atmosphere/SkyMaterial.ts": {
+    "mtime": 1784180877.2358198,
+    "ast_hash": "864d59a1fb5722a00d948ad555300660",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/atmosphere/StarsGeometry.ts": {
+    "mtime": 1784180877.2352886,
+    "ast_hash": "4cf46caf2b39fda61bcab9823b8d0537",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/atmosphere/StarsMaterial.ts": {
+    "mtime": 1784180877.2296557,
+    "ast_hash": "3480f49a696554f40bd105d2dce5ed13",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/atmosphere/SunDirectionalLight.ts": {
+    "mtime": 1784180877.2291873,
+    "ast_hash": "dbb63d78ac8ff988a8d551b45fa0c19f",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/atmosphere/blackBodyChromaticity.ts": {
+    "mtime": 1784180877.2278364,
+    "ast_hash": "863575cb6c60a41e552bbd537391b4a6",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/atmosphere/celestialDirections.ts": {
+    "mtime": 1784180877.235539,
+    "ast_hash": "8fe1b4235c2ee8a9b2db71bc60f0d703",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/atmosphere/constants.ts": {
+    "mtime": 1784180877.2310343,
+    "ast_hash": "024b94217ddd9d6050589506361dbc43",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/atmosphere/getAltitudeCorrectionOffset.ts": {
+    "mtime": 1784180877.2294147,
+    "ast_hash": "1a9c423e6c104741e8aa8591d274fcf4",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/atmosphere/getSunLightColor.ts": {
+    "mtime": 1784180877.2283804,
+    "ast_hash": "1c99957da05f6de67f8aa1f098628b35",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/atmosphere/helpers/functions.ts": {
+    "mtime": 1784180877.2364366,
+    "ast_hash": "b9edc2e71466be5cce6f0844e8cf625d",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/atmosphere/helpers/sampleTexture.ts": {
+    "mtime": 1784180877.2361689,
+    "ast_hash": "7218ac6487a3af2bbb59526dda54f486",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/atmosphere/index.ts": {
+    "mtime": 1784180877.235038,
+    "ast_hash": "02a88cb384c8cda2ea965d5892d0f720",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/atmosphere/shaders/index.ts": {
+    "mtime": 1784180877.233841,
+    "ast_hash": "2eeb7e9e6c7f7478e6490beb687ef78f",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/atmosphere/types.ts": {
+    "mtime": 1784180877.229922,
+    "ast_hash": "da8a75814ea36ce9c27a050f1a5b1fc9",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/clouds/CascadedShadowMaps.ts": {
+    "mtime": 1784180877.2165897,
+    "ast_hash": "504c0425a20bc0a89f341a60a05d5cf9",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/clouds/CloudLayer.ts": {
+    "mtime": 1784180877.2163045,
+    "ast_hash": "c724cf6ad298d8375b036856f880a1c2",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/clouds/CloudLayers.ts": {
+    "mtime": 1784180877.218847,
+    "ast_hash": "98397d645b02a3dacefb362689d35b99",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/clouds/CloudShape.ts": {
+    "mtime": 1784180877.2151787,
+    "ast_hash": "0c3f1aa7f27ec9ba284daf63a970f3b3",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/clouds/CloudShapeDetail.ts": {
+    "mtime": 1784180877.2157269,
+    "ast_hash": "1cd4572359a628aa1ff8fcbac0fc0693",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/clouds/CloudsEffect.ts": {
+    "mtime": 1784180877.2176714,
+    "ast_hash": "fa21423e90e047eb46c9b5de02fa06b9",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/clouds/CloudsMaterial.ts": {
+    "mtime": 1784180877.2160177,
+    "ast_hash": "430f5ca89f671e2db3deb8f867c1c70c",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/clouds/CloudsPass.ts": {
+    "mtime": 1784180877.2148147,
+    "ast_hash": "cbd58ea972864f6766c62c34c2c487c1",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/clouds/CloudsResolveMaterial.ts": {
+    "mtime": 1784180877.2169166,
+    "ast_hash": "88c94c89637e967cf95de0dfc2940967",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/clouds/DensityProfile.ts": {
+    "mtime": 1784180877.2196252,
+    "ast_hash": "cc6094d3aa804ecbefea53a410d0bffe",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/clouds/LocalWeather.ts": {
+    "mtime": 1784180877.227361,
+    "ast_hash": "b041890a5f68435a2aa06236546911f4",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/clouds/PassBase.ts": {
+    "mtime": 1784180877.2154582,
+    "ast_hash": "306484a7bdb8e78327b31d4407b20ae1",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/clouds/Procedural3DTexture.ts": {
+    "mtime": 1784180877.2260156,
+    "ast_hash": "ad6d5d87e9465fa1645cfbfa686fd1b6",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/clouds/ProceduralTexture.ts": {
+    "mtime": 1784180877.2185798,
+    "ast_hash": "5d5ed0ee399a7d9d0d97b6c771374674",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/clouds/ShaderArrayPass.ts": {
+    "mtime": 1784180877.2180955,
+    "ast_hash": "20822fa29255e852b038567420940fc3",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/clouds/ShadowMaterial.ts": {
+    "mtime": 1784180877.2145195,
+    "ast_hash": "890326459219feae2a284836093d5c12",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/clouds/ShadowPass.ts": {
+    "mtime": 1784180877.2255301,
+    "ast_hash": "a5a1072c8f9922cc4c40390709d022e1",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/clouds/ShadowResolveMaterial.ts": {
+    "mtime": 1784180877.227127,
+    "ast_hash": "f6b7384b20cc8ceb9a17341ddcc0af90",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/clouds/Turbulence.ts": {
+    "mtime": 1784180877.225772,
+    "ast_hash": "4386ad897e1bdb8bed883a089fdbd0c0",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/clouds/bayer.ts": {
+    "mtime": 1784180877.2183368,
+    "ast_hash": "f28124087e4af8c2dafebf305b750936",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/clouds/constants.ts": {
+    "mtime": 1784180877.219363,
+    "ast_hash": "7aa51bdf28270255bb254f45fcc2ca0f",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/clouds/helpers/FrustumCorners.ts": {
+    "mtime": 1784180877.2266107,
+    "ast_hash": "be1f4743ac59468a2b4450848d84f1a9",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/clouds/helpers/setArrayRenderTargetLayers.ts": {
+    "mtime": 1784180877.226345,
+    "ast_hash": "42731a77af50322cb61965e2453a25f3",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/clouds/helpers/splitFrustum.ts": {
+    "mtime": 1784180877.2268305,
+    "ast_hash": "99b695496a7e058ec2e4fe7d928a200d",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/clouds/index.ts": {
+    "mtime": 1784180877.2252986,
+    "ast_hash": "47c1a4ef878972bdb6f80b7f2251613f",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/clouds/qualityPresets.ts": {
+    "mtime": 1784180877.2191095,
+    "ast_hash": "8c1ccaebac5a6b8837558d5e1953725d",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/clouds/uniforms.ts": {
+    "mtime": 1784180877.217268,
+    "ast_hash": "a0e198cab7376f8b9a2c167464fd9dd3",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/effects/DepthEffect.ts": {
+    "mtime": 1784180877.23717,
+    "ast_hash": "1c73798d47a4ab867f42a8aca2d26fb1",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/effects/DitheringEffect.ts": {
+    "mtime": 1784180877.2424195,
+    "ast_hash": "387feafb6a08fe02b863970f85f5d1c6",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/effects/DownsampleThresholdMaterial.ts": {
+    "mtime": 1784180877.2418733,
+    "ast_hash": "b096f2d8d2dc26fe28821224ebe02d18",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/effects/GeometryEffect.ts": {
+    "mtime": 1784180877.238347,
+    "ast_hash": "d71b2a385348a9bf09b3ae1995288aac",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/effects/GeometryPass.ts": {
+    "mtime": 1784180877.2374961,
+    "ast_hash": "dbd579dc94b14b1635f835b1a617f384",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/effects/LensFlareEffect.ts": {
+    "mtime": 1784180877.2378592,
+    "ast_hash": "acb85a53da7ee4685e739aef696b1f86",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/effects/LensFlareFeaturesMaterial.ts": {
+    "mtime": 1784180877.2421038,
+    "ast_hash": "cc1c5d3c5829a7d3975fa39a03539fc2",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/effects/NormalEffect.ts": {
+    "mtime": 1784180877.2368977,
+    "ast_hash": "e11c98681f009bc2ac710bf834bf9449",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/effects/createHaldLookupTexture.ts": {
+    "mtime": 1784180877.2416275,
+    "ast_hash": "64c582e82b8e0101405bafd4badd68ed",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/effects/index.ts": {
+    "mtime": 1784180877.2413666,
+    "ast_hash": "b362d67538cc76e02a35a435c3fe5599",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/effects/setupMaterialsForGeometryPass.ts": {
+    "mtime": 1784180877.238118,
+    "ast_hash": "f5aac7414f6a4296e6129c1cd2360cc1",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/geospatial/ArrayBufferLoader.ts": {
+    "mtime": 1784180877.2444532,
+    "ast_hash": "22d03bd7df6d93a2861fc7f6cb1ebdbf",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/geospatial/DataLoader.ts": {
+    "mtime": 1784180877.2434633,
+    "ast_hash": "fbb3efe174db5bc2718eb31c0a5ed259",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/geospatial/EXR3DLoader.ts": {
+    "mtime": 1784180877.245195,
+    "ast_hash": "4c810a22e9970aa4643161afcd176bea",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/geospatial/Ellipsoid.ts": {
+    "mtime": 1784180877.2507799,
+    "ast_hash": "637ff714b345cf5f7736997dfee2a498",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/geospatial/EllipsoidGeometry.ts": {
+    "mtime": 1784180877.2515738,
+    "ast_hash": "8b930ff1f29788dbb513150e1d8898aa",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/geospatial/Geodetic.ts": {
+    "mtime": 1784180877.2465668,
+    "ast_hash": "34308fa5eb3b1e64a3b0cc8385c96a92",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/geospatial/PointOfView.ts": {
+    "mtime": 1784180877.2457578,
+    "ast_hash": "e85d026c228f9eab28841f3b103f4613",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/geospatial/Rectangle.ts": {
+    "mtime": 1784180877.2439606,
+    "ast_hash": "3028fda444200ad1c5e03b05b7dac18a",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/geospatial/STBNLoader.ts": {
+    "mtime": 1784180877.2446768,
+    "ast_hash": "63f8189d9410501cf1f0aa7d953cc008",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/geospatial/Texture3DLoader.ts": {
+    "mtime": 1784180877.2522418,
+    "ast_hash": "79800176634795e64cc8016969263ae5",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/geospatial/TileCoordinate.ts": {
+    "mtime": 1784180877.2524927,
+    "ast_hash": "e42f45783546dc64b21d001afd459ff1",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/geospatial/TilingScheme.ts": {
+    "mtime": 1784180877.2431164,
+    "ast_hash": "2ee6ef1b045ba89a4f93b4426932d646",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/geospatial/TypedArrayLoader.ts": {
+    "mtime": 1784180877.2505493,
+    "ast_hash": "900c4fecae225fca8426cb3fdb78c70a",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/geospatial/assertions.ts": {
+    "mtime": 1784180877.2463133,
+    "ast_hash": "28e5789d2c6140acbc56f88fce979796",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/geospatial/bufferGeometry.ts": {
+    "mtime": 1784180877.2454772,
+    "ast_hash": "12a2876299eeac2ca2d5765f48332e3f",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/geospatial/constants.ts": {
+    "mtime": 1784180877.246843,
+    "ast_hash": "425a8c60ed18c98489431e1f6ada87a0",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/geospatial/decorators.ts": {
+    "mtime": 1784180877.2428803,
+    "ast_hash": "d393b1d1abeb52be1be8a558321a4044",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/geospatial/defineShorthand.ts": {
+    "mtime": 1784180877.2473547,
+    "ast_hash": "ff4889e73490b3136166b77cab8dadba",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/geospatial/helpers/projectOnEllipsoidSurface.ts": {
+    "mtime": 1784180877.2519548,
+    "ast_hash": "1454d60cbaf2064a5b53c3a6a49943e6",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/geospatial/index.ts": {
+    "mtime": 1784180877.251251,
+    "ast_hash": "4502e8f535a10218b093e01b49257417",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/geospatial/math.ts": {
+    "mtime": 1784180877.2437038,
+    "ast_hash": "9377c2734f08b337c0be5656f7457902",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/geospatial/resolveIncludes.ts": {
+    "mtime": 1784180877.2449162,
+    "ast_hash": "eed74d627260f8937f769db6ed48aa71",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/geospatial/shaders/index.ts": {
+    "mtime": 1784180877.2495823,
+    "ast_hash": "ec2959f7aacc636b2e01ab5e95b26ccb",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/geospatial/typedArray.ts": {
+    "mtime": 1784180877.2471216,
+    "ast_hash": "25e17f27948fd70b8d4ec71670d8b956",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/geospatial/typedArrayParsers.ts": {
+    "mtime": 1784180877.2510269,
+    "ast_hash": "ccd9b72163fc2f568792775c60551713",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/geospatial/types.ts": {
+    "mtime": 1784180877.2460425,
+    "ast_hash": "c46790a2ade3cf37d6e9555e9a83b940",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/geospatial/unrollLoops.ts": {
+    "mtime": 1784180877.2442129,
+    "ast_hash": "e32d7520c44bff345151f20fc8ced47d",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/vendor/tiny-invariant.ts": {
+    "mtime": 1784180877.253256,
+    "ast_hash": "f49736bb5d24bdc8f3cb45fca5855c31",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/vendor/url-join.ts": {
+    "mtime": 1784180877.252989,
+    "ast_hash": "cd8edbd1e98020f4bdc0ccae0c2a9c50",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-water-optics/examples/analytic-wave-optics/water-system.js": {
+    "mtime": 1784180877.2747939,
+    "ast_hash": "23dd6b77c16e12f9ad2725267d14aa51",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-water-optics/examples/interactive-pool-volume/water-volume-system.js": {
+    "mtime": 1784180877.2742872,
+    "ast_hash": "6c4f71c4e1ee9deb8959b03b4f31c9a4",
+    "semantic_hash": ""
+  },
+  ".claude/launch.json": {
+    "mtime": 1783478346.6765425,
+    "ast_hash": "88cc9b1f2509b3f00412ef1c41d6129a",
+    "semantic_hash": ""
+  },
+  ".claude/settings.json": {
+    "mtime": 1784708104.7744684,
+    "ast_hash": "edb4b9fe58bc2fe6141ba1b06dc3cc4a",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-atmosphere-aerial-perspective/examples/lut-aerial-perspective/atmosphere-effect.js": {
+    "mtime": 1784180815.7329829,
+    "ast_hash": "ec3c25d8083832156406431ae86a0b4d",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-atmosphere-aerial-perspective/examples/lut-aerial-perspective/source/atmosphere/AerialPerspectiveEffect.ts": {
+    "mtime": 1784180815.7365816,
+    "ast_hash": "b5fce2c5cf993bfbf53b5cfdedec70dc",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-atmosphere-aerial-perspective/examples/lut-aerial-perspective/source/atmosphere/AtmosphereMaterialBase.ts": {
+    "mtime": 1784180815.7341497,
+    "ast_hash": "2efb5698765f5d1e2b5e971d1cd913a8",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-atmosphere-aerial-perspective/examples/lut-aerial-perspective/source/atmosphere/AtmosphereParameters.ts": {
+    "mtime": 1784180815.7349582,
+    "ast_hash": "21c4e83625752ee3091725b4978f8a5d",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-atmosphere-aerial-perspective/examples/lut-aerial-perspective/source/atmosphere/IrradianceMaskPass.ts": {
+    "mtime": 1784180815.7347775,
+    "ast_hash": "f08f3c971d7b9076182cd7a8fb56ad40",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-atmosphere-aerial-perspective/examples/lut-aerial-perspective/source/atmosphere/PrecomputedTexturesLoader.ts": {
+    "mtime": 1784180815.7372248,
+    "ast_hash": "b688e4f8fd8a936dfaab387b58052bca",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-atmosphere-aerial-perspective/examples/lut-aerial-perspective/source/atmosphere/SkyLightProbe.ts": {
+    "mtime": 1784180815.7363207,
+    "ast_hash": "f9920a1bf6d98f5d4d8d2975b3a3dc91",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-atmosphere-aerial-perspective/examples/lut-aerial-perspective/source/atmosphere/SkyMaterial.ts": {
+    "mtime": 1784180815.7445595,
+    "ast_hash": "864d59a1fb5722a00d948ad555300660",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-atmosphere-aerial-perspective/examples/lut-aerial-perspective/source/atmosphere/StarsGeometry.ts": {
+    "mtime": 1784180815.7436101,
+    "ast_hash": "4cf46caf2b39fda61bcab9823b8d0537",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-atmosphere-aerial-perspective/examples/lut-aerial-perspective/source/atmosphere/StarsMaterial.ts": {
+    "mtime": 1784180815.7357185,
+    "ast_hash": "3480f49a696554f40bd105d2dce5ed13",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-atmosphere-aerial-perspective/examples/lut-aerial-perspective/source/atmosphere/SunDirectionalLight.ts": {
+    "mtime": 1784180815.73515,
+    "ast_hash": "dbb63d78ac8ff988a8d551b45fa0c19f",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-atmosphere-aerial-perspective/examples/lut-aerial-perspective/source/atmosphere/blackBodyChromaticity.ts": {
+    "mtime": 1784180815.7338428,
+    "ast_hash": "863575cb6c60a41e552bbd537391b4a6",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-atmosphere-aerial-perspective/examples/lut-aerial-perspective/source/atmosphere/celestialDirections.ts": {
+    "mtime": 1784180815.7440274,
+    "ast_hash": "8fe1b4235c2ee8a9b2db71bc60f0d703",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-atmosphere-aerial-perspective/examples/lut-aerial-perspective/source/atmosphere/constants.ts": {
+    "mtime": 1784180815.7370331,
+    "ast_hash": "024b94217ddd9d6050589506361dbc43",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-atmosphere-aerial-perspective/examples/lut-aerial-perspective/source/atmosphere/getAltitudeCorrectionOffset.ts": {
+    "mtime": 1784180815.7354436,
+    "ast_hash": "1a9c423e6c104741e8aa8591d274fcf4",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-atmosphere-aerial-perspective/examples/lut-aerial-perspective/source/atmosphere/getSunLightColor.ts": {
+    "mtime": 1784180815.734485,
+    "ast_hash": "1c99957da05f6de67f8aa1f098628b35",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-atmosphere-aerial-perspective/examples/lut-aerial-perspective/source/atmosphere/helpers/functions.ts": {
+    "mtime": 1784180815.7463634,
+    "ast_hash": "b9edc2e71466be5cce6f0844e8cf625d",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-atmosphere-aerial-perspective/examples/lut-aerial-perspective/source/atmosphere/helpers/sampleTexture.ts": {
+    "mtime": 1784180815.7456543,
+    "ast_hash": "7218ac6487a3af2bbb59526dda54f486",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-atmosphere-aerial-perspective/examples/lut-aerial-perspective/source/atmosphere/index.ts": {
+    "mtime": 1784180815.7431016,
+    "ast_hash": "02a88cb384c8cda2ea965d5892d0f720",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-atmosphere-aerial-perspective/examples/lut-aerial-perspective/source/atmosphere/shaders/index.ts": {
+    "mtime": 1784180815.7410347,
+    "ast_hash": "2eeb7e9e6c7f7478e6490beb687ef78f",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-atmosphere-aerial-perspective/examples/lut-aerial-perspective/source/atmosphere/types.ts": {
+    "mtime": 1784180815.735944,
+    "ast_hash": "da8a75814ea36ce9c27a050f1a5b1fc9",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-atmosphere-aerial-perspective/examples/lut-aerial-perspective/source/effects/DepthEffect.ts": {
+    "mtime": 1784180815.748051,
+    "ast_hash": "1c73798d47a4ab867f42a8aca2d26fb1",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-atmosphere-aerial-perspective/examples/lut-aerial-perspective/source/effects/DitheringEffect.ts": {
+    "mtime": 1784180815.7566879,
+    "ast_hash": "387feafb6a08fe02b863970f85f5d1c6",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-atmosphere-aerial-perspective/examples/lut-aerial-perspective/source/effects/DownsampleThresholdMaterial.ts": {
+    "mtime": 1784180815.7558196,
+    "ast_hash": "b096f2d8d2dc26fe28821224ebe02d18",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-atmosphere-aerial-perspective/examples/lut-aerial-perspective/source/effects/GeometryEffect.ts": {
+    "mtime": 1784180815.7499216,
+    "ast_hash": "d71b2a385348a9bf09b3ae1995288aac",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-atmosphere-aerial-perspective/examples/lut-aerial-perspective/source/effects/GeometryPass.ts": {
+    "mtime": 1784180815.748541,
+    "ast_hash": "dbd579dc94b14b1635f835b1a617f384",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-atmosphere-aerial-perspective/examples/lut-aerial-perspective/source/effects/LensFlareEffect.ts": {
+    "mtime": 1784180815.7489395,
+    "ast_hash": "acb85a53da7ee4685e739aef696b1f86",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-atmosphere-aerial-perspective/examples/lut-aerial-perspective/source/effects/LensFlareFeaturesMaterial.ts": {
+    "mtime": 1784180815.7562876,
+    "ast_hash": "cc1c5d3c5829a7d3975fa39a03539fc2",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-atmosphere-aerial-perspective/examples/lut-aerial-perspective/source/effects/NormalEffect.ts": {
+    "mtime": 1784180815.747626,
+    "ast_hash": "e11c98681f009bc2ac710bf834bf9449",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-atmosphere-aerial-perspective/examples/lut-aerial-perspective/source/effects/createHaldLookupTexture.ts": {
+    "mtime": 1784180815.7554288,
+    "ast_hash": "64c582e82b8e0101405bafd4badd68ed",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-atmosphere-aerial-perspective/examples/lut-aerial-perspective/source/effects/index.ts": {
+    "mtime": 1784180815.7550864,
+    "ast_hash": "b362d67538cc76e02a35a435c3fe5599",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-atmosphere-aerial-perspective/examples/lut-aerial-perspective/source/effects/setupMaterialsForGeometryPass.ts": {
+    "mtime": 1784180815.749431,
+    "ast_hash": "f5aac7414f6a4296e6129c1cd2360cc1",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-atmosphere-aerial-perspective/examples/lut-aerial-perspective/source/geospatial/ArrayBufferLoader.ts": {
+    "mtime": 1784180815.7587981,
+    "ast_hash": "22d03bd7df6d93a2861fc7f6cb1ebdbf",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-atmosphere-aerial-perspective/examples/lut-aerial-perspective/source/geospatial/DataLoader.ts": {
+    "mtime": 1784180815.757911,
+    "ast_hash": "fbb3efe174db5bc2718eb31c0a5ed259",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-atmosphere-aerial-perspective/examples/lut-aerial-perspective/source/geospatial/EXR3DLoader.ts": {
+    "mtime": 1784180815.7593343,
+    "ast_hash": "4c810a22e9970aa4643161afcd176bea",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-atmosphere-aerial-perspective/examples/lut-aerial-perspective/source/geospatial/Ellipsoid.ts": {
+    "mtime": 1784180815.765842,
+    "ast_hash": "637ff714b345cf5f7736997dfee2a498",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-atmosphere-aerial-perspective/examples/lut-aerial-perspective/source/geospatial/EllipsoidGeometry.ts": {
+    "mtime": 1784180815.766935,
+    "ast_hash": "8b930ff1f29788dbb513150e1d8898aa",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-atmosphere-aerial-perspective/examples/lut-aerial-perspective/source/geospatial/Geodetic.ts": {
+    "mtime": 1784180815.7609262,
+    "ast_hash": "34308fa5eb3b1e64a3b0cc8385c96a92",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-atmosphere-aerial-perspective/examples/lut-aerial-perspective/source/geospatial/PointOfView.ts": {
+    "mtime": 1784180815.759733,
+    "ast_hash": "e85d026c228f9eab28841f3b103f4613",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-atmosphere-aerial-perspective/examples/lut-aerial-perspective/source/geospatial/Rectangle.ts": {
+    "mtime": 1784180815.7583451,
+    "ast_hash": "3028fda444200ad1c5e03b05b7dac18a",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-atmosphere-aerial-perspective/examples/lut-aerial-perspective/source/geospatial/STBNLoader.ts": {
+    "mtime": 1784180815.758982,
+    "ast_hash": "63f8189d9410501cf1f0aa7d953cc008",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-atmosphere-aerial-perspective/examples/lut-aerial-perspective/source/geospatial/Texture3DLoader.ts": {
+    "mtime": 1784180815.768271,
+    "ast_hash": "79800176634795e64cc8016969263ae5",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-atmosphere-aerial-perspective/examples/lut-aerial-perspective/source/geospatial/TileCoordinate.ts": {
+    "mtime": 1784180815.7688026,
+    "ast_hash": "e42f45783546dc64b21d001afd459ff1",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-atmosphere-aerial-perspective/examples/lut-aerial-perspective/source/geospatial/TilingScheme.ts": {
+    "mtime": 1784180815.7575746,
+    "ast_hash": "2ee6ef1b045ba89a4f93b4426932d646",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-atmosphere-aerial-perspective/examples/lut-aerial-perspective/source/geospatial/TypedArrayLoader.ts": {
+    "mtime": 1784180815.7655818,
+    "ast_hash": "900c4fecae225fca8426cb3fdb78c70a",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-atmosphere-aerial-perspective/examples/lut-aerial-perspective/source/geospatial/assertions.ts": {
+    "mtime": 1784180815.7605367,
+    "ast_hash": "28e5789d2c6140acbc56f88fce979796",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-atmosphere-aerial-perspective/examples/lut-aerial-perspective/source/geospatial/bufferGeometry.ts": {
+    "mtime": 1784180815.7595005,
+    "ast_hash": "12a2876299eeac2ca2d5765f48332e3f",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-atmosphere-aerial-perspective/examples/lut-aerial-perspective/source/geospatial/constants.ts": {
+    "mtime": 1784180815.761222,
+    "ast_hash": "425a8c60ed18c98489431e1f6ada87a0",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-atmosphere-aerial-perspective/examples/lut-aerial-perspective/source/geospatial/decorators.ts": {
+    "mtime": 1784180815.757337,
+    "ast_hash": "d393b1d1abeb52be1be8a558321a4044",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-atmosphere-aerial-perspective/examples/lut-aerial-perspective/source/geospatial/defineShorthand.ts": {
+    "mtime": 1784180815.7619529,
+    "ast_hash": "ff4889e73490b3136166b77cab8dadba",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-atmosphere-aerial-perspective/examples/lut-aerial-perspective/source/geospatial/helpers/projectOnEllipsoidSurface.ts": {
+    "mtime": 1784180815.7677195,
+    "ast_hash": "1454d60cbaf2064a5b53c3a6a49943e6",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-atmosphere-aerial-perspective/examples/lut-aerial-perspective/source/geospatial/index.ts": {
+    "mtime": 1784180815.7665503,
+    "ast_hash": "4502e8f535a10218b093e01b49257417",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-atmosphere-aerial-perspective/examples/lut-aerial-perspective/source/geospatial/math.ts": {
+    "mtime": 1784180815.75815,
+    "ast_hash": "9377c2734f08b337c0be5656f7457902",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-atmosphere-aerial-perspective/examples/lut-aerial-perspective/source/geospatial/resolveIncludes.ts": {
+    "mtime": 1784180815.7591624,
+    "ast_hash": "eed74d627260f8937f769db6ed48aa71",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-atmosphere-aerial-perspective/examples/lut-aerial-perspective/source/geospatial/shaders/index.ts": {
+    "mtime": 1784180815.7642992,
+    "ast_hash": "ec2959f7aacc636b2e01ab5e95b26ccb",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-atmosphere-aerial-perspective/examples/lut-aerial-perspective/source/geospatial/typedArray.ts": {
+    "mtime": 1784180815.7615073,
+    "ast_hash": "25e17f27948fd70b8d4ec71670d8b956",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-atmosphere-aerial-perspective/examples/lut-aerial-perspective/source/geospatial/typedArrayParsers.ts": {
+    "mtime": 1784180815.7661767,
+    "ast_hash": "ccd9b72163fc2f568792775c60551713",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-atmosphere-aerial-perspective/examples/lut-aerial-perspective/source/geospatial/types.ts": {
+    "mtime": 1784180815.7601883,
+    "ast_hash": "c46790a2ade3cf37d6e9555e9a83b940",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-atmosphere-aerial-perspective/examples/lut-aerial-perspective/source/geospatial/unrollLoops.ts": {
+    "mtime": 1784180815.7585254,
+    "ast_hash": "e32d7520c44bff345151f20fc8ced47d",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-atmosphere-aerial-perspective/examples/lut-aerial-perspective/source/vendor/tiny-invariant.ts": {
+    "mtime": 1784180815.7699974,
+    "ast_hash": "f49736bb5d24bdc8f3cb45fca5855c31",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-atmosphere-aerial-perspective/examples/lut-aerial-perspective/source/vendor/url-join.ts": {
+    "mtime": 1784180815.769567,
+    "ast_hash": "cd8edbd1e98020f4bdc0ccae0c2a9c50",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-parallax-occlusion-mapping/examples/silhouette-relief/ParallaxOcclusion.js": {
+    "mtime": 1784180815.7927694,
+    "ast_hash": "4024b34b190158606867342a5a07eedc",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-parallax-occlusion-mapping/examples/silhouette-relief/bulkhead-height-maps.js": {
+    "mtime": 1784180815.7925155,
+    "ast_hash": "5fdbcc35b8dd18d39e45433eeceb1e79",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-parallax-occlusion-mapping/examples/silhouette-relief/silhouette-relief-system.js": {
+    "mtime": 1784180815.7929714,
+    "ast_hash": "1821ca810cd5a7f5348491b271b03525",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-precipitation-surfaces/examples/snow-accumulation/snow-system.js": {
+    "mtime": 1784180815.794855,
+    "ast_hash": "735d43eb5a01e223cc832ad36591583d",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-precipitation-surfaces/examples/wet-puddle-rain/rain-puddle-system.js": {
+    "mtime": 1784180815.795198,
+    "ast_hash": "a7db31ba8067289d90e3a424f6ec9457",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-procedural-architecture/examples/procedural-financial-tower/building-system.js": {
+    "mtime": 1784180815.8079357,
+    "ast_hash": "02df55db309b8afa4cb6bdb5d1172b44",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-procedural-architecture/examples/procedural-financial-tower/shadow-clipmaps.js": {
+    "mtime": 1784180815.8076499,
+    "ast_hash": "2d9510c248077bc3e8328ec13318352f",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-procedural-geometry/examples/porcelain-brass-submarine/source/design-contract.js": {
+    "mtime": 1784180815.823866,
+    "ast_hash": "af582b405f612e315c507cdac334eba8",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-procedural-geometry/examples/porcelain-brass-submarine/source/mesh-kit.js": {
+    "mtime": 1784180815.8235476,
+    "ast_hash": "ae63c59c09a947fd075ad2530afa8f97",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-procedural-geometry/examples/porcelain-brass-submarine/source/submarine-materials.js": {
+    "mtime": 1784180815.8241494,
+    "ast_hash": "39c5e97c7c6c49257999270c4e9839ca",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-procedural-geometry/examples/porcelain-brass-submarine/source/submarine-model.js": {
+    "mtime": 1784180815.8233247,
+    "ast_hash": "6dc1a548c256e9a30f967de2c472a415",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-procedural-geometry/examples/porcelain-brass-submarine/submarine-model.js": {
+    "mtime": 1784180815.8229268,
+    "ast_hash": "35184bf679fca0e2648ca7cb8b2c0a30",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-procedural-geometry/examples/sculpted-gallery-frame/frame-geometry.js": {
+    "mtime": 1784180815.824869,
+    "ast_hash": "7200e8a190e272ac7564302c8badfdfa",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-procedural-materials/examples/hybrid-soil-moss-surface/hybrid-soil-moss-surface.js": {
+    "mtime": 1784180815.8295076,
+    "ast_hash": "c625773324900281a53819eeafb2d5ef",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-procedural-materials/examples/hybrid-soil-moss-surface/model-moss-accumulation.js": {
+    "mtime": 1784180815.8292372,
+    "ast_hash": "880d171b437bd674663dc2eb1120a4c5",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-procedural-materials/examples/lava-flow-surface/lava-surface.js": {
+    "mtime": 1784180815.8287919,
+    "ast_hash": "da08aca2e0eb6f3c0325b7254ab6868c",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-procedural-planets/examples/procedural-planet-surface/planet-system.js": {
+    "mtime": 1784180815.8448176,
+    "ast_hash": "5234057370fec6c2e84ed60d14f35b88",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-procedural-planets/examples/procedural-planet-surface/terrain-field.js": {
+    "mtime": 1784180815.8446627,
+    "ast_hash": "047273286e4b0f4bdf1d6fa980429bcf",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-procedural-vegetation/examples/gpu-computed-grass/gpu-grass-system.js": {
+    "mtime": 1784180815.8491707,
+    "ast_hash": "c5b8fc96906754bfe8f1a0b8c4df465b",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-procedural-vegetation/examples/procedural-surface-ivy/ivy-effect.js": {
+    "mtime": 1784180815.847674,
+    "ast_hash": "ab809d9f200d40e30c064bd235c17d8d",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-procedural-vegetation/examples/procedural-surface-ivy/source/bvh.ts": {
+    "mtime": 1784180815.8470647,
+    "ast_hash": "77827ea1f37935e803a097756909af69",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-procedural-vegetation/examples/procedural-surface-ivy/source/flowers.ts": {
+    "mtime": 1784180815.8467166,
+    "ast_hash": "020f2919ebae1157d67e106acecf3544",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-procedural-vegetation/examples/procedural-surface-ivy/source/ivy.ts": {
+    "mtime": 1784180815.846885,
+    "ast_hash": "dc8734488e870a02d5ce874b1c3d07ea",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-procedural-vegetation/examples/procedural-surface-ivy/source/leafTexture.ts": {
+    "mtime": 1784180815.8474925,
+    "ast_hash": "288448a27cebacd5945f42e951f0fe94",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-procedural-vegetation/examples/procedural-surface-ivy/source/wind.ts": {
+    "mtime": 1784180815.84733,
+    "ast_hash": "940fa8d70c5718f03a1cd8d1953b6916",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-procedural-vegetation/examples/structured-ash-growth/ash-preset.js": {
+    "mtime": 1784180815.8485548,
+    "ast_hash": "2031781701769ed5443dd7ebdc936345",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-procedural-vegetation/examples/structured-ash-growth/tree-system.js": {
+    "mtime": 1784180815.8487227,
+    "ast_hash": "12cf9586f81a1d1fb1e9485e247837c9",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-procedural-vegetation/examples/stylized-meadow-grass/grass-system.js": {
+    "mtime": 1784180815.847969,
+    "ast_hash": "696ba905659d9c68179d963bb5c9d77a",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-procedural-vfx/examples/reentry-plasma/reentry-plasma.js": {
+    "mtime": 1784180815.8543296,
+    "ast_hash": "bb44615a9897cb921816a2ea309cf616",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-raymarched-space-effects/examples/curved-ray-accretion-volume/curved-ray-effect.js": {
+    "mtime": 1784180815.8560412,
+    "ast_hash": "3c01f7e4e7f157f555d360400d5b93a6",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-raymarched-space-effects/examples/schwarzschild-geodesic-black-hole/geodesic-black-hole-effect.js": {
+    "mtime": 1784180815.856615,
+    "ast_hash": "e29e4e35ca9c7ac769120a57b26ebead",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-spectral-ocean/examples/hybrid-clear-water-ocean/hybrid-ocean-material.js": {
+    "mtime": 1784180815.8677435,
+    "ast_hash": "9ac5a524b25ee7774c46adce6b5355ca",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-spectral-ocean/examples/spectral-cascade-ocean/detail-texture.js": {
+    "mtime": 1784180815.8663313,
+    "ast_hash": "3a89bcbba07d03c639f2e2af7ad89001",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-spectral-ocean/examples/spectral-cascade-ocean/fft-pipeline.js": {
+    "mtime": 1784180815.8670132,
+    "ast_hash": "6506c931fca020f48e962faed520b420",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-spectral-ocean/examples/spectral-cascade-ocean/ocean-material.js": {
+    "mtime": 1784180815.8667152,
+    "ast_hash": "13125d418591ca4ba03001fe6f6eb745",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-spectral-ocean/examples/spectral-cascade-ocean/ocean-system.js": {
+    "mtime": 1784180815.866471,
+    "ast_hash": "81613c40eb12c0f0025b538010fd1803",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-spectral-ocean/examples/spectral-cascade-ocean/spectrum.js": {
+    "mtime": 1784180815.8673594,
+    "ast_hash": "754b3a8cdf2147a975c01e0bafdb14fc",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-spectral-ocean/examples/stylized-above-below-ocean/stylized-ocean-material.js": {
+    "mtime": 1784180815.8634245,
+    "ast_hash": "23b441f60c3135fa11a91e29e591b774",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-spectral-ocean/examples/submerged-snell-ocean/source/caustics.ts": {
+    "mtime": 1784180815.8657587,
+    "ast_hash": "e0731c9b3b2b9509e7709d39c066a9a8",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-spectral-ocean/examples/submerged-snell-ocean/source/current.ts": {
+    "mtime": 1784180815.8652453,
+    "ast_hash": "a22df5669644dc39a97299fa10aacee1",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-spectral-ocean/examples/submerged-snell-ocean/source/fft-compute.ts": {
+    "mtime": 1784180815.8659422,
+    "ast_hash": "4f75db90a3137b0d960cfbac96f04b3c",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-spectral-ocean/examples/submerged-snell-ocean/source/grade.ts": {
+    "mtime": 1784180815.8642485,
+    "ast_hash": "896676afdfeb6766473b4eb6456cf458",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-spectral-ocean/examples/submerged-snell-ocean/source/noise.ts": {
+    "mtime": 1784180815.8646321,
+    "ast_hash": "6b099b663f8cff59c496a7a1bb26958f",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-spectral-ocean/examples/submerged-snell-ocean/source/ocean-material.ts": {
+    "mtime": 1784180815.8654215,
+    "ast_hash": "c9024a5e325e443a2bcb37d92e49e722",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-spectral-ocean/examples/submerged-snell-ocean/source/ocean-spectrum.ts": {
+    "mtime": 1784180815.8647811,
+    "ast_hash": "df0a453df4e142455fb6ff42e4a001c0",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-spectral-ocean/examples/submerged-snell-ocean/source/ocean-system.ts": {
+    "mtime": 1784180815.8655837,
+    "ast_hash": "81cd7a8598d9b8abe1bab58626c23bd2",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-spectral-ocean/examples/submerged-snell-ocean/source/random.ts": {
+    "mtime": 1784180815.8650982,
+    "ast_hash": "3aea86f601ed3b34c8d9730147f0ed71",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-spectral-ocean/examples/submerged-snell-ocean/source/sky.ts": {
+    "mtime": 1784180815.86494,
+    "ast_hash": "84cfa0635a766ece43556006133fed24",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-spectral-ocean/examples/submerged-snell-ocean/source/underwater-medium.ts": {
+    "mtime": 1784180815.864398,
+    "ast_hash": "15a9af94487e585d88c83e099f466bde",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-spectral-ocean/examples/submerged-snell-ocean/source/wave-sim.ts": {
+    "mtime": 1784180815.8640172,
+    "ast_hash": "b6ed32407d02125fd706f66952e99342",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-spectral-ocean/examples/submerged-snell-ocean/underwater-snell-ocean.ts": {
+    "mtime": 1784180815.863741,
+    "ast_hash": "9dce3b3e07049b69515c0ddacfbdafbf",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-temporal-surfaces/examples/refractive-window-rain/window-rain-effect.js": {
+    "mtime": 1784180815.8719873,
+    "ast_hash": "8fc51b649a166d04d9d73e4e8d666e11",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-temporal-surfaces/examples/touch-history-frost/frost-surface-effect.js": {
+    "mtime": 1784180815.8712347,
+    "ast_hash": "196058feef9b4ef7dfe386b14ca252ca",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/cloud-effect.js": {
+    "mtime": 1784180815.902845,
+    "ast_hash": "fcfd4feb607ca98d292dd76cd30938aa",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/atmosphere/AerialPerspectiveEffect.ts": {
+    "mtime": 1784180815.8879454,
+    "ast_hash": "b5fce2c5cf993bfbf53b5cfdedec70dc",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/atmosphere/AtmosphereMaterialBase.ts": {
+    "mtime": 1784180815.8861966,
+    "ast_hash": "2efb5698765f5d1e2b5e971d1cd913a8",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/atmosphere/AtmosphereParameters.ts": {
+    "mtime": 1784180815.8868558,
+    "ast_hash": "21c4e83625752ee3091725b4978f8a5d",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/atmosphere/IrradianceMaskPass.ts": {
+    "mtime": 1784180815.8866868,
+    "ast_hash": "f08f3c971d7b9076182cd7a8fb56ad40",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/atmosphere/PrecomputedTexturesLoader.ts": {
+    "mtime": 1784180815.8883762,
+    "ast_hash": "b688e4f8fd8a936dfaab387b58052bca",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/atmosphere/SkyLightProbe.ts": {
+    "mtime": 1784180815.8877378,
+    "ast_hash": "f9920a1bf6d98f5d4d8d2975b3a3dc91",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/atmosphere/SkyMaterial.ts": {
+    "mtime": 1784180815.8916101,
+    "ast_hash": "864d59a1fb5722a00d948ad555300660",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/atmosphere/StarsGeometry.ts": {
+    "mtime": 1784180815.89129,
+    "ast_hash": "4cf46caf2b39fda61bcab9823b8d0537",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/atmosphere/StarsMaterial.ts": {
+    "mtime": 1784180815.8873563,
+    "ast_hash": "3480f49a696554f40bd105d2dce5ed13",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/atmosphere/SunDirectionalLight.ts": {
+    "mtime": 1784180815.8870068,
+    "ast_hash": "dbb63d78ac8ff988a8d551b45fa0c19f",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/atmosphere/blackBodyChromaticity.ts": {
+    "mtime": 1784180815.885996,
+    "ast_hash": "863575cb6c60a41e552bbd537391b4a6",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/atmosphere/celestialDirections.ts": {
+    "mtime": 1784180815.8914526,
+    "ast_hash": "8fe1b4235c2ee8a9b2db71bc60f0d703",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/atmosphere/constants.ts": {
+    "mtime": 1784180815.8881552,
+    "ast_hash": "024b94217ddd9d6050589506361dbc43",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/atmosphere/getAltitudeCorrectionOffset.ts": {
+    "mtime": 1784180815.8871872,
+    "ast_hash": "1a9c423e6c104741e8aa8591d274fcf4",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/atmosphere/getSunLightColor.ts": {
+    "mtime": 1784180815.886471,
+    "ast_hash": "1c99957da05f6de67f8aa1f098628b35",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/atmosphere/helpers/functions.ts": {
+    "mtime": 1784180815.8920324,
+    "ast_hash": "b9edc2e71466be5cce6f0844e8cf625d",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/atmosphere/helpers/sampleTexture.ts": {
+    "mtime": 1784180815.891892,
+    "ast_hash": "7218ac6487a3af2bbb59526dda54f486",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/atmosphere/index.ts": {
+    "mtime": 1784180815.8911228,
+    "ast_hash": "02a88cb384c8cda2ea965d5892d0f720",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/atmosphere/shaders/index.ts": {
+    "mtime": 1784180815.890422,
+    "ast_hash": "2eeb7e9e6c7f7478e6490beb687ef78f",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/atmosphere/types.ts": {
+    "mtime": 1784180815.8875384,
+    "ast_hash": "da8a75814ea36ce9c27a050f1a5b1fc9",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/clouds/CascadedShadowMaps.ts": {
+    "mtime": 1784180815.8774536,
+    "ast_hash": "504c0425a20bc0a89f341a60a05d5cf9",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/clouds/CloudLayer.ts": {
+    "mtime": 1784180815.8772902,
+    "ast_hash": "c724cf6ad298d8375b036856f880a1c2",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/clouds/CloudLayers.ts": {
+    "mtime": 1784180815.8786554,
+    "ast_hash": "98397d645b02a3dacefb362689d35b99",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/clouds/CloudShape.ts": {
+    "mtime": 1784180815.876668,
+    "ast_hash": "0c3f1aa7f27ec9ba284daf63a970f3b3",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/clouds/CloudShapeDetail.ts": {
+    "mtime": 1784180815.8769631,
+    "ast_hash": "1cd4572359a628aa1ff8fcbac0fc0693",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/clouds/CloudsEffect.ts": {
+    "mtime": 1784180815.8780136,
+    "ast_hash": "fa21423e90e047eb46c9b5de02fa06b9",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/clouds/CloudsMaterial.ts": {
+    "mtime": 1784180815.877126,
+    "ast_hash": "430f5ca89f671e2db3deb8f867c1c70c",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/clouds/CloudsPass.ts": {
+    "mtime": 1784180815.8764286,
+    "ast_hash": "cbd58ea972864f6766c62c34c2c487c1",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/clouds/CloudsResolveMaterial.ts": {
+    "mtime": 1784180815.8776853,
+    "ast_hash": "88c94c89637e967cf95de0dfc2940967",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/clouds/DensityProfile.ts": {
+    "mtime": 1784180815.8791704,
+    "ast_hash": "cc6094d3aa804ecbefea53a410d0bffe",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/clouds/LocalWeather.ts": {
+    "mtime": 1784180815.885591,
+    "ast_hash": "b041890a5f68435a2aa06236546911f4",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/clouds/PassBase.ts": {
+    "mtime": 1784180815.8768253,
+    "ast_hash": "306484a7bdb8e78327b31d4407b20ae1",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/clouds/Procedural3DTexture.ts": {
+    "mtime": 1784180815.8843403,
+    "ast_hash": "ad6d5d87e9465fa1645cfbfa686fd1b6",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/clouds/ProceduralTexture.ts": {
+    "mtime": 1784180815.8785102,
+    "ast_hash": "5d5ed0ee399a7d9d0d97b6c771374674",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/clouds/ShaderArrayPass.ts": {
+    "mtime": 1784180815.8781996,
+    "ast_hash": "20822fa29255e852b038567420940fc3",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/clouds/ShadowMaterial.ts": {
+    "mtime": 1784180815.8762863,
+    "ast_hash": "890326459219feae2a284836093d5c12",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/clouds/ShadowPass.ts": {
+    "mtime": 1784180815.8838737,
+    "ast_hash": "a5a1072c8f9922cc4c40390709d022e1",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/clouds/ShadowResolveMaterial.ts": {
+    "mtime": 1784180815.885393,
+    "ast_hash": "f6b7384b20cc8ceb9a17341ddcc0af90",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/clouds/Turbulence.ts": {
+    "mtime": 1784180815.8841348,
+    "ast_hash": "4386ad897e1bdb8bed883a089fdbd0c0",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/clouds/bayer.ts": {
+    "mtime": 1784180815.878348,
+    "ast_hash": "f28124087e4af8c2dafebf305b750936",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/clouds/constants.ts": {
+    "mtime": 1784180815.8789968,
+    "ast_hash": "7aa51bdf28270255bb254f45fcc2ca0f",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/clouds/helpers/FrustumCorners.ts": {
+    "mtime": 1784180815.8849332,
+    "ast_hash": "be1f4743ac59468a2b4450848d84f1a9",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/clouds/helpers/setArrayRenderTargetLayers.ts": {
+    "mtime": 1784180815.8847127,
+    "ast_hash": "42731a77af50322cb61965e2453a25f3",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/clouds/helpers/splitFrustum.ts": {
+    "mtime": 1784180815.8851376,
+    "ast_hash": "99b695496a7e058ec2e4fe7d928a200d",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/clouds/index.ts": {
+    "mtime": 1784180815.8836691,
+    "ast_hash": "47c1a4ef878972bdb6f80b7f2251613f",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/clouds/qualityPresets.ts": {
+    "mtime": 1784180815.878825,
+    "ast_hash": "8c1ccaebac5a6b8837558d5e1953725d",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/clouds/uniforms.ts": {
+    "mtime": 1784180815.877848,
+    "ast_hash": "a0e198cab7376f8b9a2c167464fd9dd3",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/effects/DepthEffect.ts": {
+    "mtime": 1784180815.8926454,
+    "ast_hash": "1c73798d47a4ab867f42a8aca2d26fb1",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/effects/DitheringEffect.ts": {
+    "mtime": 1784180815.8958762,
+    "ast_hash": "387feafb6a08fe02b863970f85f5d1c6",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/effects/DownsampleThresholdMaterial.ts": {
+    "mtime": 1784180815.895583,
+    "ast_hash": "b096f2d8d2dc26fe28821224ebe02d18",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/effects/GeometryEffect.ts": {
+    "mtime": 1784180815.8933136,
+    "ast_hash": "d71b2a385348a9bf09b3ae1995288aac",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/effects/GeometryPass.ts": {
+    "mtime": 1784180815.8928156,
+    "ast_hash": "dbd579dc94b14b1635f835b1a617f384",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/effects/LensFlareEffect.ts": {
+    "mtime": 1784180815.8929918,
+    "ast_hash": "acb85a53da7ee4685e739aef696b1f86",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/effects/LensFlareFeaturesMaterial.ts": {
+    "mtime": 1784180815.8957324,
+    "ast_hash": "cc1c5d3c5829a7d3975fa39a03539fc2",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/effects/NormalEffect.ts": {
+    "mtime": 1784180815.8925157,
+    "ast_hash": "e11c98681f009bc2ac710bf834bf9449",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/effects/createHaldLookupTexture.ts": {
+    "mtime": 1784180815.8954074,
+    "ast_hash": "64c582e82b8e0101405bafd4badd68ed",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/effects/index.ts": {
+    "mtime": 1784180815.8952572,
+    "ast_hash": "b362d67538cc76e02a35a435c3fe5599",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/effects/setupMaterialsForGeometryPass.ts": {
+    "mtime": 1784180815.893144,
+    "ast_hash": "f5aac7414f6a4296e6129c1cd2360cc1",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/geospatial/ArrayBufferLoader.ts": {
+    "mtime": 1784180815.8971636,
+    "ast_hash": "22d03bd7df6d93a2861fc7f6cb1ebdbf",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/geospatial/DataLoader.ts": {
+    "mtime": 1784180815.8965168,
+    "ast_hash": "fbb3efe174db5bc2718eb31c0a5ed259",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/geospatial/EXR3DLoader.ts": {
+    "mtime": 1784180815.8976192,
+    "ast_hash": "4c810a22e9970aa4643161afcd176bea",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/geospatial/Ellipsoid.ts": {
+    "mtime": 1784180815.901074,
+    "ast_hash": "637ff714b345cf5f7736997dfee2a498",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/geospatial/EllipsoidGeometry.ts": {
+    "mtime": 1784180815.9015298,
+    "ast_hash": "8b930ff1f29788dbb513150e1d8898aa",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/geospatial/Geodetic.ts": {
+    "mtime": 1784180815.8984194,
+    "ast_hash": "34308fa5eb3b1e64a3b0cc8385c96a92",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/geospatial/PointOfView.ts": {
+    "mtime": 1784180815.8979182,
+    "ast_hash": "e85d026c228f9eab28841f3b103f4613",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/geospatial/Rectangle.ts": {
+    "mtime": 1784180815.896842,
+    "ast_hash": "3028fda444200ad1c5e03b05b7dac18a",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/geospatial/STBNLoader.ts": {
+    "mtime": 1784180815.897313,
+    "ast_hash": "63f8189d9410501cf1f0aa7d953cc008",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/geospatial/Texture3DLoader.ts": {
+    "mtime": 1784180815.9019957,
+    "ast_hash": "79800176634795e64cc8016969263ae5",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/geospatial/TileCoordinate.ts": {
+    "mtime": 1784180815.9021628,
+    "ast_hash": "e42f45783546dc64b21d001afd459ff1",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/geospatial/TilingScheme.ts": {
+    "mtime": 1784180815.8963537,
+    "ast_hash": "2ee6ef1b045ba89a4f93b4426932d646",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/geospatial/TypedArrayLoader.ts": {
+    "mtime": 1784180815.9009213,
+    "ast_hash": "900c4fecae225fca8426cb3fdb78c70a",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/geospatial/assertions.ts": {
+    "mtime": 1784180815.8982575,
+    "ast_hash": "28e5789d2c6140acbc56f88fce979796",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/geospatial/bufferGeometry.ts": {
+    "mtime": 1784180815.8977573,
+    "ast_hash": "12a2876299eeac2ca2d5765f48332e3f",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/geospatial/constants.ts": {
+    "mtime": 1784180815.8985767,
+    "ast_hash": "425a8c60ed18c98489431e1f6ada87a0",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/geospatial/decorators.ts": {
+    "mtime": 1784180815.8962188,
+    "ast_hash": "d393b1d1abeb52be1be8a558321a4044",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/geospatial/defineShorthand.ts": {
+    "mtime": 1784180815.8988943,
+    "ast_hash": "ff4889e73490b3136166b77cab8dadba",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/geospatial/helpers/projectOnEllipsoidSurface.ts": {
+    "mtime": 1784180815.9018192,
+    "ast_hash": "1454d60cbaf2064a5b53c3a6a49943e6",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/geospatial/index.ts": {
+    "mtime": 1784180815.9013946,
+    "ast_hash": "4502e8f535a10218b093e01b49257417",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/geospatial/math.ts": {
+    "mtime": 1784180815.8966815,
+    "ast_hash": "9377c2734f08b337c0be5656f7457902",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/geospatial/resolveIncludes.ts": {
+    "mtime": 1784180815.8974824,
+    "ast_hash": "eed74d627260f8937f769db6ed48aa71",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/geospatial/shaders/index.ts": {
+    "mtime": 1784180815.9002419,
+    "ast_hash": "ec2959f7aacc636b2e01ab5e95b26ccb",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/geospatial/typedArray.ts": {
+    "mtime": 1784180815.898742,
+    "ast_hash": "25e17f27948fd70b8d4ec71670d8b956",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/geospatial/typedArrayParsers.ts": {
+    "mtime": 1784180815.9012477,
+    "ast_hash": "ccd9b72163fc2f568792775c60551713",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/geospatial/types.ts": {
+    "mtime": 1784180815.8980896,
+    "ast_hash": "c46790a2ade3cf37d6e9555e9a83b940",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/geospatial/unrollLoops.ts": {
+    "mtime": 1784180815.8969972,
+    "ast_hash": "e32d7520c44bff345151f20fc8ced47d",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/vendor/tiny-invariant.ts": {
+    "mtime": 1784180815.9026375,
+    "ast_hash": "f49736bb5d24bdc8f3cb45fca5855c31",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/vendor/url-join.ts": {
+    "mtime": 1784180815.9024951,
+    "ast_hash": "cd8edbd1e98020f4bdc0ccae0c2a9c50",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-water-optics/examples/analytic-wave-optics/water-system.js": {
+    "mtime": 1784180815.9167054,
+    "ast_hash": "23dd6b77c16e12f9ad2725267d14aa51",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-water-optics/examples/interactive-pool-volume/water-volume-system.js": {
+    "mtime": 1784180815.9164002,
+    "ast_hash": "6c4f71c4e1ee9deb8959b03b4f31c9a4",
+    "semantic_hash": ""
+  },
+  "package.json": {
+    "mtime": 1784605072.9246054,
+    "ast_hash": "a72bc0a6a97ebcd9566f48750cf72c48",
+    "semantic_hash": ""
+  },
+  "scripts/audit-delivery.mjs": {
+    "mtime": 1784605072.924789,
+    "ast_hash": "82067c173de6c90a49382ff528b17d23",
+    "semantic_hash": ""
+  },
+  "scripts/check-gates.mjs": {
+    "mtime": 1784605072.9248805,
+    "ast_hash": "2f10fba78f90f5fe2630889341951059",
+    "semantic_hash": ""
+  },
+  "scripts/delivery-budgets.json": {
+    "mtime": 1784605072.9249718,
+    "ast_hash": "67e97f479b5a27a9e33b03a8363463eb",
+    "semantic_hash": ""
+  },
+  "scripts/encode-assets.mjs": {
+    "mtime": 1784605072.9250958,
+    "ast_hash": "9c631c37bbe343709fa950bb0616097c",
+    "semantic_hash": ""
+  },
+  "skills-lock.json": {
+    "mtime": 1784180674.8039625,
+    "ast_hash": "dbcb0753763a977057fc613f7f370d6a",
+    "semantic_hash": ""
+  },
+  "tailwind.theme.json": {
+    "mtime": 1783356351.2305996,
+    "ast_hash": "16699aa36944d7aaff1c84896a68d0e5",
+    "semantic_hash": ""
+  },
+  "tsconfig.json": {
+    "mtime": 1784605072.9272904,
+    "ast_hash": "15af7ac99471286d8e7b85582f6b401f",
+    "semantic_hash": ""
+  },
+  "vite.config.ts": {
+    "mtime": 1784605072.9274464,
+    "ast_hash": "282fa7b9ac0c10aa886fe1a72816adb4",
+    "semantic_hash": ""
+  },
+  ".agents/skills/code-review/SKILL.md": {
+    "mtime": 1784180596.4280746,
+    "ast_hash": "6dd105e464896f4964c3844f5a53f341",
+    "semantic_hash": ""
+  },
+  ".agents/skills/code-review/agents/openai.yaml": {
+    "mtime": 1784180596.4281635,
+    "ast_hash": "41726fb93a74bbeab2f643a27d6452d2",
+    "semantic_hash": ""
+  },
+  ".agents/skills/codebase-design/DEEPENING.md": {
+    "mtime": 1784180596.4438345,
+    "ast_hash": "2e14795cf50abe04a6cb1d6cbb57d5f0",
+    "semantic_hash": ""
+  },
+  ".agents/skills/codebase-design/DESIGN-IT-TWICE.md": {
+    "mtime": 1784180596.4437597,
+    "ast_hash": "8046cbefbdeeeea756399aa4c7a1852b",
+    "semantic_hash": ""
+  },
+  ".agents/skills/codebase-design/SKILL.md": {
+    "mtime": 1784180596.4438343,
+    "ast_hash": "bba82452bae25a9187c8ce076406d752",
+    "semantic_hash": ""
+  },
+  ".agents/skills/codebase-design/agents/openai.yaml": {
+    "mtime": 1784180596.4438457,
+    "ast_hash": "c27ba4232198f8b0318014a8c715cc01",
+    "semantic_hash": ""
+  },
+  ".agents/skills/diagnosing-bugs/SKILL.md": {
+    "mtime": 1784180596.4588704,
+    "ast_hash": "77f2ef3211c1cff2e9c7a45fa234e54c",
+    "semantic_hash": ""
+  },
+  ".agents/skills/diagnosing-bugs/agents/openai.yaml": {
+    "mtime": 1784180596.4590147,
+    "ast_hash": "52e474f87cddee193c6d9f0bca1fcdb4",
+    "semantic_hash": ""
+  },
+  ".agents/skills/domain-modeling/ADR-FORMAT.md": {
+    "mtime": 1784180596.4736083,
+    "ast_hash": "bb327bab674f400796f64b6e2ef5850c",
+    "semantic_hash": ""
+  },
+  ".agents/skills/domain-modeling/CONTEXT-FORMAT.md": {
+    "mtime": 1784180596.4736538,
+    "ast_hash": "c2f41ffc931955b2b8d01322273d75fa",
+    "semantic_hash": ""
+  },
+  ".agents/skills/domain-modeling/SKILL.md": {
+    "mtime": 1784180596.4736445,
+    "ast_hash": "ef92f0dcd9f2007e71a319a3af54d2b1",
+    "semantic_hash": ""
+  },
+  ".agents/skills/domain-modeling/agents/openai.yaml": {
+    "mtime": 1784180596.4736726,
+    "ast_hash": "e68374ca79182d08c013ce592a4b429c",
+    "semantic_hash": ""
+  },
+  ".agents/skills/grill-me/SKILL.md": {
+    "mtime": 1784180596.4864018,
+    "ast_hash": "d07c47e3f0ffefd2c28354eb81a1e831",
+    "semantic_hash": ""
+  },
+  ".agents/skills/grill-me/agents/openai.yaml": {
+    "mtime": 1784180596.486627,
+    "ast_hash": "aff7b6f7b10220e3b4537c42a2d08917",
+    "semantic_hash": ""
+  },
+  ".agents/skills/grill-with-docs/SKILL.md": {
+    "mtime": 1784180596.501608,
+    "ast_hash": "7c5095d1b2c2ed9483df63c4622d05ea",
+    "semantic_hash": ""
+  },
+  ".agents/skills/grill-with-docs/agents/openai.yaml": {
+    "mtime": 1784180596.5016665,
+    "ast_hash": "d50e6a6a53801a48192dde963945affc",
+    "semantic_hash": ""
+  },
+  ".agents/skills/grilling/SKILL.md": {
+    "mtime": 1784180596.5159774,
+    "ast_hash": "340be7002489c3a90a8c0968ab204654",
+    "semantic_hash": ""
+  },
+  ".agents/skills/grilling/agents/openai.yaml": {
+    "mtime": 1784180596.51606,
+    "ast_hash": "4b0364889bf3880a5ff46f0906d73efc",
+    "semantic_hash": ""
+  },
+  ".agents/skills/handoff/SKILL.md": {
+    "mtime": 1784180596.5266232,
+    "ast_hash": "4b41ddea5fe8bec9aaf6de6d00a70353",
+    "semantic_hash": ""
+  },
+  ".agents/skills/handoff/agents/openai.yaml": {
+    "mtime": 1784180596.526703,
+    "ast_hash": "4be8ae2848843907cb2c73c3abed107c",
+    "semantic_hash": ""
+  },
+  ".agents/skills/implement/SKILL.md": {
+    "mtime": 1784180596.5384572,
+    "ast_hash": "7cc3e48c97c3a5f287601f87015d02b2",
+    "semantic_hash": ""
+  },
+  ".agents/skills/implement/agents/openai.yaml": {
+    "mtime": 1784180596.5385118,
+    "ast_hash": "67981219ee02544ca054221195e85d41",
+    "semantic_hash": ""
+  },
+  ".agents/skills/improve-codebase-architecture/HTML-REPORT.md": {
+    "mtime": 1784180596.5529444,
+    "ast_hash": "751df2fdf436e9539123d6ebc70c1e86",
+    "semantic_hash": ""
+  },
+  ".agents/skills/improve-codebase-architecture/SKILL.md": {
+    "mtime": 1784180596.5529482,
+    "ast_hash": "a5c2a84b521403627de5817ffae99f84",
+    "semantic_hash": ""
+  },
+  ".agents/skills/improve-codebase-architecture/agents/openai.yaml": {
+    "mtime": 1784180596.552946,
+    "ast_hash": "e73ee28ebe885ee90bec6f34554efdd1",
+    "semantic_hash": ""
+  },
+  ".agents/skills/prototype/LOGIC.md": {
+    "mtime": 1784180596.568734,
+    "ast_hash": "4c27a0861fb9d81e0a8bd36ef0dfc10b",
+    "semantic_hash": ""
+  },
+  ".agents/skills/prototype/SKILL.md": {
+    "mtime": 1784180596.568577,
+    "ast_hash": "86d04d3f9b52f556aa71a2a2e4face89",
+    "semantic_hash": ""
+  },
+  ".agents/skills/prototype/UI.md": {
+    "mtime": 1784180596.5687382,
+    "ast_hash": "0531f4c5365f312b7faad44b88adcf38",
+    "semantic_hash": ""
+  },
+  ".agents/skills/prototype/agents/openai.yaml": {
+    "mtime": 1784180596.5687973,
+    "ast_hash": "f52e5df8465a544537396ffa1d2a11a4",
+    "semantic_hash": ""
+  },
+  ".agents/skills/research/SKILL.md": {
+    "mtime": 1784180596.5869179,
+    "ast_hash": "506b3477669c57820d944af5766105cc",
+    "semantic_hash": ""
+  },
+  ".agents/skills/research/agents/openai.yaml": {
+    "mtime": 1784180596.5869176,
+    "ast_hash": "ea8c2769bf46410cc6b302b291bb7b9d",
+    "semantic_hash": ""
+  },
+  ".agents/skills/resolving-merge-conflicts/SKILL.md": {
+    "mtime": 1784180596.6070325,
+    "ast_hash": "bcd188abf71621828777e86be87a1738",
+    "semantic_hash": ""
+  },
+  ".agents/skills/resolving-merge-conflicts/agents/openai.yaml": {
+    "mtime": 1784180596.607211,
+    "ast_hash": "befb39ecdbcc54c6718b91c84d7f0f26",
+    "semantic_hash": ""
+  },
+  ".agents/skills/setup-matt-pocock-skills/SKILL.md": {
+    "mtime": 1784180596.631222,
+    "ast_hash": "d1fda98ba440baac8608638bd808cb4b",
+    "semantic_hash": ""
+  },
+  ".agents/skills/setup-matt-pocock-skills/agents/openai.yaml": {
+    "mtime": 1784180596.6314847,
+    "ast_hash": "a9d2c63bccc70831e36cc011557a6b38",
+    "semantic_hash": ""
+  },
+  ".agents/skills/setup-matt-pocock-skills/domain.md": {
+    "mtime": 1784180596.6312232,
+    "ast_hash": "35089ed6a70a657c91fd100ade31b642",
+    "semantic_hash": ""
+  },
+  ".agents/skills/setup-matt-pocock-skills/issue-tracker-github.md": {
+    "mtime": 1784180596.6312876,
+    "ast_hash": "3cd8509285524d31a33279b8cb0870e5",
+    "semantic_hash": ""
+  },
+  ".agents/skills/setup-matt-pocock-skills/issue-tracker-gitlab.md": {
+    "mtime": 1784180596.6313775,
+    "ast_hash": "f65c57249762602d86ca3af76ad77615",
+    "semantic_hash": ""
+  },
+  ".agents/skills/setup-matt-pocock-skills/issue-tracker-local.md": {
+    "mtime": 1784180596.6312318,
+    "ast_hash": "a0582fd1e4ef87730a00f437fc41a3ec",
+    "semantic_hash": ""
+  },
+  ".agents/skills/setup-matt-pocock-skills/triage-labels.md": {
+    "mtime": 1784180596.631376,
+    "ast_hash": "22add54cb98451c55b20e6b7992d4a85",
+    "semantic_hash": ""
+  },
+  ".agents/skills/tdd/SKILL.md": {
+    "mtime": 1784180596.6444793,
+    "ast_hash": "a78e613a36731153b960491c24b06106",
+    "semantic_hash": ""
+  },
+  ".agents/skills/tdd/agents/openai.yaml": {
+    "mtime": 1784180596.6445522,
+    "ast_hash": "e37e499fa0b017cde536bacb0ebaae67",
+    "semantic_hash": ""
+  },
+  ".agents/skills/tdd/mocking.md": {
+    "mtime": 1784180596.6444962,
+    "ast_hash": "c5505e8da8f516c7dacebd01c58a4c2c",
+    "semantic_hash": ""
+  },
+  ".agents/skills/tdd/tests.md": {
+    "mtime": 1784180596.6445165,
+    "ast_hash": "0a462499661825df11a0852c42382f10",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-3d-generator/SKILL.md": {
+    "mtime": 1784180674.4830675,
+    "ast_hash": "48784a3b9dbec4e7ce403377bb045df7",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-3d-generator/agents/openai.yaml": {
+    "mtime": 1784180674.483445,
+    "ast_hash": "062508a2d7660391d33fb561a8df5060",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-3d-generator/references/api-notes.md": {
+    "mtime": 1784180674.4834924,
+    "ast_hash": "1beaa9100114a1fd4843e9baa8e6ad34",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-3d-generator/references/image-generator-workflows.md": {
+    "mtime": 1784180674.4836757,
+    "ast_hash": "bd72e7641b970cfec9bb04ceab3faec3",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-3d-generator/references/threejs-integration.md": {
+    "mtime": 1784180674.483471,
+    "ast_hash": "23df951986317ec3ca7e11d2ae29a4d7",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-aaa-graphics-builder/SKILL.md": {
+    "mtime": 1784180674.5561118,
+    "ast_hash": "ed828dd4e212c2ba39555a47b495ac0b",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-aaa-graphics-builder/agents/openai.yaml": {
+    "mtime": 1784180674.5571537,
+    "ast_hash": "071303fb9dcea5d580805dcccf6ed780",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-aaa-graphics-builder/references/checklists/aaa-game-quality-gate.md": {
+    "mtime": 1784180674.5583057,
+    "ast_hash": "acbe14b2493d315fdd28dee7d86342ac",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-aaa-graphics-builder/references/checklists/aaa-visual-scorecard.md": {
+    "mtime": 1784180674.558315,
+    "ast_hash": "63bdb688750bb181855b7d2c516c0d71",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-aaa-graphics-builder/references/checklists/material-lighting-quality.md": {
+    "mtime": 1784180674.5580645,
+    "ast_hash": "a692d60165209bc648317c12cc15e58c",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-aaa-graphics-builder/references/checklists/performance-safe-visual-detail.md": {
+    "mtime": 1784180674.5584505,
+    "ast_hash": "c1c9d58720a44605e76749902a7155f1",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-aaa-graphics-builder/references/checklists/procedural-model-quality.md": {
+    "mtime": 1784180674.5583124,
+    "ast_hash": "21a55e00c9b15b279a30d2c1f96083f6",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-aaa-graphics-builder/references/checklists/technical-art-quality.md": {
+    "mtime": 1784180674.5583162,
+    "ast_hash": "4577fc91faf4c24db27359b6bba5cb2c",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-aaa-graphics-builder/references/implementation-blueprint.md": {
+    "mtime": 1784180674.5571637,
+    "ast_hash": "63588da24ba38ce7b55d5f322899da7e",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-aaa-graphics-builder/references/model-recipes.md": {
+    "mtime": 1784180674.5571384,
+    "ast_hash": "bb7d6869f8bbfdaa051ab9fb24e39766",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-aaa-graphics-builder/references/prompt-templates.md": {
+    "mtime": 1784180674.5574627,
+    "ast_hash": "13405f4916c493964d65afa2b1fdf518",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-aaa-graphics-builder/references/render-recipes.md": {
+    "mtime": 1784180674.557326,
+    "ast_hash": "29d7516f9ae58e205fa30a11e75de582",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-aaa-graphics-builder/references/shader-cookbook.md": {
+    "mtime": 1784180674.5577936,
+    "ast_hash": "bc17008551586dd7eb95f5ebe584e051",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-aaa-graphics-builder/references/technical-art.md": {
+    "mtime": 1784180674.5573351,
+    "ast_hash": "0914480e486d41a815aa7b48bfb13065",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-aaa-graphics-builder/references/visual-scorecard.md": {
+    "mtime": 1784180674.557625,
+    "ast_hash": "12f8f1532ea53daa66fc49676233753c",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-atmosphere-aerial-perspective/SKILL.md": {
+    "mtime": 1784180877.0328913,
+    "ast_hash": "89e51c3116c49c8b777d049aa3c95a4e",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-atmosphere-aerial-perspective/agents/openai.yaml": {
+    "mtime": 1784180877.001979,
+    "ast_hash": "0042299f09a86827e1d416dd130f79a1",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-atmosphere-aerial-perspective/assets/lut-aerial-perspective/THIRD_PARTY_LICENSES.md": {
+    "mtime": 1784180877.039987,
+    "ast_hash": "506d7fc7cfe97d7f0588f56e357560a0",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-atmosphere-aerial-perspective/references/atmosphere-system-contract.md": {
+    "mtime": 1784180877.0011725,
+    "ast_hash": "523458050822d53839978659518df629",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-audio-generator/SKILL.md": {
+    "mtime": 1784180674.5801191,
+    "ast_hash": "195140ccc8cb89d7a35040db62a2d002",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-audio-generator/agents/openai.yaml": {
+    "mtime": 1784180674.5803223,
+    "ast_hash": "5e661b771b1db6e15a59ba67afb796b5",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-audio-generator/references/audio-workflows.md": {
+    "mtime": 1784180674.5803208,
+    "ast_hash": "ccb8ec01caff92475aed0714c24504de",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-bloom/SKILL.md": {
+    "mtime": 1784180877.0587537,
+    "ast_hash": "c6c9410633560b541fbc0711368b55bf",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-bloom/agents/openai.yaml": {
+    "mtime": 1784180877.0583808,
+    "ast_hash": "eff582c525cb0e393de7fddc59015669",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-bloom/references/hdr-bloom-system.md": {
+    "mtime": 1784180877.057812,
+    "ast_hash": "bbfb727350f2f5c7c29549d53f57a7ae",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-camera-direction/SKILL.md": {
+    "mtime": 1784180877.0606325,
+    "ast_hash": "42d94077bf20f69837cdcb32b4039b69",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-camera-direction/agents/openai.yaml": {
+    "mtime": 1784180877.060392,
+    "ast_hash": "2f8c2eb7a044e5c45b7de138682a6743",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-camera-direction/references/camera-rig-and-cinematic-systems.md": {
+    "mtime": 1784180877.0597942,
+    "ast_hash": "5ac2890e580b6ad7425255b85adfe3b4",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-debug-profiler/SKILL.md": {
+    "mtime": 1784180674.6048143,
+    "ast_hash": "95fcac36d5a42a372c93a827d865ca0d",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-debug-profiler/agents/openai.yaml": {
+    "mtime": 1784180674.6050816,
+    "ast_hash": "dc62600d604fa673e2257e31890684fd",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-debug-profiler/references/checklists/mobile-input.md": {
+    "mtime": 1784180674.6052725,
+    "ast_hash": "e93300e864714f11b5c2f00bae7cb255",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-debug-profiler/references/checklists/performance-profile.md": {
+    "mtime": 1784180674.6052754,
+    "ast_hash": "e80b4ab7c6b35729042024bad068c98b",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-debug-profiler/references/checklists/scene-debugging.md": {
+    "mtime": 1784180674.6052783,
+    "ast_hash": "0d0a05de16eaec9beb7e3a7a25d12401",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-debug-profiler/references/debug-profile-checklists.md": {
+    "mtime": 1784180674.6051378,
+    "ast_hash": "bf5a0a8f9b6f668935300cbd28d3d87e",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-debug-profiler/references/prompt-templates.md": {
+    "mtime": 1784180674.6051447,
+    "ast_hash": "73b265fb5d71cbc374b05e8a3c98a088",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-exposure-color-grading/SKILL.md": {
+    "mtime": 1784180877.0625403,
+    "ast_hash": "3cb4a522dfc517bad3a72fb02bd38641",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-exposure-color-grading/agents/openai.yaml": {
+    "mtime": 1784180877.0622392,
+    "ast_hash": "2054d633950da8a6fbf8063fe9a6518a",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-exposure-color-grading/references/scene-referred-color-pipeline.md": {
+    "mtime": 1784180877.0617075,
+    "ast_hash": "a9ee2a6c5f472411e5e07b7a0c21229b",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-game-director/SKILL.md": {
+    "mtime": 1784180674.6259105,
+    "ast_hash": "c67bfe21f607330f1cd9862fd945eedf",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-game-director/agents/openai.yaml": {
+    "mtime": 1784180674.6263413,
+    "ast_hash": "42313d450653397489863a5fb78590b7",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-game-director/references/phase-playbook.md": {
+    "mtime": 1784180674.6261888,
+    "ast_hash": "7f9ff94904c0deb375bfbe5a4cbcc6f9",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-game-director/references/prompt-templates.md": {
+    "mtime": 1784180674.626197,
+    "ast_hash": "3705f4968635d72dfc56f7e548c5ac7a",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-game-ui-designer/SKILL.md": {
+    "mtime": 1784180674.6546113,
+    "ast_hash": "82cbf0b842dbe0c301e09c920e1f2422",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-game-ui-designer/agents/openai.yaml": {
+    "mtime": 1784180674.654806,
+    "ast_hash": "6b470b0b1e9f6d0f4cd5d77df01e0170",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-game-ui-designer/references/checklists/game-ui-quality.md": {
+    "mtime": 1784180674.6550639,
+    "ast_hash": "e323ccb5fce4cde4c4ed3242e32e1e2b",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-game-ui-designer/references/checklists/hud-readability.md": {
+    "mtime": 1784180674.6551394,
+    "ast_hash": "0ffe08e1b22469587cccfea313dece31",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-game-ui-designer/references/checklists/mobile-input.md": {
+    "mtime": 1784180674.6551468,
+    "ast_hash": "e93300e864714f11b5c2f00bae7cb255",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-game-ui-designer/references/checklists/responsive-ui-fit.md": {
+    "mtime": 1784180674.6551516,
+    "ast_hash": "e26d8a5b3f0b1e432fbae2f7fac42638",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-game-ui-designer/references/prompt-templates.md": {
+    "mtime": 1784180674.6548398,
+    "ast_hash": "3e4211ae2fd396439901d5b50e463066",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-game-ui-designer/references/ui-patterns.md": {
+    "mtime": 1784180674.6548877,
+    "ast_hash": "9d86580e20a7f5ec494b49a272739e70",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-gameplay-systems/SKILL.md": {
+    "mtime": 1784180674.7428324,
+    "ast_hash": "7e41bc49eff2b8333c040160c1a35b79",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-gameplay-systems/agents/openai.yaml": {
+    "mtime": 1784180674.743456,
+    "ast_hash": "4698c3a4c94601f3cb83b8b50dcdb0ce",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-gameplay-systems/assets/threejs-vite-game/index.html": {
+    "mtime": 1784180674.7447429,
+    "ast_hash": "155b14e5964bd2362fa63a4d04a118df",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-gameplay-systems/references/checklists/endless-runner-premium-quality.md": {
+    "mtime": 1784180674.7450395,
+    "ast_hash": "030603285276e192336715a15846af13",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-gameplay-systems/references/checklists/game-design-level-design.md": {
+    "mtime": 1784180674.7450054,
+    "ast_hash": "708fc1b6b3bc2365b022dc32c167c1a3",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-gameplay-systems/references/checklists/game-feel.md": {
+    "mtime": 1784180674.7449274,
+    "ast_hash": "b231fe145340673108cb0162a8b97520",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-gameplay-systems/references/checklists/new-game-definition-of-done.md": {
+    "mtime": 1784180674.7451634,
+    "ast_hash": "e8ec1b79ea81f8f5cb6f84761ef46126",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-gameplay-systems/references/game-design-level-design.md": {
+    "mtime": 1784180674.7438293,
+    "ast_hash": "92a036aa6ed101aa7a666f5c0f06b5ae",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-gameplay-systems/references/game-feel.md": {
+    "mtime": 1784180674.7438943,
+    "ast_hash": "5f3e842614307bb053ef56347169272b",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-gameplay-systems/references/gameplay-workflows.md": {
+    "mtime": 1784180674.7438927,
+    "ast_hash": "eccdb7675b0edbc8915f7513b01350d8",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-gameplay-systems/references/physics-engine-selection.md": {
+    "mtime": 1784180674.7438607,
+    "ast_hash": "2bb2e641f5aec09f9272ea8e90ddb76d",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-gameplay-systems/references/prompt-templates.md": {
+    "mtime": 1784180674.744106,
+    "ast_hash": "f8a0ec0bf18ad14cff4060a556432017",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-image-generator/SKILL.md": {
+    "mtime": 1784180674.7601106,
+    "ast_hash": "5c6f88f8620548fa80f5db1670ad0be0",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-image-generator/agents/openai.yaml": {
+    "mtime": 1784180674.7602515,
+    "ast_hash": "b0b29c2b1dae15e61a9a1b0fc46dc0fd",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-image-pipeline/SKILL.md": {
+    "mtime": 1784180877.0642886,
+    "ast_hash": "ecfa6fd3a56738a37ebd878c43e5aa6a",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-image-pipeline/agents/openai.yaml": {
+    "mtime": 1784180877.0640035,
+    "ast_hash": "2d008eafedfd91f5b50df4074b1b5990",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-image-pipeline/references/production-image-pipeline.md": {
+    "mtime": 1784180877.063521,
+    "ast_hash": "895d77a775cd55b05f02245e0a72de69",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-parallax-occlusion-mapping/SKILL.md": {
+    "mtime": 1784180877.067805,
+    "ast_hash": "ed0efadcc457f7e4dcce0c103febaaf6",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-parallax-occlusion-mapping/agents/openai.yaml": {
+    "mtime": 1784180877.0657544,
+    "ast_hash": "2b4776a4877f09b5b94735eba5bda12b",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-parallax-occlusion-mapping/references/silhouette-relief-contract.md": {
+    "mtime": 1784180877.065217,
+    "ast_hash": "4b822d7b5b713d23c11ccb59b6934c7a",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-precipitation-surfaces/SKILL.md": {
+    "mtime": 1784180877.0712452,
+    "ast_hash": "2c348d446b93e1e935d0d177660e1b9d",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-precipitation-surfaces/agents/openai.yaml": {
+    "mtime": 1784180877.0691724,
+    "ast_hash": "9e8a5bd48ecbf274520804d7aa06d165",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-precipitation-surfaces/assets/wet-puddle-rain/THIRD_PARTY_LICENSES.md": {
+    "mtime": 1784180877.0912535,
+    "ast_hash": "36620df0ffd31ef450ac4e1f5e9ab785",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-precipitation-surfaces/references/precipitation-surface-systems.md": {
+    "mtime": 1784180877.068757,
+    "ast_hash": "e0f3799d538e8d43d39bde9a6c5e93aa",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-procedural-animation/SKILL.md": {
+    "mtime": 1784180877.0933845,
+    "ast_hash": "70a79e2b8f2b49a5a3bcdcf7bf5c062a",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-procedural-animation/agents/openai.yaml": {
+    "mtime": 1784180877.0930333,
+    "ast_hash": "d13853fc4c4f7053f02fd235b9bc5348",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-procedural-animation/references/procedural-motion-and-docking-systems.md": {
+    "mtime": 1784180877.0923796,
+    "ast_hash": "1540fdbcbc86b92a3d20604dffc5e7c2",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-procedural-architecture/SKILL.md": {
+    "mtime": 1784180877.0967417,
+    "ast_hash": "2c6f83e8c2b1b19de5c183403a75d39a",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-procedural-architecture/agents/openai.yaml": {
+    "mtime": 1784180877.0947466,
+    "ast_hash": "cd4a745e883a9911dffe7cc5526ab4a2",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-procedural-architecture/assets/procedural-financial-tower/THIRD_PARTY_LICENSES.md": {
+    "mtime": 1784180877.1132646,
+    "ast_hash": "e00a0ab7b61fa2e63e84c6a15fd3a5f8",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-procedural-architecture/references/grammar-and-mesh-compiler.md": {
+    "mtime": 1784180877.0943952,
+    "ast_hash": "629cfbc90ad35dbb8dbc85cbdd441a72",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-procedural-fields/SKILL.md": {
+    "mtime": 1784180877.1197293,
+    "ast_hash": "c444e0abe93cc28e612986ef53be1b4c",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-procedural-fields/agents/openai.yaml": {
+    "mtime": 1784180877.119376,
+    "ast_hash": "7c6a2309ceb30a4836c7c80c36e18a3b",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-procedural-fields/references/field-stack-recipes.md": {
+    "mtime": 1784180877.1182435,
+    "ast_hash": "9def5da117f06f8335fef6896201f757",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-procedural-geometry/SKILL.md": {
+    "mtime": 1784180877.1261456,
+    "ast_hash": "39fd9ef4fe2b84caf59218d4525d0f66",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-procedural-geometry/agents/openai.yaml": {
+    "mtime": 1784180877.1222448,
+    "ast_hash": "9b63497cbf36b5218e2103e72f9fdd07",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-procedural-geometry/references/complete-submarine-assembly.md": {
+    "mtime": 1784180877.1209366,
+    "ast_hash": "5a038c6ccdea69effddebae2a2b1745d",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-procedural-geometry/references/profile-sweeps-and-mesh-writers.md": {
+    "mtime": 1784180877.1215389,
+    "ast_hash": "31c1afbc8fc50e0e5885cd55861cf735",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-procedural-materials/SKILL.md": {
+    "mtime": 1784180877.133651,
+    "ast_hash": "7d1a677c98091db3610759f9ae6038ef",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-procedural-materials/agents/openai.yaml": {
+    "mtime": 1784180877.131177,
+    "ast_hash": "6f68de761ddb768fd5ff3e8ed56cc95d",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-procedural-materials/references/hybrid-soil-moss-surface.md": {
+    "mtime": 1784180877.130612,
+    "ast_hash": "533798d8ea645701433ea90f6088fb43",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-procedural-materials/references/procedural-pbr-system.md": {
+    "mtime": 1784180877.1303356,
+    "ast_hash": "a5f3dabd8db03f8f17767d122100f488",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-procedural-planets/SKILL.md": {
+    "mtime": 1784180877.163962,
+    "ast_hash": "027e68a6cd37ed0b7fc7e1fb470bade4",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-procedural-planets/agents/openai.yaml": {
+    "mtime": 1784180877.1619189,
+    "ast_hash": "6583d163419b01996f151d6a28a8ecf0",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-procedural-planets/references/planet-field-and-atmosphere-systems.md": {
+    "mtime": 1784180877.161251,
+    "ast_hash": "a247bcb0faaab28d1d7f900c50379c59",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-procedural-vegetation/SKILL.md": {
+    "mtime": 1784180877.1707342,
+    "ast_hash": "7b5320546659c6e90a43548dc6eafd59",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-procedural-vegetation/agents/openai.yaml": {
+    "mtime": 1784180877.165742,
+    "ast_hash": "fb1bd8ace16333098edcaff4e95d5bb6",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-procedural-vegetation/assets/structured-ash-growth/THIRD_PARTY_LICENSES.md": {
+    "mtime": 1784180877.1786118,
+    "ast_hash": "c17550d74d469af03f52af4a0b4061cb",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-procedural-vegetation/references/structured-ash-growth-system.md": {
+    "mtime": 1784180877.1650634,
+    "ast_hash": "6462afa7e9a200a84995c594aa6eb3f0",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-procedural-vfx/SKILL.md": {
+    "mtime": 1784180877.18327,
+    "ast_hash": "8e235d8de10e34d348c89b750edaf4b8",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-procedural-vfx/agents/openai.yaml": {
+    "mtime": 1784180877.1821728,
+    "ast_hash": "53bb13086f950d778c498a4a9675f05d",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-procedural-vfx/references/procedural-vfx-system.md": {
+    "mtime": 1784180877.1816213,
+    "ast_hash": "6a9b3ef9cb0b9cc78d7d48ed85fb08c2",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-qa-release/SKILL.md": {
+    "mtime": 1784180674.7923725,
+    "ast_hash": "a24023047219120b9b91daa345b32686",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-qa-release/agents/openai.yaml": {
+    "mtime": 1784180674.7930014,
+    "ast_hash": "371cbb57520ee685ea32e27ab7e9eead",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-qa-release/references/checklists/bot-playtest.md": {
+    "mtime": 1784180674.7932098,
+    "ast_hash": "253c6ebc846284dddb67601ac57b226c",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-qa-release/references/checklists/playtest-qa.md": {
+    "mtime": 1784180674.7932005,
+    "ast_hash": "ecb91557a6fda6a575ec0c10555929cd",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-qa-release/references/checklists/release.md": {
+    "mtime": 1784180674.7932062,
+    "ast_hash": "60a3bad8b88d27cec9a14a05c0745e18",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-qa-release/references/checklists/visual-test-harness.md": {
+    "mtime": 1784180674.7932007,
+    "ast_hash": "5defd05cc91709d640a4a6d6c5950a5e",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-qa-release/references/checklists/visual-verification.md": {
+    "mtime": 1784180674.7933187,
+    "ast_hash": "07e6e53f30119a97ed4bce83f262f7d2",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-qa-release/references/playtest-bot.md": {
+    "mtime": 1784180674.7926657,
+    "ast_hash": "912318b25bea6ae64ca0bae1f9fa593a",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-qa-release/references/prompt-templates.md": {
+    "mtime": 1784180674.7927327,
+    "ast_hash": "4a8fcd486424d2ee038be1d19b409679",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-qa-release/references/qa-release-checklists.md": {
+    "mtime": 1784180674.7928913,
+    "ast_hash": "18eee094ea6de2d025bdda9eb5ddad13",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-qa-release/references/visual-test-harness.md": {
+    "mtime": 1784180674.793047,
+    "ast_hash": "afd04e9d321d8d094b48b8e97ae3dca2",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-raymarched-space-effects/SKILL.md": {
+    "mtime": 1784180877.1868765,
+    "ast_hash": "324f1f9227280ee2670a59e90058e033",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-raymarched-space-effects/agents/openai.yaml": {
+    "mtime": 1784180877.1848152,
+    "ast_hash": "38215e1e46df2f300cc1bc379d99fd49",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-raymarched-space-effects/references/curved-ray-integrators.md": {
+    "mtime": 1784180877.18439,
+    "ast_hash": "07d0badbf8d5848d819d228c6a221a3a",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-screen-space-ambient-occlusion/SKILL.md": {
+    "mtime": 1784180877.1915343,
+    "ast_hash": "975c27c7023b4e40af005383377e027e",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-screen-space-ambient-occlusion/agents/openai.yaml": {
+    "mtime": 1784180877.1912365,
+    "ast_hash": "b20e04cdfb27f27954b1d90270d37d72",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-screen-space-ambient-occlusion/references/gtao-bent-normal-pipeline.md": {
+    "mtime": 1784180877.1901295,
+    "ast_hash": "c3c75ac16cce0ae205aea1aa73f90bf5",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-shadow-systems/SKILL.md": {
+    "mtime": 1784180877.193238,
+    "ast_hash": "bbbdda31bc8d02d206642d02237ec324",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-shadow-systems/agents/openai.yaml": {
+    "mtime": 1784180877.1929426,
+    "ast_hash": "25d31452e75854a4fa059d6228f2c009",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-shadow-systems/references/cached-clipmap-shadows.md": {
+    "mtime": 1784180877.1923106,
+    "ast_hash": "076f185688ad04e0813c83176e312cd0",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-skill-router/SKILL.md": {
+    "mtime": 1784180877.194175,
+    "ast_hash": "530cfd3436e26a42b9840b4aff0b5ea8",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-skill-router/agents/openai.yaml": {
+    "mtime": 1784180877.1939538,
+    "ast_hash": "552ce7af8876c114814fd692856ed726",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-spectral-ocean/SKILL.md": {
+    "mtime": 1784180877.2029886,
+    "ast_hash": "873f99e8ccbb207afa153cd1175ea3ea",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-spectral-ocean/agents/openai.yaml": {
+    "mtime": 1784180877.195525,
+    "ast_hash": "bb96b29acc9258edd795bfdde0cc164f",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-spectral-ocean/references/spectral-cascade-ocean-system.md": {
+    "mtime": 1784180877.1950164,
+    "ast_hash": "a723b27891ccd94b81f25a4fb780808a",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-temporal-surfaces/SKILL.md": {
+    "mtime": 1784180877.2083433,
+    "ast_hash": "4acf9c25b42495c457518a17249adf84",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-temporal-surfaces/agents/openai.yaml": {
+    "mtime": 1784180877.206414,
+    "ast_hash": "3b31a8a740c642c43b00096cda36bb9c",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-temporal-surfaces/references/ping-pong-accumulation.md": {
+    "mtime": 1784180877.205605,
+    "ast_hash": "a0e19a9a9ba9c6719f2aac3d7896d711",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-temporal-surfaces/references/refractive-window-rain.md": {
+    "mtime": 1784180877.2059057,
+    "ast_hash": "af577e399028633ea4298b6564ee8d2a",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-visual-validation/SKILL.md": {
+    "mtime": 1784180877.2115712,
+    "ast_hash": "4cfc24b4db8b20704b134acb93010caf",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-visual-validation/agents/openai.yaml": {
+    "mtime": 1784180877.2113066,
+    "ast_hash": "1be50d48d6d4d4ffc5b179a8be104122",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-visual-validation/references/graphics-validation-protocol.md": {
+    "mtime": 1784180877.210656,
+    "ast_hash": "d6a00f97cb418aae9e3921907d310f80",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-volumetric-clouds/SKILL.md": {
+    "mtime": 1784180877.254026,
+    "ast_hash": "a8583b43de4750a2166e5ec24d0c7d36",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-volumetric-clouds/agents/openai.yaml": {
+    "mtime": 1784180877.21322,
+    "ast_hash": "cf0bfddfdb5b1c8a4ef9c8eca59a5ece",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-volumetric-clouds/assets/weather-volume-clouds/THIRD_PARTY_LICENSES.md": {
+    "mtime": 1784180877.272027,
+    "ast_hash": "506d7fc7cfe97d7f0588f56e357560a0",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-volumetric-clouds/references/weather-volume-and-reconstruction.md": {
+    "mtime": 1784180877.2125187,
+    "ast_hash": "68ed017a58162ad9e9e440dac7ca6154",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-water-optics/SKILL.md": {
+    "mtime": 1784180877.275178,
+    "ast_hash": "4150c31c95d3c14c35ae75fa46907bcc",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-water-optics/agents/openai.yaml": {
+    "mtime": 1784180877.273597,
+    "ast_hash": "5697934bfb05ad60baa4a7b9910a4516",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-water-optics/references/water-surface-system.md": {
+    "mtime": 1784180877.2731736,
+    "ast_hash": "42f2b468d41ef5864c18b98c1ed0b52f",
+    "semantic_hash": ""
+  },
+  ".agents/skills/to-spec/SKILL.md": {
+    "mtime": 1784180596.6742249,
+    "ast_hash": "ea27053babcbd7e7524056f8219e76d0",
+    "semantic_hash": ""
+  },
+  ".agents/skills/to-spec/agents/openai.yaml": {
+    "mtime": 1784180596.6742795,
+    "ast_hash": "886d06b1f83b51e39bd2874b75730f87",
+    "semantic_hash": ""
+  },
+  ".agents/skills/to-tickets/SKILL.md": {
+    "mtime": 1784180596.68574,
+    "ast_hash": "790df0bf329a58c10df79fb69a91b6c8",
+    "semantic_hash": ""
+  },
+  ".agents/skills/to-tickets/agents/openai.yaml": {
+    "mtime": 1784180596.6858935,
+    "ast_hash": "6c4d19c426617a41441e84aacf2786d6",
+    "semantic_hash": ""
+  },
+  ".agents/skills/triage/AGENT-BRIEF.md": {
+    "mtime": 1784180596.702627,
+    "ast_hash": "64f3b89bc793673428ed93c6c583133a",
+    "semantic_hash": ""
+  },
+  ".agents/skills/triage/OUT-OF-SCOPE.md": {
+    "mtime": 1784180596.7027066,
+    "ast_hash": "0d18f9ccba4c63db8b5c86c8e0000cd9",
+    "semantic_hash": ""
+  },
+  ".agents/skills/triage/SKILL.md": {
+    "mtime": 1784180596.7027073,
+    "ast_hash": "0e34e837f9e5add977dd2e95629d5afe",
+    "semantic_hash": ""
+  },
+  ".agents/skills/triage/agents/openai.yaml": {
+    "mtime": 1784180596.7027082,
+    "ast_hash": "fc03336314c293aa703724167625f4b1",
+    "semantic_hash": ""
+  },
+  ".agents/skills/wayfinder/SKILL.md": {
+    "mtime": 1784180596.7136507,
+    "ast_hash": "55b9736798c119cffa6ad6a830287a30",
+    "semantic_hash": ""
+  },
+  ".agents/skills/wayfinder/agents/openai.yaml": {
+    "mtime": 1784180596.7137613,
+    "ast_hash": "05e37f0188c1e7d2f1cdf4143c0a5c75",
+    "semantic_hash": ""
+  },
+  ".agents/skills/writing-great-skills/GLOSSARY.md": {
+    "mtime": 1784180596.7285776,
+    "ast_hash": "37dd71c1a6e8bf102a5f8d25a1bab34e",
+    "semantic_hash": ""
+  },
+  ".agents/skills/writing-great-skills/SKILL.md": {
+    "mtime": 1784180596.728475,
+    "ast_hash": "fbecb1a946c1562709cd3fc59c523a02",
+    "semantic_hash": ""
+  },
+  ".agents/skills/writing-great-skills/agents/openai.yaml": {
+    "mtime": 1784180596.7286184,
+    "ast_hash": "bb48d6be480aa9bbb4670e00775f407a",
+    "semantic_hash": ""
+  },
+  ".claude/skills/graphify/SKILL.md": {
+    "mtime": 1784708104.7726698,
+    "ast_hash": "676310b3fa55aacdb350515228c8b0ec",
+    "semantic_hash": ""
+  },
+  ".claude/skills/graphify/references/add-watch.md": {
+    "mtime": 1784708004.3139083,
+    "ast_hash": "d59d027fe449f06aa03905a01184e779",
+    "semantic_hash": ""
+  },
+  ".claude/skills/graphify/references/exports.md": {
+    "mtime": 1784708004.314208,
+    "ast_hash": "9da2a2152e60a22f07f05fed5158f287",
+    "semantic_hash": ""
+  },
+  ".claude/skills/graphify/references/extraction-spec.md": {
+    "mtime": 1784708004.314447,
+    "ast_hash": "42fef56a01698118f7fd722acdadea34",
+    "semantic_hash": ""
+  },
+  ".claude/skills/graphify/references/github-and-merge.md": {
+    "mtime": 1784708004.314621,
+    "ast_hash": "cde13df085e4c492aeb7ba298a996d0d",
+    "semantic_hash": ""
+  },
+  ".claude/skills/graphify/references/hooks.md": {
+    "mtime": 1784708004.3147202,
+    "ast_hash": "3f545db6ce646650bb9de588f5512a27",
+    "semantic_hash": ""
+  },
+  ".claude/skills/graphify/references/query.md": {
+    "mtime": 1784708004.314882,
+    "ast_hash": "3c46f8ad006874260614ed8657d02307",
+    "semantic_hash": ""
+  },
+  ".claude/skills/graphify/references/transcribe.md": {
+    "mtime": 1784708004.3149788,
+    "ast_hash": "67b6a5fa6c0974e18f60db9f8932fbd8",
+    "semantic_hash": ""
+  },
+  ".claude/skills/graphify/references/update.md": {
+    "mtime": 1784708004.3152115,
+    "ast_hash": "9378bd03d56baaf78bd738ab3848f142",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-atmosphere-aerial-perspective/SKILL.md": {
+    "mtime": 1784180815.7713165,
+    "ast_hash": "89e51c3116c49c8b777d049aa3c95a4e",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-atmosphere-aerial-perspective/agents/openai.yaml": {
+    "mtime": 1784180815.7319403,
+    "ast_hash": "0042299f09a86827e1d416dd130f79a1",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-atmosphere-aerial-perspective/assets/lut-aerial-perspective/THIRD_PARTY_LICENSES.md": {
+    "mtime": 1784180815.7774649,
+    "ast_hash": "506d7fc7cfe97d7f0588f56e357560a0",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-atmosphere-aerial-perspective/references/atmosphere-system-contract.md": {
+    "mtime": 1784180815.7313585,
+    "ast_hash": "523458050822d53839978659518df629",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-bloom/SKILL.md": {
+    "mtime": 1784180815.7858915,
+    "ast_hash": "c6c9410633560b541fbc0711368b55bf",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-bloom/agents/openai.yaml": {
+    "mtime": 1784180815.785658,
+    "ast_hash": "eff582c525cb0e393de7fddc59015669",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-bloom/references/hdr-bloom-system.md": {
+    "mtime": 1784180815.782611,
+    "ast_hash": "bbfb727350f2f5c7c29549d53f57a7ae",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-camera-direction/SKILL.md": {
+    "mtime": 1784180815.787431,
+    "ast_hash": "42d94077bf20f69837cdcb32b4039b69",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-camera-direction/agents/openai.yaml": {
+    "mtime": 1784180815.7872136,
+    "ast_hash": "2f8c2eb7a044e5c45b7de138682a6743",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-camera-direction/references/camera-rig-and-cinematic-systems.md": {
+    "mtime": 1784180815.7866235,
+    "ast_hash": "5ac2890e580b6ad7425255b85adfe3b4",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-exposure-color-grading/SKILL.md": {
+    "mtime": 1784180815.7889237,
+    "ast_hash": "3cb4a522dfc517bad3a72fb02bd38641",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-exposure-color-grading/agents/openai.yaml": {
+    "mtime": 1784180815.7886834,
+    "ast_hash": "2054d633950da8a6fbf8063fe9a6518a",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-exposure-color-grading/references/scene-referred-color-pipeline.md": {
+    "mtime": 1784180815.7883363,
+    "ast_hash": "a9ee2a6c5f472411e5e07b7a0c21229b",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-image-pipeline/SKILL.md": {
+    "mtime": 1784180815.7909653,
+    "ast_hash": "ecfa6fd3a56738a37ebd878c43e5aa6a",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-image-pipeline/agents/openai.yaml": {
+    "mtime": 1784180815.7907412,
+    "ast_hash": "2d008eafedfd91f5b50df4074b1b5990",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-image-pipeline/references/production-image-pipeline.md": {
+    "mtime": 1784180815.7898011,
+    "ast_hash": "895d77a775cd55b05f02245e0a72de69",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-parallax-occlusion-mapping/SKILL.md": {
+    "mtime": 1784180815.7934043,
+    "ast_hash": "ed0efadcc457f7e4dcce0c103febaaf6",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-parallax-occlusion-mapping/agents/openai.yaml": {
+    "mtime": 1784180815.7920313,
+    "ast_hash": "2b4776a4877f09b5b94735eba5bda12b",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-parallax-occlusion-mapping/references/silhouette-relief-contract.md": {
+    "mtime": 1784180815.7916684,
+    "ast_hash": "4b822d7b5b713d23c11ccb59b6934c7a",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-precipitation-surfaces/SKILL.md": {
+    "mtime": 1784180815.7954257,
+    "ast_hash": "2c348d446b93e1e935d0d177660e1b9d",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-precipitation-surfaces/agents/openai.yaml": {
+    "mtime": 1784180815.7943726,
+    "ast_hash": "9e8a5bd48ecbf274520804d7aa06d165",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-precipitation-surfaces/assets/wet-puddle-rain/THIRD_PARTY_LICENSES.md": {
+    "mtime": 1784180815.804141,
+    "ast_hash": "36620df0ffd31ef450ac4e1f5e9ab785",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-precipitation-surfaces/references/precipitation-surface-systems.md": {
+    "mtime": 1784180815.7940714,
+    "ast_hash": "e0f3799d538e8d43d39bde9a6c5e93aa",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-procedural-animation/SKILL.md": {
+    "mtime": 1784180815.8059084,
+    "ast_hash": "70a79e2b8f2b49a5a3bcdcf7bf5c062a",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-procedural-animation/agents/openai.yaml": {
+    "mtime": 1784180815.8056598,
+    "ast_hash": "d13853fc4c4f7053f02fd235b9bc5348",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-procedural-animation/references/procedural-motion-and-docking-systems.md": {
+    "mtime": 1784180815.8051531,
+    "ast_hash": "1540fdbcbc86b92a3d20604dffc5e7c2",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-procedural-architecture/SKILL.md": {
+    "mtime": 1784180815.8082,
+    "ast_hash": "2c6f83e8c2b1b19de5c183403a75d39a",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-procedural-architecture/agents/openai.yaml": {
+    "mtime": 1784180815.8071556,
+    "ast_hash": "cd4a745e883a9911dffe7cc5526ab4a2",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-procedural-architecture/assets/procedural-financial-tower/THIRD_PARTY_LICENSES.md": {
+    "mtime": 1784180815.815708,
+    "ast_hash": "e00a0ab7b61fa2e63e84c6a15fd3a5f8",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-procedural-architecture/references/grammar-and-mesh-compiler.md": {
+    "mtime": 1784180815.8068447,
+    "ast_hash": "629cfbc90ad35dbb8dbc85cbdd441a72",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-procedural-fields/SKILL.md": {
+    "mtime": 1784180815.8209193,
+    "ast_hash": "c444e0abe93cc28e612986ef53be1b4c",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-procedural-fields/agents/openai.yaml": {
+    "mtime": 1784180815.8206441,
+    "ast_hash": "7c6a2309ceb30a4836c7c80c36e18a3b",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-procedural-fields/references/field-stack-recipes.md": {
+    "mtime": 1784180815.8194635,
+    "ast_hash": "9def5da117f06f8335fef6896201f757",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-procedural-geometry/SKILL.md": {
+    "mtime": 1784180815.8251512,
+    "ast_hash": "39fd9ef4fe2b84caf59218d4525d0f66",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-procedural-geometry/agents/openai.yaml": {
+    "mtime": 1784180815.822427,
+    "ast_hash": "9b63497cbf36b5218e2103e72f9fdd07",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-procedural-geometry/references/complete-submarine-assembly.md": {
+    "mtime": 1784180815.8217504,
+    "ast_hash": "5a038c6ccdea69effddebae2a2b1745d",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-procedural-geometry/references/profile-sweeps-and-mesh-writers.md": {
+    "mtime": 1784180815.8220348,
+    "ast_hash": "31c1afbc8fc50e0e5885cd55861cf735",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-procedural-materials/SKILL.md": {
+    "mtime": 1784180815.8298032,
+    "ast_hash": "7d1a677c98091db3610759f9ae6038ef",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-procedural-materials/agents/openai.yaml": {
+    "mtime": 1784180815.8282583,
+    "ast_hash": "6f68de761ddb768fd5ff3e8ed56cc95d",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-procedural-materials/references/hybrid-soil-moss-surface.md": {
+    "mtime": 1784180815.8278403,
+    "ast_hash": "533798d8ea645701433ea90f6088fb43",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-procedural-materials/references/procedural-pbr-system.md": {
+    "mtime": 1784180815.8275957,
+    "ast_hash": "a5f3dabd8db03f8f17767d122100f488",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-procedural-planets/SKILL.md": {
+    "mtime": 1784180815.8450563,
+    "ast_hash": "027e68a6cd37ed0b7fc7e1fb470bade4",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-procedural-planets/agents/openai.yaml": {
+    "mtime": 1784180815.8441734,
+    "ast_hash": "6583d163419b01996f151d6a28a8ecf0",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-procedural-planets/references/planet-field-and-atmosphere-systems.md": {
+    "mtime": 1784180815.8438213,
+    "ast_hash": "a247bcb0faaab28d1d7f900c50379c59",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-procedural-vegetation/SKILL.md": {
+    "mtime": 1784180815.8494546,
+    "ast_hash": "7b5320546659c6e90a43548dc6eafd59",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-procedural-vegetation/agents/openai.yaml": {
+    "mtime": 1784180815.8461049,
+    "ast_hash": "fb1bd8ace16333098edcaff4e95d5bb6",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-procedural-vegetation/assets/structured-ash-growth/THIRD_PARTY_LICENSES.md": {
+    "mtime": 1784180815.8522677,
+    "ast_hash": "c17550d74d469af03f52af4a0b4061cb",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-procedural-vegetation/references/structured-ash-growth-system.md": {
+    "mtime": 1784180815.8457408,
+    "ast_hash": "6462afa7e9a200a84995c594aa6eb3f0",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-procedural-vfx/SKILL.md": {
+    "mtime": 1784180815.85462,
+    "ast_hash": "8e235d8de10e34d348c89b750edaf4b8",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-procedural-vfx/agents/openai.yaml": {
+    "mtime": 1784180815.8538985,
+    "ast_hash": "53bb13086f950d778c498a4a9675f05d",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-procedural-vfx/references/procedural-vfx-system.md": {
+    "mtime": 1784180815.853532,
+    "ast_hash": "6a9b3ef9cb0b9cc78d7d48ed85fb08c2",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-raymarched-space-effects/SKILL.md": {
+    "mtime": 1784180815.8568633,
+    "ast_hash": "324f1f9227280ee2670a59e90058e033",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-raymarched-space-effects/agents/openai.yaml": {
+    "mtime": 1784180815.8555732,
+    "ast_hash": "38215e1e46df2f300cc1bc379d99fd49",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-raymarched-space-effects/references/curved-ray-integrators.md": {
+    "mtime": 1784180815.8552918,
+    "ast_hash": "07d0badbf8d5848d819d228c6a221a3a",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-screen-space-ambient-occlusion/SKILL.md": {
+    "mtime": 1784180815.859411,
+    "ast_hash": "975c27c7023b4e40af005383377e027e",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-screen-space-ambient-occlusion/agents/openai.yaml": {
+    "mtime": 1784180815.8592114,
+    "ast_hash": "b20e04cdfb27f27954b1d90270d37d72",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-screen-space-ambient-occlusion/references/gtao-bent-normal-pipeline.md": {
+    "mtime": 1784180815.8588161,
+    "ast_hash": "c3c75ac16cce0ae205aea1aa73f90bf5",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-shadow-systems/SKILL.md": {
+    "mtime": 1784180815.860811,
+    "ast_hash": "bbbdda31bc8d02d206642d02237ec324",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-shadow-systems/agents/openai.yaml": {
+    "mtime": 1784180815.8606012,
+    "ast_hash": "25d31452e75854a4fa059d6228f2c009",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-shadow-systems/references/cached-clipmap-shadows.md": {
+    "mtime": 1784180815.8600812,
+    "ast_hash": "076f185688ad04e0813c83176e312cd0",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-skill-router/SKILL.md": {
+    "mtime": 1784180815.8618264,
+    "ast_hash": "530cfd3436e26a42b9840b4aff0b5ea8",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-skill-router/agents/openai.yaml": {
+    "mtime": 1784180815.8615935,
+    "ast_hash": "552ce7af8876c114814fd692856ed726",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-spectral-ocean/SKILL.md": {
+    "mtime": 1784180815.8680139,
+    "ast_hash": "873f99e8ccbb207afa153cd1175ea3ea",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-spectral-ocean/agents/openai.yaml": {
+    "mtime": 1784180815.8629434,
+    "ast_hash": "bb96b29acc9258edd795bfdde0cc164f",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-spectral-ocean/references/spectral-cascade-ocean-system.md": {
+    "mtime": 1784180815.8626099,
+    "ast_hash": "a723b27891ccd94b81f25a4fb780808a",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-temporal-surfaces/SKILL.md": {
+    "mtime": 1784180815.8722074,
+    "ast_hash": "4acf9c25b42495c457518a17249adf84",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-temporal-surfaces/agents/openai.yaml": {
+    "mtime": 1784180815.8706567,
+    "ast_hash": "3b31a8a740c642c43b00096cda36bb9c",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-temporal-surfaces/references/ping-pong-accumulation.md": {
+    "mtime": 1784180815.8700547,
+    "ast_hash": "a0e19a9a9ba9c6719f2aac3d7896d711",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-temporal-surfaces/references/refractive-window-rain.md": {
+    "mtime": 1784180815.8702848,
+    "ast_hash": "af577e399028633ea4298b6564ee8d2a",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-visual-validation/SKILL.md": {
+    "mtime": 1784180815.874395,
+    "ast_hash": "4cfc24b4db8b20704b134acb93010caf",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-visual-validation/agents/openai.yaml": {
+    "mtime": 1784180815.874213,
+    "ast_hash": "1be50d48d6d4d4ffc5b179a8be104122",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-visual-validation/references/graphics-validation-protocol.md": {
+    "mtime": 1784180815.8738253,
+    "ast_hash": "d6a00f97cb418aae9e3921907d310f80",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-volumetric-clouds/SKILL.md": {
+    "mtime": 1784180815.9030693,
+    "ast_hash": "a8583b43de4750a2166e5ec24d0c7d36",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-volumetric-clouds/agents/openai.yaml": {
+    "mtime": 1784180815.8755717,
+    "ast_hash": "cf0bfddfdb5b1c8a4ef9c8eca59a5ece",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-volumetric-clouds/assets/weather-volume-clouds/THIRD_PARTY_LICENSES.md": {
+    "mtime": 1784180815.9146035,
+    "ast_hash": "506d7fc7cfe97d7f0588f56e357560a0",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-volumetric-clouds/references/weather-volume-and-reconstruction.md": {
+    "mtime": 1784180815.8751922,
+    "ast_hash": "68ed017a58162ad9e9e440dac7ca6154",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-water-optics/SKILL.md": {
+    "mtime": 1784180815.917161,
+    "ast_hash": "4150c31c95d3c14c35ae75fa46907bcc",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-water-optics/agents/openai.yaml": {
+    "mtime": 1784180815.915932,
+    "ast_hash": "5697934bfb05ad60baa4a7b9910a4516",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-water-optics/references/water-surface-system.md": {
+    "mtime": 1784180815.9155924,
+    "ast_hash": "42f2b468d41ef5864c18b98c1ed0b52f",
+    "semantic_hash": ""
+  },
+  ".github/workflows/ci.yml": {
+    "mtime": 1784605072.923149,
+    "ast_hash": "f795c5e0c0cd78080cc1407dbde6f28d",
+    "semantic_hash": ""
+  },
+  "AGENTS.md": {
+    "mtime": 1784707576.5813856,
+    "ast_hash": "bf418c42beb50206859b7cb5200dd651",
+    "semantic_hash": ""
+  },
+  "CLAUDE.md": {
+    "mtime": 1784708104.7740095,
+    "ast_hash": "7459e681bceffa38cfae0a440609dbd9",
+    "semantic_hash": ""
+  },
+  "CONTEXT.md": {
+    "mtime": 1784239271.0820642,
+    "ast_hash": "26e77c3fdf50a7b697a7f132c21fbc67",
+    "semantic_hash": ""
+  },
+  "DESIGN.md": {
+    "mtime": 1784254549.589748,
+    "ast_hash": "ea9cc71b381cbb8d68feb90c2c9f3bda",
+    "semantic_hash": ""
+  },
+  "README.md": {
+    "mtime": 1784707627.63571,
+    "ast_hash": "af54977e191de1c93e02515f34079e27",
+    "semantic_hash": ""
+  },
+  "docs/agents/domain.md": {
+    "mtime": 1783655537.4897947,
+    "ast_hash": "35089ed6a70a657c91fd100ade31b642",
+    "semantic_hash": ""
+  },
+  "docs/agents/issue-tracker.md": {
+    "mtime": 1783655537.489815,
+    "ast_hash": "3cd8509285524d31a33279b8cb0870e5",
+    "semantic_hash": ""
+  },
+  "docs/agents/triage-labels.md": {
+    "mtime": 1783655537.4898431,
+    "ast_hash": "22add54cb98451c55b20e6b7992d4a85",
+    "semantic_hash": ""
+  },
+  "docs/release-notes.md": {
+    "mtime": 1784360107.7223995,
+    "ast_hash": "05e27a94ca58c8b2259289305d85050c",
+    "semantic_hash": ""
+  },
+  "docs/ui/index.html": {
+    "mtime": 1784602982.7487986,
+    "ast_hash": "9640db9632e1c0d3acd436f35e2af7d4",
+    "semantic_hash": ""
+  },
+  "index.html": {
+    "mtime": 1784711903.8214588,
+    "ast_hash": "c81ca0e387b437f4dd90f0b794f5d401",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-aaa-graphics-builder/assets/scorecard-anchors/scene-1.jpg": {
+    "mtime": 1784180674.5580056,
+    "ast_hash": "ff82c77fb71bebabee039378bc4b6e0c",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-aaa-graphics-builder/assets/scorecard-anchors/scene-2.jpg": {
+    "mtime": 1784180674.558107,
+    "ast_hash": "3e1dc07034add4f9fc19a93278643adb",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-aaa-graphics-builder/assets/scorecard-anchors/scene-3.jpg": {
+    "mtime": 1784180674.5581458,
+    "ast_hash": "4c8ffa2cb0b8a9a736c9831b8041ec4b",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-precipitation-surfaces/assets/wet-puddle-rain/Splash.png": {
+    "mtime": 1784180877.090953,
+    "ast_hash": "df9bf9c0f7d8b54373c06899717bfb52",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-precipitation-surfaces/assets/wet-puddle-rain/road/aerial_asphalt_01_ao_2k.jpg": {
+    "mtime": 1784180877.0810914,
+    "ast_hash": "7cfb6128237130aefdaa831374c8619e",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-precipitation-surfaces/assets/wet-puddle-rain/road/aerial_asphalt_01_diff_2k.jpg": {
+    "mtime": 1784180877.0740213,
+    "ast_hash": "4cb311fc7638c0b1d5e9641ca9c6ea78",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-precipitation-surfaces/assets/wet-puddle-rain/road/aerial_asphalt_01_nor_gl_2k.jpg": {
+    "mtime": 1784180877.0880444,
+    "ast_hash": "2b2d543f7c6567030f11a6070f586e05",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-precipitation-surfaces/assets/wet-puddle-rain/road/aerial_asphalt_01_rough_2k.jpg": {
+    "mtime": 1784180877.0781887,
+    "ast_hash": "f46f34b5509cec4b7fccdff8dfe4dc59",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-procedural-architecture/assets/procedural-financial-tower/limestone-albedo.png": {
+    "mtime": 1784180877.1166475,
+    "ast_hash": "469f43ff40821adf8e8beedb8bc1739a",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-procedural-architecture/assets/procedural-financial-tower/limestone-normal.png": {
+    "mtime": 1784180877.105415,
+    "ast_hash": "024f865155b3efa267f375bffe711e33",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-procedural-architecture/assets/procedural-financial-tower/ornaments-albedo.png": {
+    "mtime": 1784180877.0993543,
+    "ast_hash": "80a177b90fbd050e081288b111e3b931",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-procedural-architecture/assets/procedural-financial-tower/ornaments-normal.png": {
+    "mtime": 1784180877.1119473,
+    "ast_hash": "5f2588c9fc471f50830223f574e115e7",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-procedural-geometry/assets/sculpted-gallery-frame/aged-walnut-frame.webp": {
+    "mtime": 1784180877.129124,
+    "ast_hash": "03f387237539e97291300fdd53aba569",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-procedural-geometry/assets/sculpted-gallery-frame/antique-gold-frame.webp": {
+    "mtime": 1784180877.128416,
+    "ast_hash": "7eb61718ea1790f3a718ba76def4eb1a",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-procedural-geometry/assets/sculpted-gallery-frame/dark-ebony-frame.webp": {
+    "mtime": 1784180877.1273537,
+    "ast_hash": "c2375c860742d4c1be3defdb0772282e",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-procedural-geometry/assets/sculpted-gallery-frame/gallery-mat-board.webp": {
+    "mtime": 1784180877.126934,
+    "ast_hash": "ae483f6251473622995e7640e3a65576",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-procedural-materials/assets/hybrid-soil-moss-surface/Ground103_1K-JPG_AmbientOcclusion.jpg": {
+    "mtime": 1784180877.1488123,
+    "ast_hash": "aaa3fb74a40353e450a349ffa01cb356",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-procedural-materials/assets/hybrid-soil-moss-surface/Ground103_1K-JPG_Color.jpg": {
+    "mtime": 1784180877.154877,
+    "ast_hash": "8d7211dc220a15f7fafd352c65215be6",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-procedural-materials/assets/hybrid-soil-moss-surface/Ground103_1K-JPG_Displacement.jpg": {
+    "mtime": 1784180877.1472108,
+    "ast_hash": "59161e049744363468eb6998e5ee831d",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-procedural-materials/assets/hybrid-soil-moss-surface/Ground103_1K-JPG_NormalGL.jpg": {
+    "mtime": 1784180877.1508427,
+    "ast_hash": "85ee95f869ef5c24fe83522ea18b567c",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-procedural-materials/assets/hybrid-soil-moss-surface/Ground103_1K-JPG_Roughness.jpg": {
+    "mtime": 1784180877.1579669,
+    "ast_hash": "82ab680b7d476b014b44bc8349eb4488",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-procedural-materials/assets/hybrid-soil-moss-surface/moss/Moss002_1K-JPG_AmbientOcclusion.jpg": {
+    "mtime": 1784180877.1355684,
+    "ast_hash": "7073ed3ea89186d839dee170c2e1cd79",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-procedural-materials/assets/hybrid-soil-moss-surface/moss/Moss002_1K-JPG_Color.jpg": {
+    "mtime": 1784180877.1416597,
+    "ast_hash": "45c7904d35e598cd553f30b0159cae53",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-procedural-materials/assets/hybrid-soil-moss-surface/moss/Moss002_1K-JPG_NormalGL.jpg": {
+    "mtime": 1784180877.137658,
+    "ast_hash": "83e262495f367be0d2409849299b3b79",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-procedural-materials/assets/hybrid-soil-moss-surface/moss/Moss002_1K-JPG_Roughness.jpg": {
+    "mtime": 1784180877.1437402,
+    "ast_hash": "877ed320ed9db8e1ff035802001c1dcc",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-procedural-vegetation/assets/structured-ash-growth/ash.png": {
+    "mtime": 1784180877.1731641,
+    "ast_hash": "cd74c12808a09e6ccbe99526b107e09c",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-procedural-vegetation/assets/structured-ash-growth/bark-color.jpg": {
+    "mtime": 1784180877.1799896,
+    "ast_hash": "1ae84b3465d1530bad7d99e5f9d21fef",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-procedural-vegetation/assets/structured-ash-growth/bark-normal.jpg": {
+    "mtime": 1784180877.1747067,
+    "ast_hash": "c77d5fde8fde1098da420f1a045a74c1",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-procedural-vegetation/assets/structured-ash-growth/bark-roughness.jpg": {
+    "mtime": 1784180877.1780398,
+    "ast_hash": "1959a1461c52609555d22a0e6358e7cd",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-procedural-vegetation/assets/stylized-meadow-grass/path.webp": {
+    "mtime": 1784180877.1718676,
+    "ast_hash": "7d7348053bcd17c52c2601b3827aec5e",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-procedural-vegetation/assets/stylized-meadow-grass/perlin.webp": {
+    "mtime": 1784180877.1714892,
+    "ast_hash": "a2ce3bbaa4498d39bac72575c776bc8c",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-raymarched-space-effects/assets/curved-ray-accretion-volume/noise_deep.png": {
+    "mtime": 1784180877.1886232,
+    "ast_hash": "40a53037bd0d4d4d2f616fcab635420c",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-spectral-ocean/assets/stylized-above-below-ocean/foam.webp": {
+    "mtime": 1784180877.2036526,
+    "ast_hash": "8e6051968f4189add5caac608abddcf8",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-spectral-ocean/assets/stylized-above-below-ocean/sand.webp": {
+    "mtime": 1784180877.2045412,
+    "ast_hash": "e02a8b70edfe2dad4224b42a43e54085",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-temporal-surfaces/assets/touch-history-frost/main-normal.webp": {
+    "mtime": 1784180877.2089634,
+    "ast_hash": "a2f941b35579bd2bbf8d8b9bd7911f7d",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-temporal-surfaces/assets/touch-history-frost/noise.webp": {
+    "mtime": 1784180877.2097492,
+    "ast_hash": "3c8c62092d3adce965b17f4f3c2aede3",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-temporal-surfaces/assets/touch-history-frost/sub-normal.webp": {
+    "mtime": 1784180877.2094326,
+    "ast_hash": "6ea4fb73bf0b95b729bfac3d2c3c0599",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-volumetric-clouds/assets/weather-volume-clouds/local_weather.png": {
+    "mtime": 1784180877.2600427,
+    "ast_hash": "c83a74ea61db1e5969cf07ec76778898",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-volumetric-clouds/assets/weather-volume-clouds/turbulence.png": {
+    "mtime": 1784180877.2699144,
+    "ast_hash": "2ca9b13f4c58dadb1623ec6103f051fb",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-water-optics/assets/interactive-pool-volume/tiles.jpg": {
+    "mtime": 1784180877.2772794,
+    "ast_hash": "36354467ec56a512cf8b94a630324174",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-water-optics/assets/interactive-pool-volume/xneg.jpg": {
+    "mtime": 1784180877.27625,
+    "ast_hash": "eb5e308618f974098b63fea83c18accd",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-water-optics/assets/interactive-pool-volume/xpos.jpg": {
+    "mtime": 1784180877.278201,
+    "ast_hash": "140a403b75a25d730f4ba669aca2a5d9",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-water-optics/assets/interactive-pool-volume/ypos.jpg": {
+    "mtime": 1784180877.2758882,
+    "ast_hash": "0a9afd27ad9ac3a64e1f41b778d6e6de",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-water-optics/assets/interactive-pool-volume/zneg.jpg": {
+    "mtime": 1784180877.2776961,
+    "ast_hash": "4711fb33dac5275d1957428e33c2972d",
+    "semantic_hash": ""
+  },
+  ".agents/skills/threejs-water-optics/assets/interactive-pool-volume/zpos.jpg": {
+    "mtime": 1784180877.2765713,
+    "ast_hash": "77ee8fa072f1d9efc7a86f847a9ed095",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-precipitation-surfaces/assets/wet-puddle-rain/Splash.png": {
+    "mtime": 1784180815.802387,
+    "ast_hash": "df9bf9c0f7d8b54373c06899717bfb52",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-precipitation-surfaces/assets/wet-puddle-rain/road/aerial_asphalt_01_ao_2k.jpg": {
+    "mtime": 1784180815.7996345,
+    "ast_hash": "7cfb6128237130aefdaa831374c8619e",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-precipitation-surfaces/assets/wet-puddle-rain/road/aerial_asphalt_01_diff_2k.jpg": {
+    "mtime": 1784180815.7974155,
+    "ast_hash": "4cb311fc7638c0b1d5e9641ca9c6ea78",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-precipitation-surfaces/assets/wet-puddle-rain/road/aerial_asphalt_01_nor_gl_2k.jpg": {
+    "mtime": 1784180815.8006058,
+    "ast_hash": "2b2d543f7c6567030f11a6070f586e05",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-precipitation-surfaces/assets/wet-puddle-rain/road/aerial_asphalt_01_rough_2k.jpg": {
+    "mtime": 1784180815.7988393,
+    "ast_hash": "f46f34b5509cec4b7fccdff8dfe4dc59",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-procedural-architecture/assets/procedural-financial-tower/limestone-albedo.png": {
+    "mtime": 1784180815.817222,
+    "ast_hash": "469f43ff40821adf8e8beedb8bc1739a",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-procedural-architecture/assets/procedural-financial-tower/limestone-normal.png": {
+    "mtime": 1784180815.8139899,
+    "ast_hash": "024f865155b3efa267f375bffe711e33",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-procedural-architecture/assets/procedural-financial-tower/ornaments-albedo.png": {
+    "mtime": 1784180815.809913,
+    "ast_hash": "80a177b90fbd050e081288b111e3b931",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-procedural-architecture/assets/procedural-financial-tower/ornaments-normal.png": {
+    "mtime": 1784180815.815491,
+    "ast_hash": "5f2588c9fc471f50830223f574e115e7",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-procedural-geometry/assets/sculpted-gallery-frame/aged-walnut-frame.webp": {
+    "mtime": 1784180815.8263266,
+    "ast_hash": "03f387237539e97291300fdd53aba569",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-procedural-geometry/assets/sculpted-gallery-frame/antique-gold-frame.webp": {
+    "mtime": 1784180815.826097,
+    "ast_hash": "7eb61718ea1790f3a718ba76def4eb1a",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-procedural-geometry/assets/sculpted-gallery-frame/dark-ebony-frame.webp": {
+    "mtime": 1784180815.825805,
+    "ast_hash": "c2375c860742d4c1be3defdb0772282e",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-procedural-geometry/assets/sculpted-gallery-frame/gallery-mat-board.webp": {
+    "mtime": 1784180815.8256133,
+    "ast_hash": "ae483f6251473622995e7640e3a65576",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-procedural-materials/assets/hybrid-soil-moss-surface/Ground103_1K-JPG_AmbientOcclusion.jpg": {
+    "mtime": 1784180815.8374934,
+    "ast_hash": "aaa3fb74a40353e450a349ffa01cb356",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-procedural-materials/assets/hybrid-soil-moss-surface/Ground103_1K-JPG_Color.jpg": {
+    "mtime": 1784180815.8413143,
+    "ast_hash": "8d7211dc220a15f7fafd352c65215be6",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-procedural-materials/assets/hybrid-soil-moss-surface/Ground103_1K-JPG_Displacement.jpg": {
+    "mtime": 1784180815.8368413,
+    "ast_hash": "59161e049744363468eb6998e5ee831d",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-procedural-materials/assets/hybrid-soil-moss-surface/Ground103_1K-JPG_NormalGL.jpg": {
+    "mtime": 1784180815.8403387,
+    "ast_hash": "85ee95f869ef5c24fe83522ea18b567c",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-procedural-materials/assets/hybrid-soil-moss-surface/Ground103_1K-JPG_Roughness.jpg": {
+    "mtime": 1784180815.8422558,
+    "ast_hash": "82ab680b7d476b014b44bc8349eb4488",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-procedural-materials/assets/hybrid-soil-moss-surface/moss/Moss002_1K-JPG_AmbientOcclusion.jpg": {
+    "mtime": 1784180815.8308425,
+    "ast_hash": "7073ed3ea89186d839dee170c2e1cd79",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-procedural-materials/assets/hybrid-soil-moss-surface/moss/Moss002_1K-JPG_Color.jpg": {
+    "mtime": 1784180815.8336928,
+    "ast_hash": "45c7904d35e598cd553f30b0159cae53",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-procedural-materials/assets/hybrid-soil-moss-surface/moss/Moss002_1K-JPG_NormalGL.jpg": {
+    "mtime": 1784180815.832185,
+    "ast_hash": "83e262495f367be0d2409849299b3b79",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-procedural-materials/assets/hybrid-soil-moss-surface/moss/Moss002_1K-JPG_Roughness.jpg": {
+    "mtime": 1784180815.8359277,
+    "ast_hash": "877ed320ed9db8e1ff035802001c1dcc",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-procedural-vegetation/assets/structured-ash-growth/ash.png": {
+    "mtime": 1784180815.8508067,
+    "ast_hash": "cd74c12808a09e6ccbe99526b107e09c",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-procedural-vegetation/assets/structured-ash-growth/bark-color.jpg": {
+    "mtime": 1784180815.8526888,
+    "ast_hash": "1ae84b3465d1530bad7d99e5f9d21fef",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-procedural-vegetation/assets/structured-ash-growth/bark-normal.jpg": {
+    "mtime": 1784180815.851549,
+    "ast_hash": "c77d5fde8fde1098da420f1a045a74c1",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-procedural-vegetation/assets/structured-ash-growth/bark-roughness.jpg": {
+    "mtime": 1784180815.8521144,
+    "ast_hash": "1959a1461c52609555d22a0e6358e7cd",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-procedural-vegetation/assets/stylized-meadow-grass/path.webp": {
+    "mtime": 1784180815.8501074,
+    "ast_hash": "7d7348053bcd17c52c2601b3827aec5e",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-procedural-vegetation/assets/stylized-meadow-grass/perlin.webp": {
+    "mtime": 1784180815.8499331,
+    "ast_hash": "a2ce3bbaa4498d39bac72575c776bc8c",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-raymarched-space-effects/assets/curved-ray-accretion-volume/noise_deep.png": {
+    "mtime": 1784180815.8577034,
+    "ast_hash": "40a53037bd0d4d4d2f616fcab635420c",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-spectral-ocean/assets/stylized-above-below-ocean/foam.webp": {
+    "mtime": 1784180815.8685853,
+    "ast_hash": "8e6051968f4189add5caac608abddcf8",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-spectral-ocean/assets/stylized-above-below-ocean/sand.webp": {
+    "mtime": 1784180815.8688805,
+    "ast_hash": "e02a8b70edfe2dad4224b42a43e54085",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-temporal-surfaces/assets/touch-history-frost/main-normal.webp": {
+    "mtime": 1784180815.872628,
+    "ast_hash": "a2f941b35579bd2bbf8d8b9bd7911f7d",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-temporal-surfaces/assets/touch-history-frost/noise.webp": {
+    "mtime": 1784180815.8730695,
+    "ast_hash": "3c8c62092d3adce965b17f4f3c2aede3",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-temporal-surfaces/assets/touch-history-frost/sub-normal.webp": {
+    "mtime": 1784180815.8728766,
+    "ast_hash": "6ea4fb73bf0b95b729bfac3d2c3c0599",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-volumetric-clouds/assets/weather-volume-clouds/local_weather.png": {
+    "mtime": 1784180815.9051836,
+    "ast_hash": "c83a74ea61db1e5969cf07ec76778898",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-volumetric-clouds/assets/weather-volume-clouds/turbulence.png": {
+    "mtime": 1784180815.9115396,
+    "ast_hash": "2ca9b13f4c58dadb1623ec6103f051fb",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-water-optics/assets/interactive-pool-volume/tiles.jpg": {
+    "mtime": 1784180815.9182553,
+    "ast_hash": "36354467ec56a512cf8b94a630324174",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-water-optics/assets/interactive-pool-volume/xneg.jpg": {
+    "mtime": 1784180815.9178827,
+    "ast_hash": "eb5e308618f974098b63fea83c18accd",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-water-optics/assets/interactive-pool-volume/xpos.jpg": {
+    "mtime": 1784180815.9187512,
+    "ast_hash": "140a403b75a25d730f4ba669aca2a5d9",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-water-optics/assets/interactive-pool-volume/ypos.jpg": {
+    "mtime": 1784180815.9175644,
+    "ast_hash": "0a9afd27ad9ac3a64e1f41b778d6e6de",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-water-optics/assets/interactive-pool-volume/zneg.jpg": {
+    "mtime": 1784180815.918589,
+    "ast_hash": "4711fb33dac5275d1957428e33c2972d",
+    "semantic_hash": ""
+  },
+  ".claude/skills/threejs-water-optics/assets/interactive-pool-volume/zpos.jpg": {
+    "mtime": 1784180815.9180472,
+    "ast_hash": "77ee8fa072f1d9efc7a86f847a9ed095",
+    "semantic_hash": ""
+  },
+  "inspiration/Generated image 1.png": {
+    "mtime": 1783399260.623448,
+    "ast_hash": "b552012853155165c32c9d571bccccb2",
+    "semantic_hash": ""
+  },
+  "inspiration/grok-image-f050f433-832c-4c28-89c3-3044573c6aa0.jpg": {
+    "mtime": 1783399384.369498,
+    "ast_hash": "4d9506ff49cf2f47619c75e6f3bbc2ef",
+    "semantic_hash": ""
+  },
+  "output/imagegen/agent-asset-portrait-sheet-masked.png": {
+    "mtime": 1783482758.2798686,
+    "ast_hash": "0f547f946539ccffaf17b2add7ffeb08",
+    "semantic_hash": ""
+  },
+  "public/favicon.svg": {
+    "mtime": 1783290819.9056087,
+    "ast_hash": "3fce01566e7bfef0aea07b285dfd7863",
+    "semantic_hash": ""
   }
 }

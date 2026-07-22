@@ -1,16 +1,16 @@
 # Graph Report - nexus-protocol  (2026-07-22)
 
 ## Corpus Check
-- 786 files · ~3,203,605 words
+- 786 files · ~3,203,995 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 6750 nodes · 11850 edges · 374 communities (293 shown, 81 thin omitted)
+- 6752 nodes · 11854 edges · 378 communities (296 shown, 82 thin omitted)
 - Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 94 edges (avg confidence: 0.72)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `06f6cc05`
+- Built from commit: `ed7d78f2`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -368,6 +368,10 @@
 - functions
 - parameters
 - generators
+- .claude/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/geospatial/TilingScheme.ts
+- TilingScheme
+- OrderFeedback
+- CausticsPass
 
 ## God Nodes (most connected - your core abstractions)
 1. `createMissionSystems()` - 64 edges
@@ -382,8 +386,6 @@
 10. `Ellipsoid` - 35 edges
 
 ## Surprising Connections (you probably didn't know these)
-- `withStorage()` --indirect_call--> `v()`  [INFERRED]
-  tests/narrativeMeta.test.ts → src/app/narrative/vignettes.ts
 - `createSculptedRailGeometry()` --indirect_call--> `v()`  [INFERRED]
   .agents/skills/threejs-procedural-geometry/examples/sculpted-gallery-frame/frame-geometry.js → src/app/narrative/vignettes.ts
 - `createTerrainPlanetGeometry()` --indirect_call--> `v()`  [INFERRED]
@@ -392,15 +394,17 @@
   .agents/skills/threejs-spectral-ocean/examples/submerged-snell-ocean/source/fft-compute.ts → tests/attackMove.test.ts
 - `createSculptedRailGeometry()` --indirect_call--> `v()`  [INFERRED]
   .claude/skills/threejs-procedural-geometry/examples/sculpted-gallery-frame/frame-geometry.js → src/app/narrative/vignettes.ts
+- `createTerrainPlanetGeometry()` --indirect_call--> `v()`  [INFERRED]
+  .claude/skills/threejs-procedural-planets/examples/procedural-planet-surface/planet-system.js → src/app/narrative/vignettes.ts
 
 ## Import Cycles
 - None detected.
 
-## Communities (374 total, 81 thin omitted)
+## Communities (378 total, 82 thin omitted)
 
 ### Community 0 - "Sim Geometry & Fixed-Point Math"
-Cohesion: 0.10
-Nodes (77): v(), deadRelays(), fxDiv(), fxMul(), inBounds(), losClear(), nearestWalkable(), losUnits() (+69 more)
+Cohesion: 0.09
+Nodes (80): v(), deadRelays(), fxDiv(), fxMul(), inBounds(), losClear(), nearestWalkable(), losUnits() (+72 more)
 
 ### Community 1 - "World Map Globe"
 Cohesion: 0.07
@@ -408,95 +412,99 @@ Nodes (21): Legend(), COL_NEUTRAL, COL_NEXUS, COL_UNREST, createGlobePost(), fac
 
 ### Community 2 - "Determinism & Replay"
 Cohesion: 0.08
-Nodes (57): ADR-0001, Command, CommandQueue, contractExpansion(), initContract(), toFx(), hashState(), cellIdx() (+49 more)
+Nodes (57): RegionDef, contractExpansion(), initContract(), districtRead, rate(), hashState(), Building, cellIdx() (+49 more)
 
 ### Community 3 - "Contract Objectives & Progress"
 Cohesion: 0.13
-Nodes (43): baseObjectiveComplete(), contractFailures(), contractProgress, convoyStopped(), countAssetsDown(), countBroadcasters(), countMarkedTargets(), countRivals() (+35 more)
+Nodes (43): baseObjectiveComplete(), contractFailures(), contractLossReason(), contractProgress, convoyStopped(), countAssetsDown(), countBroadcasters(), countMarkedTargets() (+35 more)
 
 ### Community 4 - "Agent Character Rig"
 Cohesion: 0.06
-Nodes (42): Joints, AGENT_TRIM, agentModelBase, AgentRig, BillboardHandles, buildBillboardFallbackTexture(), buildScanlineTexture(), buildSignAtlasTexture() (+34 more)
+Nodes (40): AGENT_TRIM, agentModelBase, BillboardHandles, buildBillboardFallbackTexture(), buildCarGeometry(), buildCarLightsGeometry(), buildDepGeometries(), buildFuelPumpGeometry() (+32 more)
 
 ### Community 5 - "Meta Progression State"
 Cohesion: 0.09
-Nodes (45): actOfTerritory(), agentAppearance(), appearanceWithAugmentLevel(), applyResult(), augLevel(), buildSpec(), campaignAct(), CODENAMES (+37 more)
+Nodes (42): appearanceWithAugmentLevel(), applyResult(), augLevel(), buildSpec(), CODENAMES, DISTRICT_NAMES, ensureAgentVariant(), hash32() (+34 more)
 
 ### Community 6 - "Augment Research System"
-Cohesion: 0.11
-Nodes (30): AUG_PROJECT_NAMES, AUG_VERSION_SPECIALS, bestOffer(), BY_ID, Deliverable, expireOffers(), fmtDuration(), generateBreakthroughOffers() (+22 more)
+Cohesion: 0.07
+Nodes (48): AUG_SLOTS, AugKey, CONDITION_NAMES, ActiveProject, AUG_PROJECT_NAMES, AUG_VERSION_SPECIALS, augVersionUnlocked(), bestOffer() (+40 more)
 
 ### Community 7 - "Mission Briefing UI"
-Cohesion: 0.04
-Nodes (66): ADR-0003, Comms, createComms(), conditionsLine(), FAILURE_TEXT, failureLabel(), FailureText, firedLine() (+58 more)
+Cohesion: 0.05
+Nodes (53): ADR-0003, CanvasHost, modNames(), Comms, createComms(), conditionsLine(), FAILURE_TEXT, failureLabel() (+45 more)
 
 ### Community 8 - "Mission Launch & Debrief"
-Cohesion: 0.14
-Nodes (13): GameDeps, MissionResult, Screen, ScreenKind, ScreenStore, Store, expectKind(), Launch (+5 more)
+Cohesion: 0.10
+Nodes (19): Game, GameDeps, advanceTime(), DebriefInfo, saveMeta(), Territory, MissionResult, GlobeHandle (+11 more)
 
 ### Community 9 - "Mission Cursor & Interaction"
-Cohesion: 0.10
-Nodes (34): bestEngage(), CursorKind, CursorRead, denialCaption(), HoverContext, interactCell(), read(), resolveCursor() (+26 more)
+Cohesion: 0.12
+Nodes (31): bestEngage(), CursorKind, CursorRead, denialCaption(), HoverContext, interactCell(), read(), resolveCursor() (+23 more)
 
 ### Community 10 - "Chassis Appearance Preview"
-Cohesion: 0.14
-Nodes (15): MissionOptions, TutorialHint, ALL_SLOTS, AppearanceFaction, AppearanceInput, AppearanceManifest, AttachmentCue, AttachmentKind (+7 more)
+Cohesion: 0.18
+Nodes (12): ALL_SLOTS, AppearanceFaction, AppearanceInput, AttachmentCue, AttachmentKind, AttachmentSlot, buildAppearanceManifest(), ChassisId (+4 more)
 
 ### Community 11 - "Vehicle Geometry & Materials"
 Cohesion: 0.12
-Nodes (28): AlarmGrade, buildBeamTexture(), buildCarGeometry(), buildCarLightsGeometry(), buildDepGeometries(), buildFuelPumpGeometry(), buildGroundTexture(), buildPoolTexture() (+20 more)
+Nodes (28): AlarmGrade, buildBeamTexture(), buildGroundTexture(), buildPoolTexture(), buildRubbleGeometry(), buildScorchTexture(), buildSignAtlasTexture(), buildSplatterTexture() (+20 more)
 
 ### Community 12 - "Minimap & Onboarding State"
-Cohesion: 0.04
-Nodes (52): Minimap, layoutPlates(), Nameplates, plateLabel(), Denial, Lock, OrderFeedback, Ping (+44 more)
+Cohesion: 0.06
+Nodes (41): Minimap, Nameplates, createOrderFeedback(), Denial, Lock, Ping, Trace, CameraRig (+33 more)
 
 ### Community 13 - "Mission Runner & Systems"
 Cohesion: 0.04
-Nodes (36): DepthMaskMaterial, IrradianceMaskPass, postprocessing, bayerIndices, bayerOffsets, CloudShape, CloudShapeDetail, CloudsResolveMaterialParameters (+28 more)
+Nodes (42): AerialPerspectiveEffectUniforms, geodeticScratch, vectorScratch1, vectorScratch2, DepthMaskMaterial, postprocessing, bayerIndices, bayerOffsets (+34 more)
 
 ### Community 14 - "Agent Appearance & Spawn"
-Cohesion: 0.05
-Nodes (59): functions, parameters, changeEvent, CloudsEffectChangeEvent, CloudsEffectOptions, CloudsEffectUniforms, CloudsShorthand, TODO: Position the sun on the top atmosphere sphere. (+51 more)
+Cohesion: 0.06
+Nodes (55): functions, parameters, changeEvent, CloudsEffectChangeEvent, CloudsEffectOptions, CloudsEffectUniforms, CloudsShorthand, TODO: Position the sun on the top atmosphere sphere. (+47 more)
 
 ### Community 15 - "Archive & Lore Docs"
-Cohesion: 0.12
-Nodes (28): lossDebriefLine(), MetaState, Territory, ARCHIVE, archiveDoc, evaluateArchiveUnlocks(), unreadArchiveCount(), campaignFacts (+20 more)
+Cohesion: 0.09
+Nodes (3): IrradianceMaskPass, Rectangle, Texture3DLoader
 
 ### Community 16 - "City Prop Dressing"
 Cohesion: 0.20
 Nodes (23): addInstanced(), addTintedInstanced(), buildBarrierGeo(), buildBenchGeo(), buildCrateStackGeo(), buildDumpsterGeo(), buildHydrantGeo(), buildParkedCarGeo() (+15 more)
 
 ### Community 17 - "Mission Setup & Map Init"
-Cohesion: 0.05
-Nodes (47): AerialPerspectiveEffectOptions, AerialPerspectiveEffectUniforms, geodeticScratch, vectorScratch1, vectorScratch2, AtmosphereMaterialProps, vectorScratch, applyOptions() (+39 more)
+Cohesion: 0.06
+Nodes (42): applyOptions(), AtmosphereParameters, AtmosphereParametersOptions, paramKeys, SCATTERING_TEXTURE_DEPTH, SCATTERING_TEXTURE_HEIGHT, getSunLightColor(), getUvFromRMu() (+34 more)
 
 ### Community 18 - "Contract Clauses & Briefing"
-Cohesion: 0.09
-Nodes (38): briefingIntel, buildReview(), Clause, ClauseFacts, clauseMet(), ClauseOutcome, counterfactualLine(), evaluateClauses() (+30 more)
+Cohesion: 0.17
+Nodes (18): briefingIntel, buildReview(), Clause, ClauseFacts, clauseMet(), ClauseOutcome, counterfactualLine(), evaluateClauses() (+10 more)
 
 ### Community 19 - "Mission Narrative Barks"
-Cohesion: 0.06
-Nodes (55): functions, parameters, changeEvent, CloudsEffectChangeEvent, CloudsEffectOptions, CloudsEffectUniforms, CloudsShorthand, TODO: Position the sun on the top atmosphere sphere. (+47 more)
+Cohesion: 0.07
+Nodes (49): functions, parameters, changeEvent, CloudsEffectChangeEvent, CloudsEffectOptions, CloudsEffectUniforms, CloudsShorthand, TODO: Position the sun on the top atmosphere sphere. (+41 more)
 
 ### Community 20 - "Cast & Character Roster"
-Cohesion: 0.07
-Nodes (37): MissionNarrative, Bark, MISSION_BARKS, rivalBark(), BY_ID, CAST, castMember, castName() (+29 more)
+Cohesion: 0.06
+Nodes (56): lossDebriefLine(), actOfTerritory(), agentAppearance(), MetaState, nextMissionSeed(), MissionNarrative, ARCHIVE, archiveDoc (+48 more)
+
+### Community 21 - "HUD Controls & Commands"
+Cohesion: 0.05
+Nodes (39): ADR-0001, clampSimSpeed(), commandForAction(), createHudControls(), GEAR_ACTS, HudAgent, HudControlHooks, HudControls (+31 more)
 
 ### Community 22 - "Alarm Escalation & Color"
 Cohesion: 0.18
-Nodes (16): alarmTargets, createAlarmGrade(), cssToRgb(), easeRgb(), hexToRgb(), Rgb, rgbToCss(), SIEGE_BIAS (+8 more)
+Nodes (15): alarmTargets, createAlarmGrade(), cssToRgb(), easeRgb(), hexToRgb(), Rgb, rgbToCss(), SIEGE_BIAS (+7 more)
 
 ### Community 23 - "Canvas Host & Mission Handle"
-Cohesion: 0.22
-Nodes (8): CanvasHost, MissionHandle, MissionStore, MissionView(), PaletteBinding(), settingsVersion(), subscribeSettings(), applyPalette()
+Cohesion: 0.16
+Nodes (8): MissionHandle, MissionStore, MissionView(), PaletteBinding(), settingsVersion(), subscribeSettings(), Store, applyPalette()
 
 ### Community 24 - "Settings Persistence"
-Cohesion: 0.25
-Nodes (12): defaults(), listeners, load(), saveSettings(), snapSimSpeed(), fillPct(), RangeInput(), ToggleRow() (+4 more)
+Cohesion: 0.23
+Nodes (14): defaults(), listeners, load(), saveSettings(), Settings, snapSimSpeed(), fillPct(), RangeInput() (+6 more)
 
 ### Community 25 - "Asset Loading Pipeline"
-Cohesion: 0.04
-Nodes (32): DepthMaskMaterial, IrradianceMaskPass, postprocessing, DepthEffect, DepthEffectOptions, DepthEffectUniforms, define, GeometryEffect (+24 more)
+Cohesion: 0.05
+Nodes (29): DepthMaskMaterial, postprocessing, DepthEffect, DepthEffectOptions, DepthEffectUniforms, define, GeometryEffect, GeometryEffectOptions (+21 more)
 
 ### Community 26 - "Sim Command Types"
 Cohesion: 0.04
@@ -507,36 +515,36 @@ Cohesion: 0.26
 Nodes (13): createCanvasHost(), mountScreenRoot(), main(), stagingAppearances(), initAssetPipeline(), createRenderer(), detectCapabilities(), resolveTier() (+5 more)
 
 ### Community 28 - "District Map Generation"
-Cohesion: 0.16
-Nodes (15): districtRead, rate(), Building, generateMap(), Landmark, LandmarkDef, LANDMARKS, Lot (+7 more)
+Cohesion: 0.13
+Nodes (9): SCATTERING_TEXTURE_DEPTH, SCATTERING_TEXTURE_HEIGHT, LoadTextureOptions, PrecomputedTextures, PrecomputedTexturesLoader, StarsGeometry, EXR3DLoader, normalize() (+1 more)
 
 ### Community 29 - "Region Economy & Infrastructure"
-Cohesion: 0.16
-Nodes (14): REGIONS, regionUnlocked(), buyInfrastructure(), hasInfra(), INFRA, infraById(), taxCeiling(), unrestCeiling() (+6 more)
+Cohesion: 0.18
+Nodes (17): CONTRACT_NAMES, incomePerCycle(), REGIONS, regionUnlocked(), unreadArchiveCount(), buyInfrastructure(), hasInfra(), INFRA (+9 more)
 
 ### Community 30 - "Crowd Baking & Hints"
-Cohesion: 0.21
-Nodes (11): bake(), Baked, box(), buildRig(), CLIPS, createCrowd(), Crowd, dummy (+3 more)
+Cohesion: 0.17
+Nodes (13): bake(), Baked, box(), buildRig(), CLIPS, createCrowd(), Crowd, dummy (+5 more)
 
 ### Community 31 - "Rival Doctrine & Probe Bot"
-Cohesion: 0.25
-Nodes (15): influence(), ALL_TYPES, cellCenter(), decide(), decideForDebug(), distCells(), DOC_NAMES, doctrineSpecs() (+7 more)
+Cohesion: 0.26
+Nodes (14): ALL_TYPES, cellCenter(), decide(), decideForDebug(), distCells(), DOC_NAMES, doctrineSpecs(), Focus (+6 more)
 
 ### Community 32 - "Game Class Orchestration"
-Cohesion: 0.34
-Nodes (3): Game, advanceTime(), saveMeta()
+Cohesion: 0.23
+Nodes (9): vectorScratch1, vectorScratch2, vectorScratch3, GeodeticTuple, vectorScratch1, vectorScratch2, projectOnEllipsoidSurface(), ProjectOnEllipsoidSurfaceOptions (+1 more)
 
 ### Community 33 - "Rival Chassis Presentation"
-Cohesion: 0.21
-Nodes (12): pose(), interpolateNpcAxis(), RivalChassisCandidate, rivalChassisState, RivalChassisStatus, shouldUseRivalChassis(), carVariant(), poseAugmentJoints() (+4 more)
+Cohesion: 0.20
+Nodes (13): pose(), interpolateNpcAxis(), RivalChassisCandidate, rivalChassisState, RivalChassisStatus, rivalPeerContract(), shouldUseRivalChassis(), carVariant() (+5 more)
 
 ### Community 34 - "Campaign Progression & Save"
-Cohesion: 0.31
-Nodes (6): campaignWon(), clearSave(), DebriefInfo, DebriefScreen(), MenuScreen(), VictoryScreen()
+Cohesion: 0.21
+Nodes (10): audio, campaignAct(), campaignWon(), clearSave(), castMember, Vignette, DebriefScreen(), MenuScreen() (+2 more)
 
 ### Community 35 - "Order Feedback & Denial"
-Cohesion: 0.05
-Nodes (30): DepthMaskMaterial, postprocessing, CloudShape, CloudShapeDetail, LocalWeather, Procedural3DTextureBase, Procedural3DTextureBaseParameters, ProceduralTextureBase (+22 more)
+Cohesion: 0.04
+Nodes (36): DepthMaskMaterial, IrradianceMaskPass, postprocessing, bayerIndices, bayerOffsets, CloudShape, CloudShapeDetail, CloudsResolveMaterialParameters (+28 more)
 
 ### Community 36 - "Unit Nameplates"
 Cohesion: 0.05
@@ -551,16 +559,16 @@ Cohesion: 0.16
 Nodes (12): ensureRegionResident(), fetchPack(), loadManifest(), packIdForRegion(), resident, AssetClass, AssetManifest, AssetPack (+4 more)
 
 ### Community 39 - "A* Pathfinding"
-Cohesion: 0.06
-Nodes (41): SCATTERING_TEXTURE_DEPTH, SCATTERING_TEXTURE_HEIGHT, LoadTextureOptions, PrecomputedTextures, PrecomputedTexturesLoader, ArrayBufferLoader, BufferGeometryLike, createData3DTextureLoader() (+33 more)
+Cohesion: 0.07
+Nodes (33): BufferGeometryLike, createData3DTextureLoader(), createData3DTextureLoaderClass(), createDataLoaderClass(), createDataTextureLoader(), createDataTextureLoaderClass(), Data3DTextureParameters, DataLoader (+25 more)
 
 ### Community 40 - "Camera Rig"
 Cohesion: 0.05
-Nodes (38): AerialPerspectiveEffectOptions, applyOptions(), AtmosphereParameters, AtmosphereParametersOptions, paramKeys, getAltitudeCorrectionOffset(), vectorScratch, getSunLightColor() (+30 more)
+Nodes (44): AerialPerspectiveEffectOptions, applyOptions(), AtmosphereParameters, AtmosphereParametersOptions, paramKeys, SCATTERING_TEXTURE_DEPTH, SCATTERING_TEXTURE_HEIGHT, vectorScratch (+36 more)
 
 ### Community 41 - "Audio System"
-Cohesion: 0.29
-Nodes (9): audio, blip(), burst(), Buses, noiseBuffer(), prevShots, shot(), startAmbient() (+1 more)
+Cohesion: 0.39
+Nodes (7): blip(), burst(), Buses, noiseBuffer(), prevShots, shot(), startAmbient()
 
 ### Community 42 - "Generated Car Assets"
 Cohesion: 0.12
@@ -571,24 +579,24 @@ Cohesion: 0.40
 Nodes (6): Generated-Asset Production Line, Nexus Protocol Design Bible, Performance Baseline, Presentation Roadmap, Measured Quality Gates, Implementation Roadmap
 
 ### Community 44 - "HUD Icon Assets"
-Cohesion: 0.04
-Nodes (30): AerialPerspectiveEffect, AerialPerspectiveEffectUniforms, geodeticScratch, define, defineInt, vectorScratch1, vectorScratch2, convertBVIndexToLinearSRGBChromaticity() (+22 more)
+Cohesion: 0.06
+Nodes (16): AerialPerspectiveEffect, define, defineInt, convertBVIndexToLinearSRGBChromaticity(), convertBVIndexToTemperature(), convertTemperatureToLinearSRGBChromaticity(), vectorScratch, XYZToLinearRGB (+8 more)
 
 ### Community 45 - "Comms Channel"
 Cohesion: 0.06
 Nodes (39): TODO: Cache instance, samplePixel(), sampleTexture(), vectorScratch1, vectorScratch2, vectorScratch3, ArrayBufferLoader, BufferGeometryLike (+31 more)
 
 ### Community 46 - "Minimap Component"
-Cohesion: 0.06
-Nodes (37): applyOptions(), AtmosphereParameters, AtmosphereParametersOptions, paramKeys, SCATTERING_TEXTURE_DEPTH, SCATTERING_TEXTURE_HEIGHT, getAltitudeCorrectionOffset(), vectorScratch (+29 more)
+Cohesion: 0.08
+Nodes (29): applyOptions(), AtmosphereParameters, AtmosphereParametersOptions, paramKeys, getAltitudeCorrectionOffset(), vectorScratch, getSunLightColor(), getUvFromRMu() (+21 more)
 
 ### Community 47 - "Perf Overlay"
-Cohesion: 0.05
-Nodes (28): AtmosphereMaterialBase, AtmosphereMaterialBaseParameters, AtmosphereMaterialBaseUniforms, AtmosphereMaterialProps, includeRenderTargets(), define, vectorScratch, SCATTERING_TEXTURE_DEPTH (+20 more)
+Cohesion: 0.06
+Nodes (21): AtmosphereMaterialBase, AtmosphereMaterialBaseParameters, AtmosphereMaterialBaseUniforms, AtmosphereMaterialProps, includeRenderTargets(), define, vectorScratch, getAltitudeCorrectionOffset() (+13 more)
 
 ### Community 52 - "AtmosphereMaterialBase"
-Cohesion: 0.04
-Nodes (24): AtmosphereMaterialBase, AtmosphereMaterialBaseParameters, AtmosphereMaterialBaseUniforms, includeRenderTargets(), define, Camera, SkyMaterial, SkyMaterialParameters (+16 more)
+Cohesion: 0.06
+Nodes (22): AtmosphereMaterialBase, AtmosphereMaterialBaseParameters, AtmosphereMaterialBaseUniforms, AtmosphereMaterialProps, includeRenderTargets(), define, vectorScratch, getAltitudeCorrectionOffset() (+14 more)
 
 ### Community 53 - ".agents/skills/threejs-atmosphere-aerial-perspective/examples/lut-aerial-perspective/source/atmosphere/AerialPerspectiveEffect.ts"
 Cohesion: 0.05
@@ -612,15 +620,15 @@ Nodes (14): EXR3DLoader, GeodeticLike, Rectangle, RectangleLike, RectangleTuple,
 
 ### Community 58 - "CloudsEffect"
 Cohesion: 0.05
-Nodes (9): AtmosphereIrradianceMask, AtmosphereOverlay, AtmosphereShadow, AtmosphereShadowLength, CloudsEffect, define, Procedural3DTexture, ProceduralTexture (+1 more)
+Nodes (16): AerialPerspectiveEffectUniforms, geodeticScratch, vectorScratch1, vectorScratch2, AtmosphereIrradianceMask, AtmosphereOverlay, AtmosphereShadow, AtmosphereShadowLength (+8 more)
 
 ### Community 59 - ".claude/skills/threejs-atmosphere-aerial-perspective/examples/lut-aerial-perspective/source/atmosphere/AerialPerspectiveEffect.ts"
-Cohesion: 0.06
-Nodes (28): AerialPerspectiveEffect, AerialPerspectiveEffectUniforms, geodeticScratch, define, defineInt, vectorScratch1, vectorScratch2, Camera (+20 more)
+Cohesion: 0.05
+Nodes (23): AerialPerspectiveEffect, AerialPerspectiveEffectUniforms, geodeticScratch, define, defineInt, vectorScratch1, vectorScratch2, Camera (+15 more)
 
 ### Community 60 - "Rectangle"
-Cohesion: 0.05
-Nodes (14): EXR3DLoader, GeodeticLike, Rectangle, RectangleLike, RectangleTuple, Texture3DLoader, TileCoordinate, TileCoordinateLike (+6 more)
+Cohesion: 0.09
+Nodes (11): GeodeticLike, RectangleLike, RectangleTuple, TileCoordinate, TileCoordinateLike, TileCoordinateTuple, traverseChildren(), TODO: Support slippyMap and EPSG:3857 (+3 more)
 
 ### Community 61 - ".agents/skills/threejs-atmosphere-aerial-perspective/examples/lut-aerial-perspective/source/geospatial/index.ts"
 Cohesion: 0.08
@@ -636,19 +644,15 @@ Nodes (16): DitheringEffect, DitheringEffectOptions, DownsampleThresholdMaterial
 
 ### Community 64 - ".claude/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/geospatial/index.ts"
 Cohesion: 0.07
-Nodes (32): ArrayBufferLoader, BufferGeometryLike, createData3DTextureLoader(), createData3DTextureLoaderClass(), createDataLoaderClass(), createDataTextureLoader(), createDataTextureLoaderClass(), Data3DTextureParameters (+24 more)
-
-### Community 65 - "Rectangle"
-Cohesion: 0.05
-Nodes (14): EXR3DLoader, GeodeticLike, Rectangle, RectangleLike, RectangleTuple, Texture3DLoader, TileCoordinate, TileCoordinateLike (+6 more)
+Nodes (33): PrecomputedTexturesLoader, BufferGeometryLike, createData3DTextureLoader(), createData3DTextureLoaderClass(), createDataLoaderClass(), createDataTextureLoader(), createDataTextureLoaderClass(), Data3DTextureParameters (+25 more)
 
 ### Community 66 - "devDependencies"
 Cohesion: 0.04
 Nodes (46): @gltf-transform/core, @gltf-transform/extensions, @gltf-transform/functions, ktx2-encoder, meshoptimizer, dependencies, react, react-dom (+38 more)
 
 ### Community 67 - "Rectangle"
-Cohesion: 0.06
-Nodes (13): GeodeticLike, Rectangle, RectangleLike, RectangleTuple, Texture3DLoader, TileCoordinate, TileCoordinateLike, TileCoordinateTuple (+5 more)
+Cohesion: 0.05
+Nodes (14): EXR3DLoader, GeodeticLike, Rectangle, RectangleLike, RectangleTuple, Texture3DLoader, TileCoordinate, TileCoordinateLike (+6 more)
 
 ### Community 68 - "AerialPerspectiveEffect"
 Cohesion: 0.05
@@ -667,16 +671,16 @@ Cohesion: 0.09
 Nodes (36): appendAtlasQuad(), appendPlacement(), appendQuad(), appendQuadRaw(), atlasUvs(), bilerp(), blockerSegment(), chamferFace() (+28 more)
 
 ### Community 72 - "CloudsEffect"
-Cohesion: 0.06
-Nodes (5): CloudsEffect, define, Procedural3DTexture, ProceduralTexture, updateCloudLayerUniforms()
+Cohesion: 0.05
+Nodes (9): AtmosphereIrradianceMask, AtmosphereOverlay, AtmosphereShadow, AtmosphereShadowLength, CloudsEffect, define, Procedural3DTexture, ProceduralTexture (+1 more)
 
 ### Community 73 - "Issue tracker: GitHub"
 Cohesion: 0.06
 Nodes (30): Before exploring, read these, Domain Docs, File structure, Flag ADR conflicts, Use the glossary's vocabulary, Conventions, Issue tracker: GitHub, Pull requests as a triage surface (+22 more)
 
 ### Community 74 - "AtmosphereMaterialBase"
-Cohesion: 0.07
-Nodes (16): AtmosphereMaterialBase, AtmosphereMaterialBaseParameters, AtmosphereMaterialBaseUniforms, AtmosphereMaterialProps, includeRenderTargets(), define, vectorScratch, SkyMaterial (+8 more)
+Cohesion: 0.09
+Nodes (14): AtmosphereMaterialBase, AtmosphereMaterialBaseParameters, AtmosphereMaterialBaseUniforms, AtmosphereMaterialProps, includeRenderTargets(), define, vectorScratch, SkyMaterialParameters (+6 more)
 
 ### Community 75 - "AGENTS.md"
 Cohesion: 0.06
@@ -755,12 +759,8 @@ Cohesion: 0.09
 Nodes (14): AtmosphereMaterialBase, AtmosphereMaterialBaseParameters, AtmosphereMaterialBaseUniforms, AtmosphereMaterialProps, includeRenderTargets(), define, vectorScratch, SkyMaterialParameters (+6 more)
 
 ### Community 94 - "Geodetic"
-Cohesion: 0.10
-Nodes (10): vectorScratch1, vectorScratch2, vectorScratch3, Geodetic, GeodeticTuple, vectorScratch1, vectorScratch2, projectOnEllipsoidSurface() (+2 more)
-
-### Community 95 - "Geodetic"
-Cohesion: 0.10
-Nodes (10): vectorScratch1, vectorScratch2, vectorScratch3, Geodetic, GeodeticTuple, vectorScratch1, vectorScratch2, projectOnEllipsoidSurface() (+2 more)
+Cohesion: 0.07
+Nodes (12): AerialPerspectiveEffectOptions, Ellipsoid, vectorScratch1, vectorScratch2, vectorScratch3, Geodetic, GeodeticTuple, vectorScratch1 (+4 more)
 
 ### Community 96 - ".agents/skills/threejs-temporal-surfaces/examples/touch-history-frost/frost-surface-effect.js"
 Cohesion: 0.14
@@ -859,8 +859,8 @@ Cohesion: 0.08
 Nodes (22): 10. Verdance rocky path, 11. Gas and ice giants, 12. Procedural bump and specular anti-aliasing, 13. Atmosphere handoff and limb clipping, 14. Refactor guidance, 15. Required diagnostics, 1. Preserve undeformed sphere direction, 2. Geometry terrain stack (+14 more)
 
 ### Community 120 - ".claude/skills/threejs-atmosphere-aerial-perspective/examples/lut-aerial-perspective/source/geospatial/PointOfView.ts"
-Cohesion: 0.10
-Nodes (16): convertBVIndexToLinearSRGBChromaticity(), convertBVIndexToTemperature(), convertTemperatureToLinearSRGBChromaticity(), vectorScratch, XYZToLinearRGB, remap(), saturate(), eastScratch (+8 more)
+Cohesion: 0.11
+Nodes (16): convertBVIndexToLinearSRGBChromaticity(), convertBVIndexToTemperature(), convertTemperatureToLinearSRGBChromaticity(), vectorScratch, XYZToLinearRGB, define(), defineExpression(), DefineExpressionDecoratorOptions (+8 more)
 
 ### Community 121 - "During the session"
 Cohesion: 0.09
@@ -887,8 +887,8 @@ Cohesion: 0.11
 Nodes (22): appendPlacement(), assertCompleteKitRegistry(), assertGeneratorInvariants(), compileBuilding(), compileFinancialBuilding(), createBuildingPlan(), createFinancialBuildingPlan(), duplicateSurfaceOwners() (+14 more)
 
 ### Community 127 - ".claude/skills/threejs-spectral-ocean/examples/submerged-snell-ocean/source/underwater-medium.ts"
-Cohesion: 0.13
-Nodes (15): CausticsPass, currentFlow, AnyNode, asColor(), createDreamLutTexture(), dreamGrade(), dreamLutTexture, gradeParams (+7 more)
+Cohesion: 0.11
+Nodes (15): currentFlow, AnyNode, asColor(), createDreamLutTexture(), dreamGrade(), dreamLutTexture, gradeParams, gradeSample() (+7 more)
 
 ### Community 128 - ".claude/skills/threejs-temporal-surfaces/examples/touch-history-frost/frost-surface-effect.js"
 Cohesion: 0.18
@@ -910,10 +910,6 @@ Nodes (20): compilerOptions, allowImportingTsExtensions, isolatedModules, module
 Cohesion: 0.10
 Nodes (19): 10. Target invalidation spatially, 11. Attach and dispose ownership explicitly, 12. Adaptation workflow, 13. Required diagnostics, 1. Identify the representation correctly, 2. Preserve the exact default envelope, 3. Store committed map state, 4. Stabilize X/Y by the actual texel footprint (+11 more)
 
-### Community 133 - ".agents/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/clouds/CloudsResolveMaterial.ts"
-Cohesion: 0.11
-Nodes (11): bayerIndices, bayerOffsets, CloudsResolveMaterial, CloudsResolveMaterialParameters, CloudsResolveMaterialUniforms, define, ShadowResolveMaterial, defineInt (+3 more)
-
 ### Community 134 - "Cached clipmap shadow system"
 Cohesion: 0.10
 Nodes (19): 10. Target invalidation spatially, 11. Attach and dispose ownership explicitly, 12. Adaptation workflow, 13. Required diagnostics, 1. Identify the representation correctly, 2. Preserve the exact default envelope, 3. Store committed map state, 4. Stabilize X/Y by the actual texel footprint (+11 more)
@@ -927,8 +923,8 @@ Cohesion: 0.10
 Nodes (18): 10. Verify view/world transform semantics, 11. Temporal behavior, 12. Required diagnostics, 1. Preserve the actual budget, 2. Preserve the depth convention, 3. Preserve world-radius projection, 4. Rotate two horizon slices per pixel, 5. Keep horizon angle and distance falloff separate (+10 more)
 
 ### Community 137 - "invariant"
-Cohesion: 0.16
-Nodes (5): setArrayRenderTargetLayers(), ShaderArrayPass, createRenderTarget(), ShadowPass, invariant()
+Cohesion: 0.10
+Nodes (10): setArrayRenderTargetLayers(), ShaderArrayPass, ShadowMaterial, define, defineExpression, defineInt, createRenderTarget(), ShadowPass (+2 more)
 
 ### Community 138 - "GTAO and bent-normal pipeline"
 Cohesion: 0.10
@@ -939,8 +935,8 @@ Cohesion: 0.11
 Nodes (10): CloudsResolveMaterial, define, ShadowMaterial, define, defineExpression, defineInt, ShadowResolveMaterial, defineInt (+2 more)
 
 ### Community 140 - "invariant"
-Cohesion: 0.16
-Nodes (5): setArrayRenderTargetLayers(), ShaderArrayPass, createRenderTarget(), ShadowPass, invariant()
+Cohesion: 0.14
+Nodes (6): setArrayRenderTargetLayers(), ShaderArrayPass, createRenderTarget(), ShadowPass, ArrayBufferLoader, invariant()
 
 ### Community 141 - "Procedural motion and docking systems"
 Cohesion: 0.11
@@ -963,8 +959,8 @@ Cohesion: 0.11
 Nodes (17): 10. Required contract diagnostics, 11. Numeric contract gate, 1. Preserve the exact species table before tuning, 2. Match the branch continuation model, 3. Match section evolution, 4. Match taper and child radius semantics, 5. Match stratification and interpolation, 6. Match ring and bark UV construction (+9 more)
 
 ### Community 146 - ".claude/skills/threejs-spectral-ocean/examples/submerged-snell-ocean/source/wave-sim.ts"
-Cohesion: 0.19
-Nodes (14): createFrequencyTexture(), PackedIFFT, runFftSelfTest(), CascadeBand, cascadeBands(), createSpectrumTexture(), DEFAULT_SEA_STATE, jonswapTma() (+6 more)
+Cohesion: 0.15
+Nodes (16): createFrequencyTexture(), PackedIFFT, runFftSelfTest(), CascadeBand, cascadeBands(), createSpectrumTexture(), DEFAULT_SEA_STATE, jonswapTma() (+8 more)
 
 ### Community 147 - "compilerOptions"
 Cohesion: 0.11
@@ -985,6 +981,10 @@ Nodes (3): createRenderer(), resizeRenderer(), Game
 ### Community 151 - "Game Design And Level Design"
 Cohesion: 0.11
 Nodes (17): Arcade Racer, Billiards / Pool / Snooker, Boss Fight / Action Arena, Core Loop Contract, Design Brief Gate, Difficulty And Pacing, Dogfight / Space Shooter, Endless Runner (+9 more)
+
+### Community 152 - "CloudsPass"
+Cohesion: 0.05
+Nodes (14): CloudsMaterial, define, defineExpression, defineFloat, defineInt, CloudsPass, createRenderTarget(), CloudsResolveMaterial (+6 more)
 
 ### Community 153 - "Camera rig and cinematic systems"
 Cohesion: 0.11
@@ -1019,8 +1019,8 @@ Cohesion: 0.12
 Nodes (15): Altitude filtering, Contents, Cross-system implementation contract, Diagnostics, Planetary sphere fields, Procedural field-stack recipes, Shared-phase water fields, Stable coordinate ownership (+7 more)
 
 ### Community 161 - ".claude/skills/threejs-spectral-ocean/examples/submerged-snell-ocean/source/ocean-system.ts"
-Cohesion: 0.16
-Nodes (8): createOceanSkirtGeometry(), QuadBounds, SKIRT_QUADS, SubmergedOcean, SubmergedOceanOptions, hashLabel(), Rng, WaveSim
+Cohesion: 0.24
+Nodes (6): createOceanSkirtGeometry(), QuadBounds, SKIRT_QUADS, SubmergedOcean, SubmergedOceanOptions, WaveSim
 
 ### Community 162 - "HDR bloom systems"
 Cohesion: 0.12
@@ -1286,6 +1286,10 @@ Nodes (9): addQuadFace(), buildFrameProfile(), clamp(), createSculptedRailGeomet
 Cohesion: 0.29
 Nodes (7): createStylizedGrassBladeGeometry(), createStylizedGrassField(), createStylizedGrassMaterial(), grassDebugModes, measureBladeHeight(), SeededRandom, stylizedMeadowGrassAssetPaths
 
+### Community 233 - "PointOfView"
+Cohesion: 0.11
+Nodes (10): eastScratch, matrixScratch, northScratch, PointOfView, quaternionScratch, rayScratch, upScratch, vectorScratch1 (+2 more)
+
 ### Community 234 - ".claude/skills/threejs-procedural-geometry/examples/sculpted-gallery-frame/frame-geometry.js"
 Cohesion: 0.40
 Nodes (9): addQuadFace(), buildFrameProfile(), clamp(), createSculptedRailGeometry(), getFrameMetrics(), getRailPoint(), lerp(), profileZAt() (+1 more)
@@ -1446,6 +1450,10 @@ Nodes (5): Acceptance gate, Execution order, Route by the visual system being au
 Cohesion: 0.60
 Nodes (5): createOceanDetailTexture(), createRandomField(), periodicFbm(), samplePeriodic(), smooth()
 
+### Community 280 - "UnderwaterMediumPipeline"
+Cohesion: 0.24
+Nodes (10): cameFrom, closed, findPath(), gScore, heapF, heapN, heapPop(), heapPush() (+2 more)
+
 ### Community 281 - "Domain Docs"
 Cohesion: 0.33
 Nodes (5): Before exploring, read these, Domain Docs, File structure, Flag ADR conflicts, Use the glossary's vocabulary
@@ -1457,6 +1465,10 @@ Nodes (4): Mobile Input Prompt, Performance Pass Prompt, Scene Debug Prompt, Thr
 ### Community 284 - "threejs-game-director/references/prompt-templates.md"
 Cohesion: 0.40
 Nodes (4): AAA Three.js Game Pass Prompt, New Three.js Game Prompt, Premium Endless Runner Pass Prompt, Three.js Game Director Prompt Templates
+
+### Community 288 - ".agents/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/geospatial/EllipsoidGeometry.ts"
+Cohesion: 0.20
+Nodes (9): eastScratch, matrixScratch, northScratch, quaternionScratch, rayScratch, upScratch, vectorScratch1, vectorScratch2 (+1 more)
 
 ### Community 292 - "hitl-loop.template.sh"
 Cohesion: 0.83
@@ -1486,17 +1498,21 @@ Nodes (3): For git commit hook, For native CLAUDE.md integration, graphify refer
 Cohesion: 0.50
 Nodes (3): For --cluster-only, For --update (incremental re-extraction), graphify reference: incremental update and cluster-only
 
+### Community 374 - ".claude/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/geospatial/TilingScheme.ts"
+Cohesion: 0.27
+Nodes (7): RectangleLike, RectangleTuple, TileCoordinateLike, TileCoordinateTuple, TODO: Support slippyMap and EPSG:3857, TilingSchemeLike, vectorScratch
+
 ## Knowledge Gaps
 - **2183 isolated node(s):** `vectorScratch1`, `vectorScratch2`, `geodeticScratch`, `AerialPerspectiveEffectUniforms`, `vectorScratch` (+2178 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **81 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **82 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `target()` connect `.claude/skills/threejs-atmosphere-aerial-perspective/examples/lut-aerial-perspective/source/atmosphere/AerialPerspectiveEffect.ts` to `.claude/skills/threejs-temporal-surfaces/examples/touch-history-frost/frost-surface-effect.js`, `Mission Runner & Systems`, `.claude/skills/threejs-spectral-ocean/examples/spectral-cascade-ocean/spectrum.js`, `.claude/skills/threejs-spectral-ocean/examples/submerged-snell-ocean/source/wave-sim.ts`, `Mission Narrative Barks`?**
+- **Why does `target()` connect `.claude/skills/threejs-atmosphere-aerial-perspective/examples/lut-aerial-perspective/source/geospatial/PointOfView.ts` to `.claude/skills/threejs-temporal-surfaces/examples/touch-history-frost/frost-surface-effect.js`, `HUD Icon Assets`, `Mission Runner & Systems`, `.claude/skills/threejs-spectral-ocean/examples/spectral-cascade-ocean/spectrum.js`, `.claude/skills/threejs-spectral-ocean/examples/submerged-snell-ocean/source/wave-sim.ts`, `Mission Narrative Barks`?**
   _High betweenness centrality (0.074) - this node is a cross-community bridge._
-- **Why does `stage()` connect `Determinism & Replay` to `Sim Geometry & Fixed-Point Math`, `.claude/skills/threejs-spectral-ocean/examples/submerged-snell-ocean/source/wave-sim.ts`, `.agents/skills/threejs-spectral-ocean/examples/submerged-snell-ocean/source/wave-sim.ts`?**
+- **Why does `stage()` connect `Determinism & Replay` to `Sim Geometry & Fixed-Point Math`, `.claude/skills/threejs-spectral-ocean/examples/submerged-snell-ocean/source/wave-sim.ts`, `HUD Controls & Commands`, `.agents/skills/threejs-spectral-ocean/examples/submerged-snell-ocean/source/wave-sim.ts`?**
   _High betweenness centrality (0.061) - this node is a cross-community bridge._
 - **Why does `runFftSelfTest()` connect `.claude/skills/threejs-spectral-ocean/examples/submerged-snell-ocean/source/wave-sim.ts` to `.claude/skills/threejs-spectral-ocean/examples/submerged-snell-ocean/underwater-snell-ocean.ts`, `Determinism & Replay`?**
   _High betweenness centrality (0.056) - this node is a cross-community bridge._
@@ -1505,6 +1521,6 @@ _Questions this graph is uniquely positioned to answer:_
 - **What connects `vectorScratch1`, `vectorScratch2`, `geodeticScratch` to the rest of the system?**
   _2183 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Sim Geometry & Fixed-Point Math` be split into smaller, more focused modules?**
-  _Cohesion score 0.0959040959040959 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.0882716049382716 - nodes in this community are weakly interconnected._
 - **Should `World Map Globe` be split into smaller, more focused modules?**
   _Cohesion score 0.06693877551020408 - nodes in this community are weakly interconnected._

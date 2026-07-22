@@ -372,5 +372,9 @@
   "370": "functions",
   "371": "parameters",
   "372": "generators",
-  "373": "vite.config.ts"
+  "373": "vite.config.ts",
+  "374": ".claude/skills/threejs-volumetric-clouds/examples/weather-volume-clouds/source/geospatial/TilingScheme.ts",
+  "375": "TilingScheme",
+  "376": "OrderFeedback",
+  "377": "CausticsPass"
 }
