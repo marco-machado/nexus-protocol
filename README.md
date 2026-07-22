@@ -153,8 +153,8 @@ Performance baselines are tracked in [docs/perf.md](./docs/perf.md). The `?perf`
 | [docs/roadmap.md](./docs/roadmap.md) | Implementation status across MVP and release phases |
 | [docs/perf.md](./docs/perf.md) | Perf harness, measurements, and pathfinding density probe |
 | [docs/ui/index.html](./docs/ui/index.html) | Standalone local UI Explorer for screens, components, and reference sheets |
-| [docs/phase-e-multiplayer-accounts/spec.md](./docs/phase-e-multiplayer-accounts/spec.md) | Draft spec for multiplayer and accounts |
-| [docs/phase-f-platform-release/spec.md](./docs/phase-f-platform-release/spec.md) | Draft spec for platform, distribution, and release |
+| [docs/presentation-roadmap.md](./docs/presentation-roadmap.md) | Visual quality ladder (R3–R5) and presentation tracks |
+| [AGENTS.md](./AGENTS.md) | Agent constitution: principles, layering, quality gates |
 
 ## Repository map
 

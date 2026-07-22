@@ -14,7 +14,7 @@ Last validated 2026-07-07 against the working tree: `npm test` green (57/57 acro
 
 ## Design intent pivot (2026-07-16)
 
-`docs/game-design.md` v3.0 and constitution 2.1.0 (`AGENTS.md`) raise the ship bar to **browser AAA** (R5 in `docs/presentation-roadmap.md`): the mission frame, feel, audio, and interface read as AAA game quality from a shareable link, gated by measured checks, never industry AAA package scope. The full approved decision record is `docs/game-design-aaa-draft.md` (suggestions 1 to 48). The systems and meta tracks are registered in the "AAA upgrade" section below; the visual tracks live on the presentation ladder (R4/R5).
+`docs/game-design.md` v3.0 and constitution 2.1.0 (`AGENTS.md`) raise the ship bar to **browser AAA** (R5 in `docs/presentation-roadmap.md`): the mission frame, feel, audio, and interface read as AAA game quality from a shareable link, gated by measured checks, never industry AAA package scope. The approved upgrade is folded into GDD v3.0; there is no separate draft file. The systems and meta tracks are registered in the "AAA upgrade" section below; the visual tracks live on the presentation ladder (R4/R5).
 
 **R3 premium browser is ship-closed at the DoD level.** The T1–T8 checklist landed first; a human pass against the seven R3 DoD lines then failed four of them (city mass, ground, combat, set dressing), and the max-polish set P1–P5 flipped every fail: the second human DoD pass (2026-07-11) judged all seven lines green. The decision record lives on the wayfinder map, GitHub issue #2, and its child tickets; stills under `output/wayfinder-p1/` through `output/wayfinder-p6/`. Remaining caveat: the mid-range Windows perf row is still pending a manual run. Systems visual rows below stay `[x]`.
 
@@ -159,7 +159,7 @@ Single remaining item before Phase A closes: the manual perf run on a mid-range 
 
 ## AAA upgrade (GDD v3.0)
 
-Approved 2026-07-16; decision record `docs/game-design-aaa-draft.md` (suggestions 1 to 48, referenced below as "draft N"). Systems and meta tracks only; the visual tracks live on the presentation ladder (R4/R5 in `docs/presentation-roadmap.md`). Several tracks intentionally change sim behavior (new commands, new mission types, quirk retirement), so golden-hash re-pins with rationale are expected per constitution Principle I.
+Approved 2026-07-16; folded into GDD v3.0. Parenthetical "draft N" labels below are historical track numbers from that upgrade (for cross-reference with older issues and notes only—not a live file). Systems and meta tracks only; the visual tracks live on the presentation ladder (R4/R5 in `docs/presentation-roadmap.md`). Several tracks intentionally change sim behavior (new commands, new mission types, quirk retirement), so golden-hash re-pins with rationale are expected per constitution Principle I.
 
 ### Framework (draft 4, 5)
 - [x] R3F stage 1: React owns the meta screens (issue #12; `src/app/ui/` components over the Game controller's observable screen state in `src/app/screenState.ts`; `screens.ts` deleted; headless flow tests in `tests/gameFlow.test.ts`)
@@ -217,7 +217,7 @@ Approved 2026-07-16; decision record `docs/game-design-aaa-draft.md` (suggestion
 - [ ] Async PvP: attack ghost defense layouts, regional leaderboards (depends on Phase B defense)
 - [ ] Accounts and cloud saves with local fallback (migrate `localStorage` to IndexedDB plus server sync)
 
-Draft spec: `docs/phase-e-multiplayer-accounts/spec.md`.
+No dedicated spec file yet; design intent lives in `docs/game-design.md`. Neither multiplayer nor accounts are implemented beyond the determinism groundwork above.
 
 ## Phase F: Platform, distribution, release
 
@@ -231,7 +231,7 @@ Draft spec: `docs/phase-e-multiplayer-accounts/spec.md`.
 - [ ] IndexedDB local save fallback
 - [ ] Resumable missions after page exit
 
-Draft spec: `docs/phase-f-platform-release/spec.md`.
+No dedicated spec file yet; design intent lives in `docs/game-design.md`. Phase F items are not started except the input-agnostic command groundwork above.
 
 ## Known deviations from the original plan
 

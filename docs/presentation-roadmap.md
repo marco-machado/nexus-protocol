@@ -15,7 +15,7 @@ Last updated 2026-07-16.
 | **Browser AAA (R5, ship bar per GDD v3.0)** | The mission frame, feel, audio, and interface read as AAA game quality from a shareable link. An experience-quality claim gated by the R5 DoD and the measured scorecard; never industry package scope. |
 | **Industry AAA** | Out of scope as a package claim. Full studio city pipelines, multi-year art teams, and package installers are not the product promise (pillar: pick up and play). The browser AAA bar (R5) is an experience-quality claim, not this. |
 
-GDD v3.0 defines the bar (Sections 13 and 17) and the approved decision record is `docs/game-design-aaa-draft.md` (suggestions 1 to 48). This roadmap sequences how the build gets there.
+GDD v3.0 defines the bar (Sections 13 and 17); the approved AAA upgrade is folded into that document. This roadmap sequences how the build gets there.
 
 **UI is not on this ladder.** Live UI stays cold command-software (`docs/game-design.md` Section 14). World goes premium; chrome stays terminal.
 
@@ -75,7 +75,7 @@ A reviewer opens contracts in at least three different regions and can affirm al
 
 ## Work tracks (R5 Browser AAA)
 
-Visual and presentation tracks only; the systems and meta tracks of the AAA upgrade (contracts, R&D board, narrative, input) live in `docs/roadmap.md`. Draft numbers reference `docs/game-design-aaa-draft.md`.
+Visual and presentation tracks only; the systems and meta tracks of the AAA upgrade (contracts, R&D board, narrative, input) live in `docs/roadmap.md`. Parenthetical "draft N" labels are historical track numbers from the GDD v3.0 upgrade (not a live file).
 
 - [ ] Region identity kits, landmark anchors, signature-site dress (draft 17 to 19; absorbs the R4 region and landmark tracks)
 - [ ] Wet-city signature stack (draft 39)
