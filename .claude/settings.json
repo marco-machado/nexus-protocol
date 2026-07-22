@@ -1,7 +1,5 @@
 {
   "enabledPlugins": {
-    "typescript-lsp@claude-plugins-official": true,
-    "claude-code-setup@claude-plugins-official": true,
-    "coderabbit@claude-plugins-official": true
+    "typescript-lsp@claude-plugins-official": true
   }
 }
