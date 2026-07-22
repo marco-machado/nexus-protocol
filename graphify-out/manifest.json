@@ -55,7 +55,7 @@
     "semantic_hash": "c53797544f4d470e44354aa55796dd9b"
   },
   "src/app/missionRunner.ts": {
-    "mtime": 1784711903.8206217,
+    "mtime": 1784716480.5120232,
     "ast_hash": "e21f2a64de28b98d35351ca457faa00e",
     "semantic_hash": ""
   },
@@ -175,7 +175,7 @@
     "semantic_hash": "3d6154dc12291bdfa2ad6d7357d1c330"
   },
   "src/app/ui/menu.tsx": {
-    "mtime": 1784711903.8210196,
+    "mtime": 1784712058.0560594,
     "ast_hash": "1fcd9745ae91b76838f98df69d773159",
     "semantic_hash": ""
   },
@@ -220,7 +220,7 @@
     "semantic_hash": "92d96713869899772838b1399ee08391"
   },
   "src/render/appearance.ts": {
-    "mtime": 1784711846.334482,
+    "mtime": 1784712058.0563612,
     "ast_hash": "8b6fbb3d09792d49ac7676987cbb2d93",
     "semantic_hash": ""
   },
@@ -230,9 +230,9 @@
     "semantic_hash": "9773b5bec79cac7107c89407179662cf"
   },
   "src/render/camera.ts": {
-    "mtime": 1784602982.7511463,
-    "ast_hash": "9eb3edb26485b64336596975c14ff6c9",
-    "semantic_hash": "9eb3edb26485b64336596975c14ff6c9"
+    "mtime": 1784718059.604291,
+    "ast_hash": "9a446916da28b3b8898e3b14941c1c7e",
+    "semantic_hash": ""
   },
   "src/render/cityDress.ts": {
     "mtime": 1784602982.751273,
@@ -245,7 +245,7 @@
     "semantic_hash": "a07b15d1681d49c9bdd25a388d846f87"
   },
   "src/render/globe.ts": {
-    "mtime": 1784711911.4413717,
+    "mtime": 1784712058.056722,
     "ast_hash": "532c20b405a7d88a42d6faad0f7f91bf",
     "semantic_hash": ""
   },
@@ -275,7 +275,7 @@
     "semantic_hash": "7aaa67f4349e3e38baa4d1567ff2ed59"
   },
   "src/render/scene.ts": {
-    "mtime": 1784711857.3100824,
+    "mtime": 1784712058.0576377,
     "ast_hash": "a7c42c6e18858f9f276c6f0450b14760",
     "semantic_hash": ""
   },
@@ -370,7 +370,7 @@
     "semantic_hash": "e9408bd9aa3e0c2aaec9cb58246ec956"
   },
   "tests/appearance.test.ts": {
-    "mtime": 1784711903.8222406,
+    "mtime": 1784712058.057972,
     "ast_hash": "5811360151bdaf47877d4455d3a26d9a",
     "semantic_hash": ""
   },
@@ -380,9 +380,9 @@
     "semantic_hash": "f6a8fa93005bc73db597bcb266efad53"
   },
   "tests/camera.test.ts": {
-    "mtime": 1784602982.7535064,
-    "ast_hash": "8b8fd4297a1df4e843bb08f7c05e4619",
-    "semantic_hash": "8b8fd4297a1df4e843bb08f7c05e4619"
+    "mtime": 1784717420.8053396,
+    "ast_hash": "c83fc58c9951ad31e3c61067743123b6",
+    "semantic_hash": ""
   },
   "tests/captured.test.ts": {
     "mtime": 1784269923.5470314,
@@ -415,7 +415,7 @@
     "semantic_hash": "2e84ced7ff1d133d10dcaef39ee9a4af"
   },
   "tests/delivery.test.ts": {
-    "mtime": 1784711903.8228374,
+    "mtime": 1784712058.0582576,
     "ast_hash": "b8c6f341aa45799d4509ab6057bb4d9f",
     "semantic_hash": ""
   },
@@ -530,9 +530,9 @@
     "semantic_hash": "e495d6deea2498454824b84696df567e"
   },
   "docs/adr/0003-orthographic-versus-tilt-shift-frame.md": {
-    "mtime": 1784602982.748218,
-    "ast_hash": "4444b2000e39a0cdf6f0d93d45ebcaff",
-    "semantic_hash": "4444b2000e39a0cdf6f0d93d45ebcaff"
+    "mtime": 1784718086.4027133,
+    "ast_hash": "35bdb8de6d2eac961d4113314c2ac5ce",
+    "semantic_hash": ""
   },
   "docs/adr/0004-asset-packs-are-per-region.md": {
     "mtime": 1784605072.9232614,
@@ -545,14 +545,14 @@
     "semantic_hash": "fbc902de6b413fb3a1cded178de9a9df"
   },
   "docs/game-design.md": {
-    "mtime": 1784707627.6409483,
-    "ast_hash": "fc1ddfa42a256b2fe61b977f17e20978",
-    "semantic_hash": "fc1ddfa42a256b2fe61b977f17e20978"
+    "mtime": 1784718075.3562725,
+    "ast_hash": "a96285973c295966e5a9318711e2e2c2",
+    "semantic_hash": ""
   },
   "docs/perf.md": {
-    "mtime": 1784605072.9235847,
-    "ast_hash": "095bba1e8b923cb1702ee3c9c9bc1dd8",
-    "semantic_hash": "095bba1e8b923cb1702ee3c9c9bc1dd8"
+    "mtime": 1784718099.0328035,
+    "ast_hash": "3cbb1275e158bfe2ecfbd27f8f4ba6f9",
+    "semantic_hash": ""
   },
   "docs/presentation-roadmap.md": {
     "mtime": 1784707627.6403923,
@@ -2780,8 +2780,8 @@
     "semantic_hash": ""
   },
   "scripts/audit-delivery.mjs": {
-    "mtime": 1784605072.924789,
-    "ast_hash": "82067c173de6c90a49382ff528b17d23",
+    "mtime": 1784712058.055373,
+    "ast_hash": "056b8209061ff8db169cf4aba2d4f260",
     "semantic_hash": ""
   },
   "scripts/check-gates.mjs": {
@@ -4330,7 +4330,7 @@
     "semantic_hash": ""
   },
   "index.html": {
-    "mtime": 1784711903.8214588,
+    "mtime": 1784712058.0549965,
     "ast_hash": "c81ca0e387b437f4dd90f0b794f5d401",
     "semantic_hash": ""
   },
