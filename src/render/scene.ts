@@ -2675,6 +2675,9 @@ function createOutskirts(
   apron.position.set(MAP_W / 2, -0.08, MAP_W / 2);
   scene.add(apron);
 
+  // the bare staging scene keeps the ground apron but drops the tower rings
+  if (state.map.visualTest && !STAGING_DRESS) return;
+
   const next = seededNext({ rng: ((state.mapSeed | 0) ^ 0x0575) || 1 });
   const near: { m: Matrix4; c: Color }[] = [];
   const far: { m: Matrix4; c: Color }[] = [];
@@ -2952,6 +2955,11 @@ function signQuad(tileIdx: number, w: number, h: number): BufferGeometry {
 }
 
 const SIGN_TINTS = [0xff3344, 0x00e5ff, 0xff2fd6, 0xff9f1c] as const;
+
+// staging dress switch: false runs the visualtest square bare (no perimeter
+// district, billboard, skyline ring, curbs, or lamps) so the agents read
+// against an empty road; flip to true to restore the dressed staging scene
+const STAGING_DRESS = false;
 
 // render-only perimeter district for the staging scene: building hulls with
 // lit window grids and neon boards ringing the square, so the camera never
@@ -3475,6 +3483,7 @@ function createStreetLamps(
   const STREET = state.map.street;
   const spots: { x: number; z: number }[] = [];
   if (state.map.visualTest) {
+    if (!STAGING_DRESS) return null;
     // the staging map has no block grid: ring the square road from its outer
     // sidewalk so the cars/agents scene carries its own light at night
     for (const t of [40, 48.5, 57]) {
@@ -3779,7 +3788,7 @@ export function createGameScene(
   }
   scene.add(strips);
   const lamps = createStreetLamps(state, scene, light.neon);
-  const district = state.map.visualTest
+  const district = STAGING_DRESS && state.map.visualTest
     ? createVisualTestDistrict(state, scene, light, shadows, wet)
     : null;
   const billboard = district ? createBillboard(scene, light, district.hulls) : null;
@@ -3817,8 +3826,9 @@ export function createGameScene(
     if (streakSources.length > 0) streaks = createLightStreaks(scene, streakSources);
   }
   createOutskirts(state, scene, light, wet);
-  if (state.map.visualTest) createVisualTestCurbs(scene, light.neon);
-  else {
+  if (state.map.visualTest) {
+    if (STAGING_DRESS) createVisualTestCurbs(scene, light.neon);
+  } else {
     createStreetDress(state, scene, wet, light.neon);
     createPropScatter(state, scene, light.neon);
     createParkedVehicleDress(state, scene, wet);

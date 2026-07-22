@@ -81,7 +81,7 @@ async function main(): Promise<void> {
       { visualTest: true, tod: 2, weather: 0 },
       {
         civCount: 0,
-        cardTitle: 'VISUAL TEST: cars, agents, augment reads',
+        cardTitle: 'VISUAL TEST: agents, augment reads',
         host,
         appearances: stagingAppearances(),
       },

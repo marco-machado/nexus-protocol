@@ -228,24 +228,7 @@ function setupVisualTestMission(s: SimState, specs: AgentSpec[]): SimState {
     s.agents.push(createAgent(i, (cx << 16) + (1 << 15), (cz << 16) + (1 << 15), squad[i]!));
   }
 
-  const cars = [
-    { cell: cellIdx(38, 34), dirX: 1, dirZ: 0 },
-    { cell: cellIdx(48, 34), dirX: 1, dirZ: 0 },
-    { cell: cellIdx(58, 34), dirX: 1, dirZ: 0 },
-    { cell: cellIdx(62, 42), dirX: 0, dirZ: 1 },
-    { cell: cellIdx(62, 54), dirX: 0, dirZ: 1 },
-    { cell: cellIdx(58, 62), dirX: -1, dirZ: 0 },
-    { cell: cellIdx(48, 62), dirX: -1, dirZ: 0 },
-    { cell: cellIdx(38, 62), dirX: -1, dirZ: 0 },
-    { cell: cellIdx(34, 54), dirX: 0, dirZ: -1 },
-    { cell: cellIdx(34, 42), dirX: 0, dirZ: -1 },
-  ];
-  for (const c of cars) {
-    const v = createVehicle(s.vehicles.length, VEH_CAR, c.cell);
-    v.dirX = c.dirX;
-    v.dirZ = c.dirZ;
-    s.vehicles.push(v);
-  }
+  // vehicles disabled: the staging scene runs agents-only on the bare square
   return s;
 }
 
