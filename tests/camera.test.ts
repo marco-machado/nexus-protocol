@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
   createRig,
-  HANDLER_PITCH,
+  PITCH_MAX,
+  PITCH_MIN,
   rigYawDelta,
   rotateBy,
   updateRig,
@@ -70,15 +71,28 @@ describe('continuous camera rig', () => {
     expect(rig.cx).toBeGreaterThan(afterOne);
   });
 
-  it('holds handler pitch through rotation and zoom in both frames', () => {
+  it('pitch follows zoom between the clamp bounds in both frames', () => {
     for (const frame of ['ortho', 'tiltshift'] as const) {
       const rig = createRig(16 / 9, 48, 48, frame);
-      for (let i = 0; i < 50; i++) {
-        rotateBy(rig, 0.11);
-        zoomBy(rig, i % 2 === 0 ? 4 : -3);
-        updateRig(rig, 16 / 9, 16);
-        expect(pitchOf(rig)).toBeCloseTo(HANDLER_PITCH, 6);
-      }
+      expect(pitchOf(rig)).toBeGreaterThan((45 * Math.PI) / 180);
+      expect(pitchOf(rig)).toBeLessThan((55 * Math.PI) / 180);
+      zoomBy(rig, -1000);
+      updateRig(rig, 16 / 9);
+      expect(pitchOf(rig)).toBeCloseTo(PITCH_MIN, 6);
+      zoomBy(rig, 5000);
+      updateRig(rig, 16 / 9);
+      expect(pitchOf(rig)).toBeCloseTo(PITCH_MAX, 6);
+    }
+  });
+
+  it('rotation alone never disturbs pitch', () => {
+    const rig = createRig(16 / 9, 48, 48);
+    updateRig(rig, 16 / 9);
+    const before = pitchOf(rig);
+    for (let i = 0; i < 50; i++) {
+      rotateBy(rig, 0.11);
+      updateRig(rig, 16 / 9, 16);
+      expect(pitchOf(rig)).toBeCloseTo(before, 6);
     }
   });
 

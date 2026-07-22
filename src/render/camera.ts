@@ -2,15 +2,19 @@ import { MathUtils, OrthographicCamera, PerspectiveCamera, Vector3 } from 'three
 
 export type CameraFrame = 'ortho' | 'tiltshift';
 
-// handler altitude is fixed (Pillar 1): no control path may lower the camera
-// toward eye level, so pitch is a constant, never rig state
-export const HANDLER_PITCH = MathUtils.degToRad(62);
-export const ZOOM_MIN = 10;
+// pitch is a pure function of zoom: an eased ramp from PITCH_MIN at full
+// zoom-in to PITCH_MAX at full zoom-out, spread across the whole zoom range
+// and biased so the default view height rests near 50 degrees; the floor
+// stays well above eye level (Pillar 1)
+export const PITCH_MIN = MathUtils.degToRad(35);
+export const PITCH_MAX = MathUtils.degToRad(60);
+export const ZOOM_MIN = 20;
 export const ZOOM_MAX = 70;
+export const VIEW_DEFAULT = 26;
 const DIST = 90;
-// low field of view keeps the tilt-shift frame at handler altitude reading
-// near-orthographic while gaining real perspective depth
-export const TILT_FOV = 15;
+// wide field of view gives the tilt-shift frame a real aerial-perspective
+// read; camera distance derives from it, so zoom semantics match ortho
+export const TILT_FOV = 50;
 const ROTATE_EASE = 1 - Math.pow(0.001, 1 / 260);
 const ZOOM_EASE = 1 - Math.pow(0.001, 1 / 200);
 const PAN_DECAY_MS = 160;
@@ -48,8 +52,8 @@ export function createRig(
     vz: 0,
     yaw: Math.PI / 4,
     yawTarget: Math.PI / 4,
-    viewHeight: 26,
-    viewTarget: 26,
+    viewHeight: VIEW_DEFAULT,
+    viewTarget: VIEW_DEFAULT,
   };
   updateRig(rig, aspect);
   return rig;
@@ -61,6 +65,12 @@ export function rotateBy(rig: CameraRig, delta: number): void {
 
 export function zoomBy(rig: CameraRig, delta: number): void {
   rig.viewTarget = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, rig.viewTarget + delta));
+}
+
+export function rigPitch(viewHeight: number): number {
+  const t = Math.max(0, Math.min(1, (viewHeight - ZOOM_MIN) / (ZOOM_MAX - ZOOM_MIN)));
+  const eased = 1 - Math.pow(1 - t, 7);
+  return PITCH_MIN + eased * (PITCH_MAX - PITCH_MIN);
 }
 
 export function rigYawDelta(rig: CameraRig): number {
@@ -91,10 +101,11 @@ export function updateRig(rig: CameraRig, aspect: number, dt = 0): void {
   }
 
   const c = rig.camera;
+  const pitch = rigPitch(rig.viewHeight);
   const dir = new Vector3(
-    Math.cos(HANDLER_PITCH) * Math.sin(rig.yaw),
-    Math.sin(HANDLER_PITCH),
-    Math.cos(HANDLER_PITCH) * Math.cos(rig.yaw),
+    Math.cos(pitch) * Math.sin(rig.yaw),
+    Math.sin(pitch),
+    Math.cos(pitch) * Math.cos(rig.yaw),
   );
   if (rig.frame === 'ortho') {
     const ortho = c as OrthographicCamera;
