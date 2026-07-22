@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
   buildAppearanceManifest,
-  chassisUrl,
   PRIMARY_SLOTS,
   rivalAugmentLevels,
   type AppearanceManifest,
@@ -90,13 +89,6 @@ describe('buildAppearanceManifest', () => {
       levels: { legs: 9, arms: -2, eyes: 1.9 as unknown as number },
     });
     expect(levelsOf(m)).toMatchObject({ legs: 3, arms: 0, eyes: 1 });
-  });
-
-  it('keeps chassis URL a pure data swap across variants', () => {
-    const male = buildAppearanceManifest({ variant: 'male' });
-    const female = buildAppearanceManifest({ variant: 'female' });
-    expect(chassisUrl(male)).toBe('/models/agent-operative.glb');
-    expect(chassisUrl(female)).toBe('/models/agent-operative.glb');
   });
 });
 

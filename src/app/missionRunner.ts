@@ -163,8 +163,8 @@ export interface MissionOptions {
   host: CanvasHost;
 }
 
-// agent card portraits: /portraits/a{n}.png when present, else a generated
-// bust silhouette; hues derive from AGENT_TRIM in scene.ts (in-world stripe/visor)
+// agent card portraits: generated bust silhouettes; hues derive from
+// AGENT_TRIM in scene.ts (in-world stripe/visor)
 const PORTRAIT_HUES = AGENT_TRIM.map((h) => `#${h.toString(16).padStart(6, '0')}`);
 const portraitSrcs: string[] = [];
 
@@ -197,14 +197,7 @@ function buildPortraitFallback(i: number): string {
 }
 
 function portraitSrc(i: number): string {
-  if (!portraitSrcs[i]) {
-    portraitSrcs[i] = buildPortraitFallback(i);
-    const img = new Image();
-    img.onload = () => {
-      portraitSrcs[i] = `/portraits/a${i + 1}.png`;
-    };
-    img.src = `/portraits/a${i + 1}.png`;
-  }
+  portraitSrcs[i] ??= buildPortraitFallback(i);
   return portraitSrcs[i]!;
 }
 

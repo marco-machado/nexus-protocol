@@ -50,14 +50,11 @@ describe.skipIf(!existsSync(manifestPath))('streaming manifest (built output)', 
     }
   });
 
-  it('ships the mission-critical models and compressed textures in the core pack', () => {
+  it('ships no external assets while presentation is procedural-only', () => {
     const core = manifest.packs.find((p) => p.id === 'core');
     expect(core).toBeTruthy();
-    const urls = core!.files.map((f) => f.url);
-    expect(urls).toContain('/models/agent-operative.glb');
-    expect(urls).toContain('/models/cyberpunk-security-car.glb');
-    expect(manifest.ktx2.length).toBeGreaterThan(0);
-    for (const k of manifest.ktx2) expect(urls).toContain(k);
+    expect(core!.files).toHaveLength(0);
+    expect(manifest.ktx2).toHaveLength(0);
   });
 
   it('keeps every pack inside its class budget', () => {

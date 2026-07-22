@@ -15,7 +15,6 @@ export function MenuScreen({
         <span>NEXUS INTERNAL SYSTEMS</span>
         <span className="live">LINK ACTIVE</span>
       </div>
-      <img className="logo" src="/logos/nexus-orbital-variant-02.png" alt="" />
       <h1>
         NEXUS<span>PROTOCOL</span>
       </h1>

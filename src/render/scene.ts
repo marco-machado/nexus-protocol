@@ -1,11 +1,8 @@
 import {
   AdditiveBlending,
   type AnimationAction,
-  type AnimationClip,
   AnimationMixer,
   BackSide,
-  type Bone,
-  Box3,
   BoxGeometry,
   BufferAttribute,
   type BufferGeometry,
@@ -24,7 +21,6 @@ import {
   InstancedMesh,
   LatheGeometry,
   LinearSRGBColorSpace,
-  LoopOnce,
   type Material,
   Matrix4,
   Mesh,
@@ -42,19 +38,14 @@ import {
   SphereGeometry,
   SRGBColorSpace,
   type Texture,
-  TextureLoader,
   TorusGeometry,
   Vector2,
   Vector3,
-  type Wrapping,
 } from 'three';
 import { MeshPhongNodeMaterial, PMREMGenerator, type WebGPURenderer } from 'three/webgpu';
-import { color as tslColor, dot, normalView, oneMinus, positionViewDirection, pow, saturate, texture as tslTexture, uniform } from 'three/tsl';
-import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
-import { configureGltfLoader, ktx2TextureLoader, ktx2UrlFor } from './assets';
+import { color as tslColor, dot, normalView, oneMinus, positionViewDirection, pow, saturate, uniform } from 'three/tsl';
 import { tierProfile } from './tier';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
-import { clone as skeletonClone } from 'three/examples/jsm/utils/SkeletonUtils.js';
 import { objectiveComplete } from '../sim/contract';
 import { fromFx } from '../sim/fixed';
 import { MAP_W } from '../sim/map';
@@ -89,7 +80,6 @@ import type { CameraRig } from './camera';
 import type { AlarmGrade } from './alarmScript';
 import {
   buildAppearanceManifest,
-  chassisUrl,
   rivalAugmentLevels,
   type AppearanceManifest,
 } from './appearance';
@@ -175,8 +165,6 @@ export interface AgentRig {
   procMeshes: Mesh[];
   // augment attachment meshes: shape/placement reads, stay visible on GLB path
   augMeshes: Mesh[];
-  // chassis GLB URL for this rig (data-swap table in appearance.ts)
-  chassisUrl: string;
   // rival field agents track an NPC index; player agents use -1
   npcIndex: number;
   trimHex: number;
@@ -255,7 +243,6 @@ export interface GameScene {
   // two entries so rival squads alternate cosmetic body variants
   rivalLooks: AppearanceManifest[];
   rivalPeerContract: boolean;
-  chassisCache: ChassisLoadCache;
   // npc indices suppressed in the crowd so rival chassis is not doubled
   hideNpc: Uint8Array;
   ringMeshes: Mesh[];
@@ -459,75 +446,7 @@ export function installDistrictEnvironment(
   return rt.texture;
 }
 
-const texLoader = new TextureLoader();
-
-type TexOpts = {
-  srgb?: boolean;
-  wrap?: Wrapping;
-  repeat?: number;
-  anisotropy?: number;
-};
-
 /** Load a texture asynchronously; on success configure wrap/colorSpace and call onLoad. Failures are silent (keep fallbacks). */
-function loadMap(url: string, opts: TexOpts, onLoad: (t: Texture) => void): void {
-  const configure = (t: Texture) => {
-    // albedo/UI sRGB; normal and roughness stay linear
-    t.colorSpace = opts.srgb ? SRGBColorSpace : LinearSRGBColorSpace;
-    const wrap = opts.wrap ?? RepeatWrapping;
-    t.wrapS = wrap;
-    t.wrapT = wrap;
-    const rep = opts.repeat ?? 1;
-    t.repeat.set(rep, rep);
-    t.anisotropy = opts.anisotropy ?? 8;
-    t.needsUpdate = true;
-    onLoad(t);
-  };
-  const loadSource = () => texLoader.load(url, configure, undefined, () => {});
-  const compressed = ktx2UrlFor(url);
-  if (compressed) {
-    ktx2TextureLoader()!.load(compressed, configure, undefined, loadSource);
-    return;
-  }
-  loadSource();
-}
-
-function applyFacadeMaps(mat: MeshStandardMaterial): void {
-  const rep = 3.5;
-  loadMap('/textures/facade-albedo.jpg', { srgb: true, repeat: rep }, (t) => {
-    mat.map = t;
-    mat.needsUpdate = true;
-  });
-  loadMap('/textures/facade-normal.jpg', { repeat: rep }, (t) => {
-    mat.normalMap = t;
-    mat.normalScale.set(0.55, 0.55);
-    mat.needsUpdate = true;
-  });
-  loadMap('/textures/facade-roughness.jpg', { repeat: rep }, (t) => {
-    mat.roughnessMap = t;
-    mat.needsUpdate = true;
-  });
-}
-
-function applyAsphaltMaps(mat: MeshPhysicalMaterial | MeshStandardMaterial, repeat: number): void {
-  loadMap('/textures/asphalt-normal.jpg', { repeat }, (t) => {
-    mat.normalMap = t;
-    // iso orthographic view grazes the plane; scale past 1.0 so wet grit
-    // still reads after night fog and clearcoat
-    if ('normalScale' in mat) mat.normalScale.set(1.3, 1.3);
-    mat.needsUpdate = true;
-  });
-  loadMap('/textures/asphalt-roughness.jpg', { repeat }, (t) => {
-    mat.roughnessMap = t;
-    mat.needsUpdate = true;
-  });
-}
-
-function swapMapWhenLoaded(mat: MeshBasicMaterial | MeshStandardMaterial, url: string, srgb = true): void {
-  loadMap(url, { srgb, wrap: RepeatWrapping, repeat: 1 }, (t) => {
-    mat.map = t;
-    mat.needsUpdate = true;
-  });
-}
 
 function concreteMaterial(wet: WetProfile, envScale = 1): MeshStandardMaterial {
   const mat = new MeshStandardMaterial({
@@ -536,7 +455,6 @@ function concreteMaterial(wet: WetProfile, envScale = 1): MeshStandardMaterial {
     metalness: wet.concreteMetalness,
     envMapIntensity: wet.concreteEnv * envScale,
   });
-  applyFacadeMaps(mat);
   return mat;
 }
 
@@ -575,95 +493,10 @@ function tinted(geo: BufferGeometry, hex: number): BufferGeometry {
 const CAR_SCALE = 1.45;
 const CAR_LIFT = 1.3;
 const TRAM_SCALE = 2.3;
-const GENERATED_CAR_URL = '/models/cyberpunk-security-car.glb';
-const GENERATED_CAR_LENGTH = 2.9;
-const GENERATED_CAR_YAW = -Math.PI / 2;
 const GENERATED_CAR_LIGHT_VARIANT = 0;
-const GENERATED_AGENT_URL = '/models/agent-operative.glb';
-const GENERATED_AGENT_HEIGHT = 1.9;
-const GENERATED_AGENT_YAW = -Math.PI / 2;
-const BILLBOARD_URL = '/billboard/corporate-trust.jpg';
-const WINDOW_GRID_URL = '/textures/window-grid.jpg';
-const SIGN_ATLAS_URL = '/textures/sign-atlas.jpg';
 
 function carVariant(id: number): number {
   return ((id * 1103515245 + 12345) >>> 29) % 3;
-}
-
-function buildGeneratedCarTexture(): CanvasTexture {
-  const canvas = document.createElement('canvas');
-  canvas.width = 512;
-  canvas.height = 512;
-  const ctx = canvas.getContext('2d')!;
-  const body = ctx.createLinearGradient(0, 0, 512, 512);
-  body.addColorStop(0, '#9badc4');
-  body.addColorStop(0.45, '#627894');
-  body.addColorStop(1, '#263849');
-  ctx.fillStyle = body;
-  ctx.fillRect(0, 0, 512, 512);
-
-  ctx.fillStyle = 'rgba(11,16,24,0.38)';
-  for (let y = 38; y < 512; y += 64) ctx.fillRect(28, y, 456, 2);
-  for (let x = 44; x < 512; x += 72) ctx.fillRect(x, 28, 2, 456);
-
-  ctx.strokeStyle = 'rgba(210,225,245,0.32)';
-  ctx.lineWidth = 3;
-  for (const y of [116, 248, 382]) {
-    ctx.strokeRect(78, y, 356, 44);
-  }
-
-  ctx.fillStyle = 'rgba(5,10,18,0.45)';
-  ctx.fillRect(72, 224, 368, 18);
-  ctx.fillRect(88, 270, 330, 10);
-  ctx.fillRect(112, 316, 280, 8);
-
-  ctx.fillStyle = 'rgba(0,229,255,0.78)';
-  ctx.fillRect(216, 64, 80, 14);
-  ctx.fillRect(232, 88, 48, 8);
-  ctx.fillRect(220, 420, 72, 10);
-
-  ctx.fillStyle = 'rgba(255,159,28,0.78)';
-  for (let x = 84; x < 190; x += 24) ctx.fillRect(x, 38, 10, 24);
-  for (let x = 328; x < 434; x += 24) ctx.fillRect(x, 450, 10, 24);
-
-  ctx.fillStyle = 'rgba(255,255,255,0.08)';
-  for (let i = 0; i < 900; i++) {
-    const x = (i * 73) % 512;
-    const y = (i * 151) % 512;
-    ctx.fillRect(x, y, 1, 1);
-  }
-
-  const tex = new CanvasTexture(canvas);
-  tex.colorSpace = SRGBColorSpace;
-  tex.anisotropy = 8;
-  return tex;
-}
-
-function createGeneratedCarMaterial(): MeshStandardMaterial {
-  return new MeshStandardMaterial({
-    color: 0xc6d7ee,
-    map: buildGeneratedCarTexture(),
-    metalness: 0.55,
-    roughness: 0.42,
-    emissive: 0x06121f,
-    emissiveIntensity: 0.14,
-  });
-}
-
-function addGeneratedCarUvs(geo: BufferGeometry): void {
-  const pos = geo.attributes.position;
-  if (!pos || geo.attributes.uv) return;
-  geo.computeBoundingBox();
-  const box = geo.boundingBox;
-  if (!box) return;
-  const sx = Math.max(0.001, box.max.x - box.min.x);
-  const sz = Math.max(0.001, box.max.z - box.min.z);
-  const uv = new Float32Array(pos.count * 2);
-  for (let i = 0; i < pos.count; i++) {
-    uv[i * 2] = (pos.getX(i) - box.min.x) / sx;
-    uv[i * 2 + 1] = (pos.getZ(i) - box.min.z) / sz;
-  }
-  geo.setAttribute('uv', new BufferAttribute(uv, 2));
 }
 
 function buildCarGeometry(variant = 0): BufferGeometry {
@@ -812,27 +645,6 @@ function buildCarLightsGeometry(variant = 0): BufferGeometry {
   return mergeGeometries(parts).scale(CAR_SCALE, CAR_SCALE * CAR_LIFT, CAR_SCALE);
 }
 
-// light rig in world units against the measured GLB bounds: the procedural
-// variant-0 rig was authored for the box body, so over the generated hull its
-// quads float above the hood instead of sitting on it
-function buildGeneratedCarLightsGeometry(
-  length: number,
-  width: number,
-  height: number,
-): BufferGeometry {
-  const halfL = length / 2;
-  const halfW = width / 2;
-  return mergeGeometries([
-    tinted(new BoxGeometry(0.2, 0.07, 0.06).translate(halfW * 0.52, height * 0.32, halfL - 0.08), 0xfff2cc),
-    tinted(new BoxGeometry(0.2, 0.07, 0.06).translate(-halfW * 0.52, height * 0.32, halfL - 0.08), 0xfff2cc),
-    tinted(new BoxGeometry(0.26, 0.05, 0.05).translate(halfW * 0.5, height * 0.36, -halfL + 0.06), 0xff2222),
-    tinted(new BoxGeometry(0.26, 0.05, 0.05).translate(-halfW * 0.5, height * 0.36, -halfL + 0.06), 0xff2222),
-    tinted(new BoxGeometry(0.08, 0.05, 0.14).translate(halfW - 0.03, height * 0.45, halfL * 0.3), 0xff9f1c),
-    tinted(new BoxGeometry(0.08, 0.05, 0.14).translate(-halfW + 0.03, height * 0.45, halfL * 0.3), 0xff9f1c),
-    tinted(new BoxGeometry(width * 0.6, 0.06, 0.16).translate(0, height * 0.99, -halfL * 0.1), 0x00e5ff),
-  ]);
-}
-
 function buildFuelPumpGeometry(): BufferGeometry {
   return mergeGeometries([
     tinted(new BoxGeometry(0.78, 0.18, 0.78).translate(0, 0.09, 0), 0x14161a),
@@ -892,67 +704,6 @@ function buildTramLightsGeometry(): BufferGeometry {
   ]).scale(TRAM_SCALE, TRAM_SCALE, TRAM_SCALE);
 }
 
-function loadGeneratedCarModel(scene: Scene, roots: Object3D[], lightsMesh: InstancedMesh): void {
-  const loader = configureGltfLoader(new GLTFLoader());
-  loader.load(
-    GENERATED_CAR_URL,
-    (gltf) => {
-      const source = gltf.scene;
-      const generatedCarMaterial = createGeneratedCarMaterial();
-      const bounds = new Box3().setFromObject(source);
-      const size = new Vector3();
-      const center = new Vector3();
-      bounds.getSize(size);
-      bounds.getCenter(center);
-      source.position.set(-center.x, -bounds.min.y, -center.z);
-      const normalizer = new Object3D();
-      const scale = GENERATED_CAR_LENGTH / Math.max(0.001, size.x);
-      // once the GLB drives the fleet every car routes its lights through the
-      // GENERATED_CAR_LIGHT_VARIANT mesh, so refit that rig to the real hull
-      lightsMesh.geometry.dispose();
-      lightsMesh.geometry = buildGeneratedCarLightsGeometry(
-        GENERATED_CAR_LENGTH,
-        size.z * scale,
-        size.y * scale,
-      );
-      normalizer.rotation.y = GENERATED_CAR_YAW;
-      normalizer.scale.setScalar(scale);
-      normalizer.add(source);
-      normalizer.userData.generatedCarFit = {
-        scale,
-        yaw: GENERATED_CAR_YAW,
-        lightVariant: GENERATED_CAR_LIGHT_VARIANT,
-        textured: 1,
-        sourceLength: size.x,
-        sourceWidth: size.z,
-        sourceHeight: size.y,
-      };
-      normalizer.traverse((obj) => {
-        const mesh = obj as Mesh;
-        if (mesh.isMesh) {
-          addGeneratedCarUvs(mesh.geometry);
-          mesh.material = generatedCarMaterial;
-          mesh.geometry.computeVertexNormals();
-          mesh.castShadow = true;
-          mesh.receiveShadow = true;
-        }
-      });
-      for (const root of roots) {
-        const clone = normalizer.clone(true);
-        clone.visible = true;
-        root.add(clone);
-        root.userData.generatedCarReady = true;
-        root.userData.generatedCarFit = normalizer.userData.generatedCarFit;
-      }
-    },
-    undefined,
-    () => {
-      for (const root of roots) root.userData.generatedCarFailed = true;
-    },
-  );
-  for (const root of roots) scene.add(root);
-}
-
 function createRimUniform() {
   return uniform(SCENE_COLORS.agent.clone());
 }
@@ -962,15 +713,6 @@ type AgentRimUniform = ReturnType<typeof createRimUniform>;
 function agentRimEmissive(rimUniform: AgentRimUniform): unknown {
   const fresnel = pow(saturate(oneMinus(dot(normalView, positionViewDirection))), 2.5);
   return rimUniform.mul(fresnel).mul(0.9).add(tslColor(0x0a3540));
-}
-
-// the generated hero mesh is near-black under the night grade, so its baked
-// albedo doubles as a faint self-light; the rim runs weaker than on the
-// procedural rig so the texture stays readable inside the silhouette
-function agentModelEmissive(rimUniform: AgentRimUniform, map: Texture | null): unknown {
-  const fresnel = pow(saturate(oneMinus(dot(normalView, positionViewDirection))), 2.5);
-  const rim = rimUniform.mul(fresnel).mul(0.55);
-  return map ? rim.add(tslTexture(map).rgb.mul(0.32)) : rim.add(tslColor(0x0a3540));
 }
 
 // Augment dress is shape-and-placement first so it survives all three palettes
@@ -1208,7 +950,6 @@ function createAgentRig(
     walkClipSpeed: 0,
     procMeshes: [...segs, visor, rim, pack, antenna, stripe, padL, padR, gun],
     augMeshes: [],
-    chassisUrl: GENERATED_AGENT_URL,
     npcIndex: opts.npcIndex ?? -1,
     trimHex,
     heading: 0,
@@ -1219,7 +960,6 @@ function createAgentRig(
     downed: false,
   };
   if (manifest) attachAugments(rig, manifest);
-  rig.chassisUrl = chassisUrl(manifest ?? buildAppearanceManifest({ variant: 'male' }));
   return rig;
 }
 
@@ -1260,197 +1000,6 @@ export function createAgentPreviewModel(
       for (const material of materials) material.dispose();
     },
   };
-}
-
-interface ChassisTemplate {
-  normalizer: Object3D;
-  clips: AnimationClip[];
-  walkClip: AnimationClip | null;
-  idleClip: AnimationClip | null;
-  fallClip: AnimationClip | null;
-  clipGroundSpeed: Map<AnimationClip, number>;
-  sizeY: number;
-}
-
-// per-scene so siege waves clone the parsed GLB instead of re-fetching it,
-// while disposal semantics stay mission-scoped; null marks a failed URL
-export interface ChassisLoadCache {
-  templates: Map<string, ChassisTemplate | null>;
-  pending: Map<string, AgentRig[]>;
-}
-
-function createChassisLoadCache(): ChassisLoadCache {
-  return { templates: new Map(), pending: new Map() };
-}
-
-// hero agent GLB (user-generated via Tripo): loaded like the car model with
-// the procedural rig as the always-available fallback. The rig root still
-// drives heading and the downed roll; when the GLB ships skinned clips an
-// AnimationMixer per agent plays idle/walk/run, otherwise the mesh stays
-// static and the stride-locked bob stands in for a walk cycle.
-function loadGeneratedAgentModel(rigs: AgentRig[], cache: ChassisLoadCache): void {
-  if (rigs.length === 0) return;
-  // group by chassis URL so a future male/female model split is a data swap
-  const byUrl = new Map<string, AgentRig[]>();
-  for (const rig of rigs) {
-    const url = rig.chassisUrl || GENERATED_AGENT_URL;
-    const list = byUrl.get(url);
-    if (list) list.push(rig);
-    else byUrl.set(url, [rig]);
-  }
-  for (const [url, group] of byUrl) {
-    const tpl = cache.templates.get(url);
-    if (tpl) {
-      for (const rig of group) applyChassisTemplate(rig, tpl);
-      continue;
-    }
-    if (tpl === null) continue;
-    const waiting = cache.pending.get(url);
-    if (waiting) {
-      waiting.push(...group);
-      continue;
-    }
-    cache.pending.set(url, [...group]);
-    loadChassisTemplate(url, cache);
-  }
-}
-
-function loadChassisTemplate(url: string, cache: ChassisLoadCache): void {
-  const loader = configureGltfLoader(new GLTFLoader());
-  loader.load(
-    url,
-    (gltf) => {
-      const tpl = prepareChassisTemplate(gltf.scene, gltf.animations);
-      cache.templates.set(url, tpl);
-      const waiting = cache.pending.get(url) ?? [];
-      cache.pending.delete(url);
-      for (const rig of waiting) applyChassisTemplate(rig, tpl);
-    },
-    undefined,
-    () => {
-      cache.templates.set(url, null);
-      cache.pending.delete(url);
-    },
-  );
-}
-
-function prepareChassisTemplate(source: Object3D, clips: AnimationClip[]): ChassisTemplate {
-  // keep baked root motion vertical only: locomotion is owned by the sim,
-  // so the horizontal components of the root bone track are pinned to the
-  // bone's REST position; clips can start mid-stride, so flattening to
-  // the first frame instead would bake in a constant world offset
-  // (never re-export with animate_in_place, it corrupts the bake)
-  let rootBone: Bone | null = null;
-  source.traverse((obj) => {
-    const bone = obj as Bone;
-    if (bone.isBone && !rootBone && !(bone.parent as Bone | null)?.isBone) {
-      rootBone = bone;
-    }
-  });
-  // native gait speed in source units/sec, read from the baked root
-  // travel before it gets flattened
-  const clipGroundSpeed = new Map<AnimationClip, number>();
-  if (rootBone !== null) {
-    const rest = (rootBone as Bone).position;
-    const trackName = `${(rootBone as Bone).name}.position`;
-    for (const clip of clips) {
-      for (const tr of clip.tracks) {
-        if (tr.name !== trackName) continue;
-        const v = tr.values;
-        const n = v.length;
-        const travel = Math.hypot(v[n - 3]! - v[0]!, v[n - 1]! - v[2]!);
-        if (clip.duration > 0) clipGroundSpeed.set(clip, travel / clip.duration);
-        for (let i = 0; i < n; i += 3) {
-          v[i] = rest.x;
-          v[i + 2] = rest.z;
-        }
-      }
-    }
-  }
-  // Tripo batch exports name clips NlaTrack, NlaTrack.001, ... so the
-  // names carry no meaning. The order is NOT the export picker's; it was
-  // measured from the clip data of this export (idle: 15s static, fall:
-  // pelvis pitches 90 degrees and holds, walk: rooted travel over a 2.4s
-  // loop, run: short 1.3s in-place cycle). Re-measure if re-exported.
-  if (clips.length === 4 && clips.every((c) => c.name.startsWith('NlaTrack'))) {
-    const sorted = [...clips].sort((a, b) => a.name.localeCompare(b.name));
-    const presetOrder = ['idle', 'fall', 'walk', 'run'] as const;
-    sorted.forEach((c, ci) => {
-      c.name = presetOrder[ci]!;
-    });
-  }
-  const findClip = (re: RegExp) => clips.find((c) => re.test(c.name)) ?? null;
-  const bounds = new Box3().setFromObject(source);
-  const size = new Vector3();
-  const center = new Vector3();
-  bounds.getSize(size);
-  bounds.getCenter(center);
-  source.position.set(-center.x, -bounds.min.y, -center.z);
-  const normalizer = new Object3D();
-  normalizer.rotation.y = GENERATED_AGENT_YAW;
-  // the rig root carries scale 1.12, so the clone compensates to land at
-  // the authored world height
-  normalizer.scale.setScalar(GENERATED_AGENT_HEIGHT / Math.max(0.001, size.y) / 1.12);
-  normalizer.add(source);
-  return {
-    normalizer,
-    clips,
-    walkClip: findClip(/walk/i) ?? clips[0] ?? null,
-    idleClip: findClip(/idle|breath|stand/i),
-    fallClip: findClip(/fall|death|down/i),
-    clipGroundSpeed,
-    sizeY: size.y,
-  };
-}
-
-function applyChassisTemplate(rig: AgentRig, tpl: ChassisTemplate): void {
-  // SkinnedMesh bone bindings survive only the skeleton-aware clone
-  const clone = tpl.clips.length > 0 ? skeletonClone(tpl.normalizer) : tpl.normalizer.clone(true);
-  const mats: MeshPhongNodeMaterial[] = [];
-  clone.traverse((obj) => {
-    const mesh = obj as Mesh;
-    if (!mesh.isMesh) return;
-    const src = mesh.material as MeshStandardMaterial;
-    const mat = new MeshPhongNodeMaterial({
-      map: src.map ?? null,
-      color: 0xe4ebf5,
-      specular: 0x333333,
-      shininess: 36,
-      transparent: true,
-    });
-    if (rig.rimColor) {
-      (mat as unknown as { emissiveNode: unknown }).emissiveNode = agentModelEmissive(
-        rig.rimColor as unknown as AgentRimUniform,
-        src.map ?? null,
-      );
-    }
-    mesh.material = mat;
-    mesh.castShadow = true;
-    mats.push(mat);
-  });
-  if (tpl.clips.length > 0) {
-    rig.mixer = new AnimationMixer(clone);
-    rig.actWalk = tpl.walkClip ? rig.mixer.clipAction(tpl.walkClip) : null;
-    rig.actIdle = tpl.idleClip ? rig.mixer.clipAction(tpl.idleClip) : null;
-    if (tpl.fallClip) {
-      const fall = rig.mixer.clipAction(tpl.fallClip);
-      fall.setLoop(LoopOnce, 1);
-      fall.clampWhenFinished = true;
-      rig.actFall = fall;
-    }
-    const worldScale = GENERATED_AGENT_HEIGHT / Math.max(0.001, tpl.sizeY);
-    rig.walkClipSpeed = tpl.walkClip
-      ? (tpl.clipGroundSpeed.get(tpl.walkClip) ?? 0) * worldScale
-      : 0;
-  }
-  rig.joints.root.add(clone);
-  rig.modelRoot = clone;
-  rig.modelMats = mats;
-  rig.modelReady = true;
-  // augment dress stays parented to the procedural joints, which keep being
-  // posed beneath the GLB so attachments track the limbs; only the procedural
-  // body meshes hide
-  for (const m of rig.procMeshes) m.visible = false;
 }
 
 // the fall clip animates only the GLB skeleton, so dressed rigs take the
@@ -1773,17 +1322,6 @@ function buildGroundTexture(state: SimState): CanvasTexture {
     const tex = new CanvasTexture(canvas);
     tex.colorSpace = SRGBColorSpace;
     tex.anisotropy = 8;
-    // corporate logo etched into the plaza slab; drawn over the closured
-    // canvas when the PNG arrives, invisible (plain plaza) until then
-    const logo = new Image();
-    logo.onload = () => {
-      ctx.save();
-      ctx.globalAlpha = 0.3;
-      ctx.drawImage(logo, 44.5 * s, 44.5 * s, 8 * s, 8 * s);
-      ctx.restore();
-      tex.needsUpdate = true;
-    };
-    logo.src = '/logos/nexus-corporation-logo.png';
     return tex;
   }
   const next = seededNext({ rng: (state.mapSeed | 0) || 1 });
@@ -2446,14 +1984,12 @@ function createFacadeKit(
     metalness: Math.min(0.45, wet.concreteMetalness + 0.22),
     envMapIntensity: wet.concreteEnv * 1.1,
   });
-  applyFacadeMaps(trimMat);
   const postMat = new MeshStandardMaterial({
     color: 0xffffff,
     roughness: wet.concreteRoughness,
     metalness: Math.min(0.35, wet.concreteMetalness + 0.12),
     envMapIntensity: wet.concreteEnv,
   });
-  applyFacadeMaps(postMat);
 
   addInstanced(setbacks, setbackColors, setbackMat, true);
   addInstanced(annexes, annexColors, annexMat, true);
@@ -2673,7 +2209,6 @@ function createOutskirts(
     metalness: wet.groundMetalness,
     envMapIntensity: wet.groundEnv * 0.4,
   });
-  applyAsphaltMaps(apronMat, Math.max(24, (MAP_W * 14) / 5));
   const apron = new Mesh(new PlaneGeometry(MAP_W * 14, MAP_W * 14), apronMat);
   apron.rotation.x = -Math.PI / 2;
   apron.position.set(MAP_W / 2, -0.08, MAP_W / 2);
@@ -2738,7 +2273,6 @@ function createOutskirts(
       metalness: wet.concreteMetalness,
       envMapIntensity: wet.skylineEnv * envScale,
     });
-    applyFacadeMaps(mat);
     const mesh = new InstancedMesh(new BoxGeometry(1, 1, 1), mat, items.length);
     items.forEach((it, i) => {
       mesh.setMatrixAt(i, it.m);
@@ -3002,7 +2536,6 @@ function createVisualTestDistrict(
   // every camera-facing wall carries a window grid: the plaza face plus both
   // flanks, so the 8-way orbit never lands on a bare black slab
   const windowMat = new MeshBasicMaterial({ map: buildWindowGridTexture() });
-  swapMapWhenLoaded(windowMat, WINDOW_GRID_URL);
   const windowMesh = new InstancedMesh(
     new PlaneGeometry(1, 1),
     windowMat,
@@ -3152,7 +2685,6 @@ function createVisualTestDistrict(
       transparent: true,
       side: DoubleSide,
     });
-    swapMapWhenLoaded(signMat, SIGN_ATLAS_URL);
     const signBoard = new Mesh(mergeGeometries(signParts), signMat);
     signMat.color.setScalar(1.3 * light.neon);
     scene.add(signBoard);
@@ -3238,8 +2770,7 @@ export interface BillboardHandles {
 }
 
 // wall hologram board mounted on the tallest west-band facade so the default
-// camera reads it: procedural canvas art immediately, swapped for the
-// user-generated /billboard/corporate-trust.png when the file exists
+// camera reads it: procedural canvas art
 function createBillboard(
   scene: Scene,
   light: (typeof LIGHTING)[number],
@@ -3282,17 +2813,6 @@ function createBillboard(
   scan.rotation.y = Math.PI / 2;
   scan.position.set(bx + 0.06, y, bz);
   scene.add(scan);
-  new TextureLoader().load(
-    BILLBOARD_URL,
-    (t) => {
-      t.colorSpace = SRGBColorSpace;
-      t.anisotropy = 8;
-      baseMat.map = t;
-      baseMat.needsUpdate = true;
-    },
-    undefined,
-    () => {},
-  );
   return { baseMat, scanTex, x: bx, z: bz, h: y, w };
 }
 
@@ -3715,7 +3235,6 @@ export function createGameScene(
     envMapIntensity: wet.groundEnv,
   });
   // denser tiling so microdetail survives iso orthographic distance
-  applyAsphaltMaps(groundMat, Math.max(16, MAP_W / 4));
   const ground = new Mesh(new PlaneGeometry(MAP_W, MAP_W), groundMat);
   ground.rotation.x = -Math.PI / 2;
   ground.position.set(MAP_W / 2, 0, MAP_W / 2);
@@ -3977,7 +3496,6 @@ export function createGameScene(
     root.visible = false;
     return root;
   });
-  loadGeneratedCarModel(scene, carModelRoots, carVariantLights[GENERATED_CAR_LIGHT_VARIANT]!);
 
   // headlight pools: the same radial falloff quad the lamps use, dragged
   // ahead of each live car every frame so the emissive rig actually lights
@@ -4171,9 +3689,6 @@ export function createGameScene(
       }),
     );
   }
-
-  const chassisCache = createChassisLoadCache();
-  loadGeneratedAgentModel([...agentRigs, ...rivalRigs], chassisCache);
 
   // environmental zones (chem, EMP): flat ground markers built once at setup
   // since zones never move. Chem is a filled disc with a rim; EMP is a pair of
@@ -4374,7 +3889,6 @@ export function createGameScene(
     rivalRigs,
     rivalLooks,
     rivalPeerContract,
-    chassisCache,
     hideNpc,
     ringMeshes,
     blobMeshes,
@@ -4416,7 +3930,6 @@ export function applyAlarmGrade(gs: GameScene, g: AlarmGrade, tSec: number): voi
     m.color.copy(white).lerp(gradeAccent, g.spillWarm).multiplyScalar(g.neonMul * pulse);
   }
 }
-
 
 export function syncScene(
   gs: GameScene,
@@ -4934,7 +4447,6 @@ export function syncScene(
     gs.rivalRigs.push(peer);
     appendedRigs.push(peer);
   }
-  if (appendedRigs.length > 0) loadGeneratedAgentModel(appendedRigs, gs.chassisCache);
 
   // rival peer chassis: same locomotion path as agents, driven from NPC state
   for (let ri = 0; ri < gs.rivalRigs.length; ri++) {

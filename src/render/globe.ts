@@ -18,7 +18,6 @@ import {
   MeshStandardMaterial,
   OctahedronGeometry,
   PerspectiveCamera,
-  PlaneGeometry,
   Points,
   PointsMaterial,
   QuadraticBezierCurve3,
@@ -31,8 +30,6 @@ import {
   SphereGeometry,
   Sprite,
   SpriteMaterial,
-  SRGBColorSpace,
-  TextureLoader,
   TorusGeometry,
   TubeGeometry,
   Vector2,
@@ -419,8 +416,6 @@ export class WorldGlobe {
   private dragging = false;
   private dragYaw = 0;
   private tmpV = new Vector3();
-  private backdrop: Mesh | null = null;
-  private backdropAspect = 16 / 9;
 
   constructor(
     private renderer: WebGPURenderer,
@@ -459,28 +454,7 @@ export class WorldGlobe {
   private buildSpace(): void {
     this.scene.add(this.stars(1400, 40, 60, 0.09, 0.55));
     this.scene.add(this.stars(260, 30, 55, 0.2, 1.0));
-    // deep-space plate as a camera-locked backdrop; procedural nebula on failure
-    new TextureLoader().load(
-      '/textures/deep-space-backdrop.jpg',
-      (tex) => {
-        tex.colorSpace = SRGBColorSpace;
-        const img = tex.image as { width: number; height: number };
-        if (img.width && img.height) this.backdropAspect = img.width / img.height;
-        const plane = new Mesh(
-          new PlaneGeometry(1, 1),
-          new MeshBasicMaterial({ map: tex, depthTest: false, depthWrite: false }),
-        );
-        plane.renderOrder = -100;
-        plane.frustumCulled = false;
-        plane.position.set(0, 0, -60);
-        this.camera.add(plane);
-        if (!this.camera.parent) this.scene.add(this.camera);
-        this.backdrop = plane;
-        this.layoutBackdrop();
-      },
-      undefined,
-      () => this.addProceduralNebula(),
-    );
+    this.addProceduralNebula();
   }
 
   private addProceduralNebula(): void {
@@ -495,17 +469,6 @@ export class WorldGlobe {
     const nebCol = mix(vec3(0.03, 0.09, 0.16), vec3(0.1, 0.03, 0.14), neb2).mul(neb.mul(0.5));
     skyMat.colorNode = baseSky.add(nebCol);
     this.scene.add(new Mesh(new SphereGeometry(80, 32, 24), skyMat));
-  }
-
-  /** Cover-fit the backdrop plate to the current frustum so it fills any aspect. */
-  private layoutBackdrop(): void {
-    if (!this.backdrop) return;
-    const dist = 60;
-    const h = 2 * Math.tan((this.camera.fov * Math.PI) / 180 / 2) * dist;
-    const w = h * this.camera.aspect;
-    const imgA = this.backdropAspect;
-    const cover = w / h > imgA;
-    this.backdrop.scale.set((cover ? w : h * imgA) * 1.02, (cover ? w / imgA : h) * 1.02, 1);
   }
 
   private stars(count: number, rMin: number, rMax: number, size: number, bright: number): Points {
@@ -935,7 +898,6 @@ export class WorldGlobe {
     this.camera.position.z = FIT_RADIUS / Math.sin(Math.atan(tanTheta));
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(w, h);
-    this.layoutBackdrop();
   }
 
   // ---- interaction -------------------------------------------------------

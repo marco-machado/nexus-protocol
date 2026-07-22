@@ -57,23 +57,10 @@ const ALL_SLOTS: AttachmentSlot[] = ['legs', 'arms', 'torso', 'eyes', 'brain', '
 // GDD primary reads: these four must change the manifest at each version step.
 export const PRIMARY_SLOTS: AttachmentSlot[] = ['legs', 'arms', 'torso', 'eyes'];
 
-// Chassis URLs are a data table so a body-model swap is a data change, not a
-// systems change; both variants sharing one URL is intentional, not a bug.
-export const CHASSIS_URLS: Record<ChassisId, Record<BodyVariant, string>> = {
-  operative: {
-    male: '/models/agent-operative.glb',
-    female: '/models/agent-operative.glb',
-  },
-};
-
 function clampLevel(n: number | undefined): number {
   if (n === undefined || n <= 0) return 0;
   if (n >= 3) return 3;
   return n | 0;
-}
-
-export function chassisUrl(manifest: AppearanceManifest): string {
-  return CHASSIS_URLS[manifest.chassis][manifest.variant];
 }
 
 export function buildAppearanceManifest(input: AppearanceInput): AppearanceManifest {
