@@ -14,6 +14,10 @@ interface Buses {
   layers: [GainNode, GainNode, GainNode];
 }
 
+// Background music is disabled; flip to true to restore the procedural
+// ambient layers. All music code, buses, and the musicVol setting remain.
+const MUSIC_ENABLED = false;
+
 let buses: Buses | null = null;
 let analyser: AnalyserNode | null = null;
 
@@ -212,7 +216,7 @@ export const audio = {
       l.connect(music);
     });
     buses = { ctx, master, music, sfx, ui, layers };
-    startAmbient(buses);
+    if (MUSIC_ENABLED) startAmbient(buses);
     void ctx.resume();
   },
 
