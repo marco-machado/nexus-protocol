@@ -410,9 +410,9 @@ Materials should read as real surfaces under night rain and neon, not as flat un
 
 ### 13.6 Camera
 
-Full smooth camera control at handler altitude. Continuous eased rotation replaces stepped yaw; smooth zoom from squad-close to block-wide; pan via edge, middle-mouse drag, and keys, with light inertia. Double-tap agent centering stays.
+Full smooth camera control at handler altitude. Continuous eased rotation replaces stepped yaw; smooth zoom from squad-close to block-wide, with pitch coupled to zoom through an eased 35-to-60-degree band (lower and more oblique when close, steeper when wide); pan via edge, middle-mouse drag, and keys, with light inertia. Double-tap agent centering stays.
 
-A tilt-shift low-field-of-view perspective frame at the same altitude (the miniature-city look) is to be prototyped against the orthographic frame and chosen by evidence: depth parallax and cinematic read versus tactical legibility. Either way the camera never drops toward eye level; this is purely about how expensive the district looks while staying a spreadsheet's view of it.
+A tilt-shift perspective frame at the same handler altitude is prototyped against the orthographic frame and chosen by evidence: depth parallax and cinematic read versus tactical legibility. The prototype carries a wide 50-degree field of view (a real aerial read) in place of the originally drafted low-field-of-view miniature look. Either way the camera never drops toward eye level; the pitch band's floor stays far above it, and this remains purely about how expensive the district looks while staying a spreadsheet's view of it.
 
 ## 14. UI and Command-Software Identity
 
@@ -606,6 +606,7 @@ The diegetic vocabulary. Consistent use of these terms reinforces the fiction.
 
 | Version | Change |
 |---|---|
+| 3.1 | Camera: fixed 62-degree handler pitch replaced by pitch coupled to zoom through an eased 35-to-60-degree band; max zoom-in raised from view height 10 to 20; tilt-shift prototype widened to a 50-degree field of view, dropping the miniature-city low-FOV read. The camera still never drops toward eye level. |
 | 3.0 | AAA upgrade, folded from the approved 48-suggestion package into this bible: browser AAA ship bar with measured gates; React Three Fiber app framework with staged migration; objective-card contract standard, six new contract types (13 total), clauses and riders, doctrine matrix, debrief as performance review; uniform agent chassis with male/female variants, quirks retired, loss as invested capital; region identity kits, landmark anchors, signature-site dress, tactics-shaping grammar; intent cursor and order feedback grammar; full smooth camera with a tilt-shift perspective evaluation; stim-forward contract modifiers and gear-as-plan intel; project-based R&D board over managed steady income; narrative layer (region vignettes, fixed cast, reactive comms engine, Corporate Archive, rival arcs with memory); five named presentation stacks; hybrid audio with captioned operator voice; interface craft pass; two-tier WebGPU/WebGL2 delivery with streaming budgets. |
 | 2.1 | Art direction pivot to high-fidelity presentation: dense geometry, high-res characters, detailed props, real materials, physically based lighting, real proportions, real gore. Identification law and softened frame-rate bar replace low-poly-plus and silhouette-over-fidelity. UI identity (Section 14) unchanged. |
 | 2.0 | Restructured into a full design bible: added vision, player fantasy, authorial positioning, combat feel, signature moments, deepened factions, art direction, quality bar, accessibility pillar, lexicon. Folded the `DESIGN.md` visual identity in. Applied house formatting rules. |
